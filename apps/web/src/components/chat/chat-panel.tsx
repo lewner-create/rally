@@ -127,7 +127,7 @@ export function ChatPanel({
         </p>
         <p style={{ fontSize: '13px', color: '#444', margin: 0, lineHeight: 1.5 }}>
           {isGroupChat
-            ? 'Check who's in for something — or just say hey.'
+            ? "Check who's in for something — or just say hey."
             : 'Start the conversation about this plan.'}
         </p>
       </div>

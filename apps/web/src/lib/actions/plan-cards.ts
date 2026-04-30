@@ -40,7 +40,6 @@ export interface PlanCardResponseRow {
 }
 
 // ─── Post "Check who's in" ────────────────────────────────────────────────────
-// Creates the plan card + posts it to the group chat in one action.
 
 export async function postCheckWhosIn(params: {
   groupId:       string
@@ -54,7 +53,6 @@ export async function postCheckWhosIn(params: {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  // 1. Create plan card
   const { data: card, error: cardErr } = await supabase
     .from('plan_cards')
     .insert({
@@ -72,7 +70,6 @@ export async function postCheckWhosIn(params: {
 
   if (cardErr || !card) return { error: cardErr?.message ?? 'Failed to create plan' }
 
-  // 2. Post to group chat as a plan_card message
   const { error: msgErr } = await supabase
     .from('chat_messages')
     .insert({
@@ -156,17 +153,67 @@ export async function lockInPlanCard(planCardId: string): Promise<{ eventId?: st
 
 // ─── Get active plan cards for a group ────────────────────────────────────────
 
-export async function getActivePlanCards(groupId: string): Promise<{ id: string; title: string; event_type: string }[]> {
+export type ActivePlanCardData = {
+  id: string
+  title: string
+  event_type: string
+  proposed_date: string | null
+  proposed_start: string | null
+  proposed_end: string | null
+  status: 'open' | 'locked'
+  created_at: string
+  creator: {
+    id: string
+    display_name: string | null
+    username: string
+    avatar_url: string | null
+  } | null
+  response_counts: {
+    in: number
+    maybe: number
+    cant: number
+  }
+}
+
+export async function getActivePlanCards(groupId: string): Promise<ActivePlanCardData[]> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return []
 
   const { data } = await supabase
     .from('plan_cards')
-    .select('id, title, event_type')
+    .select(`
+      id, title, event_type,
+      proposed_date, proposed_start, proposed_end,
+      status, created_at, created_by,
+      creator:profiles!plan_cards_created_by_fkey(id, display_name, username, avatar_url),
+      plan_card_responses(response)
+    `)
     .eq('group_id', groupId)
     .eq('status', 'open')
     .order('created_at', { ascending: false })
 
-  return (data ?? []) as { id: string; title: string; event_type: string }[]
+  if (!data) return []
+
+  return data.map((card: any) => {
+    const responses = (card.plan_card_responses ?? []) as { response: string }[]
+    // Supabase may return the join as array or single object
+    const creatorRaw = Array.isArray(card.creator) ? card.creator[0] : card.creator
+    return {
+      id: card.id,
+      title: card.title,
+      event_type: card.event_type,
+      proposed_date: card.proposed_date ?? null,
+      proposed_start: card.proposed_start ?? null,
+      proposed_end: card.proposed_end ?? null,
+      status: card.status as 'open' | 'locked',
+      created_at: card.created_at,
+      creator: creatorRaw ?? null,
+      response_counts: {
+        in:    responses.filter(r => r.response === 'in').length,
+        maybe: responses.filter(r => r.response === 'maybe').length,
+        cant:  responses.filter(r => r.response === 'cant').length,
+      },
+    }
+  })
 }

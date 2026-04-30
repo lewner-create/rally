@@ -11,11 +11,11 @@ type Props = {
 const EVENT_TYPE_META: Record<string, { emoji: string; label: string }> = {
   vacation:   { emoji: '✈️',  label: 'Vacation'   },
   day_trip:   { emoji: '🚗',  label: 'Day trip'   },
-  road_trip:  { emoji: '🛣️', label: 'Road trip'  },
+  road_trip:  { emoji: '🛣️',  label: 'Road trip'  },
   game_night: { emoji: '🎮',  label: 'Game night' },
-  hangout:    { emoji: '🛋️', label: 'Hangout'    },
+  hangout:    { emoji: '🛋️',  label: 'Hangout'    },
   meetup:     { emoji: '👋',  label: 'Meetup'     },
-  moto_trip:  { emoji: '🏍️', label: 'Moto trip'  },
+  moto_trip:  { emoji: '🏍️',  label: 'Moto trip'  },
 }
 
 function formatDate(iso: string | null) {
@@ -72,7 +72,7 @@ export default async function EventPage({ params }: Props) {
   const isCreator  = event.created_by === user.id
   const typeMeta   = EVENT_TYPE_META[event.event_type] ?? { emoji: '📅', label: event.event_type }
   const goingCount = (rsvps ?? []).filter((r) => r.rsvp_status === 'yes').length
-  const accentColor = (event.groups as any)?.theme_color ?? '#6366f1'
+  const accentColor = (event.groups as any)?.theme_color ?? '#7F77DD'
   const groupName   = (event.groups as any)?.name ?? ''
   const groupId     = event.group_id
 
@@ -116,7 +116,6 @@ export default async function EventPage({ params }: Props) {
 
           {/* Left column */}
           <div className="flex-1 px-4 py-6 lg:px-8 lg:py-8 lg:max-w-[560px]">
-
             <a
               href={`/groups/${groupId}`}
               className="inline-flex items-center gap-1.5 text-[#555] text-sm hover:text-white transition-colors mb-6"
@@ -172,20 +171,21 @@ export default async function EventPage({ params }: Props) {
             />
           </div>
 
-          {/* Right column - chat */}
+          {/* Right column — chat, fills full height */}
           <div
-            className="lg:w-[340px] lg:border-l lg:sticky lg:top-0 lg:h-screen flex flex-col"
-            style={{ borderColor: '#1e1e1e' }}
+            className="hidden lg:flex lg:w-[340px] lg:border-l lg:flex-col"
+            style={{ borderColor: '#1e1e1e', position: 'sticky', top: 0, height: '100vh' }}
           >
-            <div className="px-4 py-4 border-b" style={{ borderColor: '#1e1e1e' }}>
+            <div className="px-4 py-4 border-b flex-shrink-0" style={{ borderColor: '#1e1e1e' }}>
               <p className="text-xs uppercase tracking-widest text-[#555] font-semibold">Plan chat</p>
             </div>
-            <div className="flex-1 overflow-hidden">
+            <div className="flex-1 min-h-0">
               <ChatPanel
                 groupId={groupId}
                 currentUserId={user.id}
                 eventId={eventId}
                 initialMessages={[]}
+                height="100%"
               />
             </div>
           </div>

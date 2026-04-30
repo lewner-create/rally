@@ -47,16 +47,16 @@ export default async function GroupPage({ params }: { params: Promise<{ groupId:
 
       {/* ── Left sidebar ──────────────────────────────────────────────── */}
       <div style={{
-        width: '256px', flexShrink: 0,
+        width: '240px', flexShrink: 0,
         display: 'flex', flexDirection: 'column',
         overflowY: 'auto', borderRight: '1px solid #1e1e1e',
-        padding: '24px 20px', background: '#111',
+        padding: '20px 16px', background: '#131313',
       }}>
         <Link
           href="/dashboard"
           style={{
             display: 'inline-flex', alignItems: 'center', gap: '6px',
-            fontSize: '12px', color: '#555', textDecoration: 'none', marginBottom: '22px',
+            fontSize: '12px', color: '#555', textDecoration: 'none', marginBottom: '20px',
             transition: 'color 0.15s',
           }}
         >
@@ -64,45 +64,45 @@ export default async function GroupPage({ params }: { params: Promise<{ groupId:
         </Link>
 
         {/* Group identity */}
-        <div style={{ marginBottom: '18px' }}>
+        <div style={{ marginBottom: '16px' }}>
           <div style={{
-            width: '42px', height: '42px', borderRadius: '11px',
+            width: '40px', height: '40px', borderRadius: '10px',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '14px', fontWeight: 800, marginBottom: '10px',
+            fontSize: '13px', fontWeight: 800, marginBottom: '10px',
             background: `${themeColor}20`, color: themeColor,
           }}>
             {initials(group.name)}
           </div>
-          <h1 style={{ fontSize: '16px', fontWeight: 700, margin: '0 0 3px', color: '#f0f0f0', letterSpacing: '-0.1px' }}>
+          <h1 style={{ fontSize: '15px', fontWeight: 700, margin: '0 0 3px', color: '#fff', letterSpacing: '-0.1px' }}>
             {group.name}
           </h1>
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             <Users size={11} color="#555" />
             <span style={{ fontSize: '12px', color: '#555' }}>
-              {group.group_members.length} of 6 members
+              {group.group_members.length} {group.group_members.length === 1 ? 'member' : 'members'}
             </span>
           </div>
           {(group as any).description && (
-            <p style={{ fontSize: '12px', color: '#555', marginTop: '5px', lineHeight: 1.5 }}>
+            <p style={{ fontSize: '12px', color: '#555', marginTop: '6px', lineHeight: 1.6 }}>
               {(group as any).description}
             </p>
           )}
         </div>
 
-        <div style={{ borderTop: '1px solid #1e1e1e', margin: '0 0 18px' }} />
+        <div style={{ borderTop: '1px solid #1e1e1e', margin: '0 0 16px' }} />
 
         <div style={{ flex: 1 }}>
           <p style={SECTION_LABEL}>Members</p>
           <MemberList members={group.group_members} currentUserId={user.id} />
         </div>
 
-        <div style={{ borderTop: '1px solid #1e1e1e', margin: '18px 0 14px' }} />
+        <div style={{ borderTop: '1px solid #1e1e1e', margin: '16px 0 12px' }} />
+
         <Link
           href={`/groups/${groupId}/settings`}
           style={{
             display: 'flex', alignItems: 'center', gap: '7px',
             fontSize: '13px', color: '#555', textDecoration: 'none', padding: '5px 0',
-            transition: 'color 0.15s',
           }}
         >
           <Settings size={13} /> Group settings
@@ -110,7 +110,7 @@ export default async function GroupPage({ params }: { params: Promise<{ groupId:
 
         {isAdmin && (
           <>
-            <div style={{ borderTop: '1px solid #1e1e1e', margin: '14px 0' }} />
+            <div style={{ borderTop: '1px solid #1e1e1e', margin: '12px 0' }} />
             <div>
               <p style={SECTION_LABEL}>Invite people</p>
               <InvitePanel groupId={group.id} initialInvites={invites} />
@@ -119,7 +119,7 @@ export default async function GroupPage({ params }: { params: Promise<{ groupId:
         )}
       </div>
 
-      {/* ── Main content (client, handles tabs + chat) ────────────────── */}
+      {/* ── Main content ─────────────────────────────────────────────── */}
       <GroupPageClient
         groupId={groupId}
         themeColor={themeColor}

@@ -1,0 +1,138 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Violet */
+    --rally-violet-50:  #EEEDFE;
+    --rally-violet-100: #CECBF6;
+    --rally-violet-200: #AFA9EC;
+    --rally-violet-400: #7F77DD;
+    --rally-violet-600: #534AB7;
+    --rally-violet-800: #3C3489;
+    --rally-violet-900: #26215C;
+
+    /* Teal */
+    --rally-teal-50:  #E1F5EE;
+    --rally-teal-100: #9FE1CB;
+    --rally-teal-200: #5DCAA5;
+    --rally-teal-400: #1D9E75;
+    --rally-teal-600: #0F6E56;
+    --rally-teal-800: #085041;
+    --rally-teal-900: #04342C;
+
+    /* Coral */
+    --rally-coral-50:  #FAECE7;
+    --rally-coral-100: #F5C4B3;
+    --rally-coral-200: #F0997B;
+    --rally-coral-400: #D85A30;
+    --rally-coral-600: #993C1D;
+    --rally-coral-800: #712B13;
+    --rally-coral-900: #4A1B0C;
+
+    /* Sand */
+    --rally-sand-50:  #F1EFE8;
+    --rally-sand-100: #D3D1C7;
+    --rally-sand-200: #B4B2A9;
+    --rally-sand-400: #888780;
+    --rally-sand-600: #5F5E5A;
+    --rally-sand-800: #444441;
+    --rally-sand-900: #2C2C2A;
+
+    /* Semantic aliases */
+    --rally-primary:          var(--rally-violet-400);
+    --rally-primary-surface:  var(--rally-violet-50);
+    --rally-primary-border:   var(--rally-violet-200);
+    --rally-primary-text:     var(--rally-violet-800);
+    --rally-primary-muted:    var(--rally-violet-600);
+
+    --rally-signal:           var(--rally-teal-400);
+    --rally-signal-surface:   var(--rally-teal-50);
+    --rally-signal-border:    var(--rally-teal-100);
+    --rally-signal-text:      var(--rally-teal-800);
+
+    --rally-conflict:         var(--rally-coral-400);
+    --rally-conflict-surface: var(--rally-coral-50);
+    --rally-conflict-border:  var(--rally-coral-200);
+    --rally-conflict-text:    var(--rally-coral-800);
+
+    --rally-neutral:          var(--rally-sand-400);
+    --rally-neutral-surface:  var(--rally-sand-50);
+    --rally-neutral-border:   var(--rally-sand-100);
+    --rally-neutral-text:     var(--rally-sand-800);
+
+    /* shadcn overrides - light mode */
+    --background:    0 0% 100%;
+    --foreground:    240 6% 16%;
+    --card:          0 0% 100%;
+    --card-foreground: 240 6% 16%;
+    --popover:       0 0% 100%;
+    --popover-foreground: 240 6% 16%;
+    --primary:       245 62% 66%;
+    --primary-foreground: 0 0% 100%;
+    --secondary:     40 12% 94%;
+    --secondary-foreground: 240 4% 26%;
+    --muted:         40 12% 94%;
+    --muted-foreground: 40 4% 52%;
+    --accent:        245 62% 66%;
+    --accent-foreground: 0 0% 100%;
+    --destructive:   18 64% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border:        40 8% 82%;
+    --input:         40 8% 82%;
+    --ring:          245 62% 66%;
+    --radius:        0.5rem;
+  }
+
+  .dark {
+    --background:    240 4% 12%;
+    --foreground:    40 12% 92%;
+    --card:          240 4% 16%;
+    --card-foreground: 40 12% 92%;
+    --popover:       240 4% 16%;
+    --popover-foreground: 40 12% 92%;
+    --primary:       245 62% 66%;
+    --primary-foreground: 0 0% 100%;
+    --secondary:     240 4% 20%;
+    --secondary-foreground: 40 8% 72%;
+    --muted:         240 4% 20%;
+    --muted-foreground: 40 4% 52%;
+    --accent:        245 62% 66%;
+    --accent-foreground: 0 0% 100%;
+    --destructive:   18 64% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border:        240 4% 24%;
+    --input:         240 4% 24%;
+    --ring:          245 62% 66%;
+
+    --rally-primary-surface:  var(--rally-violet-900);
+    --rally-primary-border:   var(--rally-violet-600);
+    --rally-primary-text:     var(--rally-violet-100);
+    --rally-signal-surface:   var(--rally-teal-900);
+    --rally-signal-border:    var(--rally-teal-600);
+    --rally-signal-text:      var(--rally-teal-100);
+    --rally-conflict-surface: var(--rally-coral-900);
+    --rally-conflict-border:  var(--rally-coral-600);
+    --rally-conflict-text:    var(--rally-coral-100);
+    --rally-neutral-surface:  var(--rally-sand-900);
+    --rally-neutral-border:   var(--rally-sand-600);
+    --rally-neutral-text:     var(--rally-sand-100);
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  :focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--rally-primary-surface);
+    border-color: var(--rally-primary);
+  }
+}

@@ -5,6 +5,8 @@ import { saveWeeklyAvailability, type WeeklyAvailability, type DayKey } from '@/
 
 // ─── Types + constants ────────────────────────────────────────────────────────
 
+const ACCENT = '#7F77DD'
+
 const ALL_DAYS:     DayKey[] = ['mon','tue','wed','thu','fri','sat','sun']
 const WEEKDAYS:     DayKey[] = ['mon','tue','wed','thu','fri']
 const WEEKEND:      DayKey[] = ['sat','sun']
@@ -81,7 +83,7 @@ function buildSummary(activeIds: Set<string>): string | null {
   return `Looks like you're mostly free ${parts.join(', ')}, and ${last}`
 }
 
-// ─── Inline mini grid (avoids importing WeeklyGrid complexity) ────────────────
+// ─── Inline mini grid ─────────────────────────────────────────────────────────
 
 const PERIODS = [
   { label: 'Morning',   hours: [8,9,10,11]          },
@@ -154,7 +156,7 @@ function MiniGrid({
                   fontSize: '10px', fontWeight: 700, textTransform: 'uppercase',
                   letterSpacing: '.07em', textAlign: 'center', padding: '4px 2px',
                   background: 'none', border: 'none', cursor: 'pointer',
-                  color: any ? '#10b981' : '#333', fontFamily: 'inherit',
+                  color: any ? ACCENT : '#333', fontFamily: 'inherit',
                   borderRadius: '4px', transition: 'color .1s',
                 }}
               >{d.short}</button>
@@ -183,8 +185,8 @@ function MiniGrid({
                     const free = isFree(d.key, hour)
                     const hov = hovCell?.d === d.key && hovCell?.h === hour
                     let bg = '#1e1e1e', border = '1px solid #272727'
-                    if (free) { bg = '#059669'; border = '1px solid #047857' }
-                    else if (hov) { bg = '#10b98122'; border = '1px solid #10b98140' }
+                    if (free) { bg = `${ACCENT}cc`; border = `1px solid ${ACCENT}88` }
+                    else if (hov) { bg = `${ACCENT}22`; border = `1px solid ${ACCENT}40` }
                     return (
                       <div
                         key={d.key}
@@ -240,7 +242,6 @@ export function AvailabilityPicker({ initial }: { initial: WeeklyAvailability })
 
   function handleGridChange(newAvail: WeeklyAvailability) {
     setAvail(newAvail)
-    // Re-detect presets after manual edit
     setActiveIds(detectActivePresets(newAvail))
     setSaved(false)
   }
@@ -273,8 +274,8 @@ export function AvailabilityPicker({ initial }: { initial: WeeklyAvailability })
                 key={p.id}
                 onClick={() => togglePreset(p.id)}
                 style={{
-                  background: on ? '#6366f110' : '#161616',
-                  border: `1px solid ${on ? '#6366f155' : '#222'}`,
+                  background: on ? `${ACCENT}12` : '#161616',
+                  border: `1px solid ${on ? `${ACCENT}44` : '#222'}`,
                   borderRadius: '14px',
                   padding: '14px 12px 12px',
                   cursor: 'pointer',
@@ -287,15 +288,15 @@ export function AvailabilityPicker({ initial }: { initial: WeeklyAvailability })
                   transition: 'border-color .15s, background .15s, transform .1s',
                   transform: on ? 'scale(1.02)' : 'scale(1)',
                   fontFamily: 'inherit',
-                  boxShadow: on ? `0 0 0 1px #6366f133` : 'none',
+                  boxShadow: on ? `0 0 0 1px ${ACCENT}22` : 'none',
                 }}
               >
                 {/* Checkmark */}
                 <div style={{
                   position: 'absolute', top: '8px', right: '8px',
                   width: '16px', height: '16px', borderRadius: '50%',
-                  background: on ? '#6366f1' : 'transparent',
-                  border: `1px solid ${on ? '#6366f1' : '#2a2a2a'}`,
+                  background: on ? ACCENT : 'transparent',
+                  border: `1px solid ${on ? ACCENT : '#2a2a2a'}`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: '9px', color: '#fff',
                   transition: 'background .15s, border-color .15s',
@@ -304,10 +305,10 @@ export function AvailabilityPicker({ initial }: { initial: WeeklyAvailability })
                   {on && '✓'}
                 </div>
                 <div style={{ fontSize: '20px', lineHeight: 1 }}>{p.emoji}</div>
-                <div style={{ fontSize: '13px', fontWeight: 600, color: on ? '#a5b4fc' : '#ccc', lineHeight: 1.2, transition: 'color .15s' }}>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: on ? '#c4bff5' : '#ccc', lineHeight: 1.2, transition: 'color .15s' }}>
                   {p.label}
                 </div>
-                <div style={{ fontSize: '11px', color: on ? '#6366f166' : '#3a3a3a', lineHeight: 1.4, transition: 'color .15s' }}>
+                <div style={{ fontSize: '11px', color: on ? `${ACCENT}88` : '#3a3a3a', lineHeight: 1.4, transition: 'color .15s' }}>
                   {p.desc}
                 </div>
               </button>
@@ -320,7 +321,7 @@ export function AvailabilityPicker({ initial }: { initial: WeeklyAvailability })
           borderRadius: '12px',
           padding: '14px 16px',
           background: '#161616',
-          border: `1px solid ${summary ? '#6366f130' : '#1e1e1e'}`,
+          border: `1px solid ${summary ? `${ACCENT}25` : '#1e1e1e'}`,
           marginBottom: '24px',
           display: 'flex',
           alignItems: 'center',
@@ -329,7 +330,7 @@ export function AvailabilityPicker({ initial }: { initial: WeeklyAvailability })
           minHeight: '52px',
         }}>
           <span style={{ fontSize: '16px', flexShrink: 0 }}>{summary ? '✦' : '○'}</span>
-          <p style={{ fontSize: '13px', color: summary ? '#a5b4fc' : '#444', lineHeight: 1.5, margin: 0, transition: 'color .3s' }}>
+          <p style={{ fontSize: '13px', color: summary ? '#c4bff5' : '#444', lineHeight: 1.5, margin: 0, transition: 'color .3s' }}>
             {summary ?? 'Pick at least one time that fits your typical week'}
           </p>
         </div>
@@ -383,7 +384,7 @@ export function AvailabilityPicker({ initial }: { initial: WeeklyAvailability })
             width: '100%',
             padding: '14px',
             borderRadius: '12px',
-            background: saved ? '#059669' : hasSelection ? '#6366f1' : '#1a1a1a',
+            background: saved ? '#1D9E75' : hasSelection ? ACCENT : '#1a1a1a',
             color: hasSelection ? '#fff' : '#333',
             border: 'none',
             fontSize: '15px',

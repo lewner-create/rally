@@ -5,6 +5,8 @@ import { createPortal } from 'react-dom'
 import { postCheckWhosIn } from '@/lib/actions/plan-cards'
 import type { EventType } from '@/lib/actions/events'
 
+const ACCENT = '#7F77DD'
+
 const EVENT_TYPES = [
   { id: 'game_night' as EventType, label: 'Game night', icon: '🎮', free: true  },
   { id: 'hangout'    as EventType, label: 'Hangout',    icon: '☕', free: true  },
@@ -14,11 +16,11 @@ const EVENT_TYPES = [
 
 export interface NudgeButtonProps {
   groupId: string
-  windowDate?:      string  // ISO date "2025-04-25"
-  windowStart?:     string  // "18:00"
-  windowEnd?:       string  // "21:00"
-  windowLabel?:     string  // "Friday evening · Apr 25"
-  windowTimeLabel?: string  // "6 PM – 9 PM"
+  windowDate?:      string
+  windowStart?:     string
+  windowEnd?:       string
+  windowLabel?:     string
+  windowTimeLabel?: string
 }
 
 type Step = 'idle' | 'dropdown' | 'popover' | 'sent'
@@ -45,7 +47,7 @@ export function NudgeButton({
     if (!btnRef.current) return
     const r  = btnRef.current.getBoundingClientRect()
     const vw = window.innerWidth
-    const pw = step === 'popover' ? 288 : 182
+    const pw = step === 'popover' ? 296 : 186
     const left = r.left + pw > vw - 12 ? Math.max(12, vw - pw - 12) : r.left
     setPos({ top: r.bottom + 6, left })
   }, [step])
@@ -81,7 +83,6 @@ export function NudgeButton({
     requestAnimationFrame(() => updatePos())
   }
 
-  // ── Post plan card to group chat ───────────────────────────────────────────
   const handleCheckWhosIn = async () => {
     if (!selectedType || !title.trim()) return
     setLoading(true)
@@ -131,12 +132,12 @@ export function NudgeButton({
       style={{
         display: 'inline-flex', alignItems: 'center', gap: '6px',
         padding: '8px 18px', borderRadius: '9999px',
-        background: isSent ? '#1D9E75' : '#7F77DD',
+        background: isSent ? '#1D9E75' : ACCENT,
         color: 'white', border: 'none', cursor: 'pointer',
         fontSize: '14px', fontWeight: 600,
         boxShadow: isSent
           ? '0 4px 16px rgba(29,158,117,0.4)'
-          : '0 4px 20px rgba(127,119,221,0.45)',
+          : `0 4px 20px ${ACCENT}66`,
         transition: 'background 0.2s, box-shadow 0.2s',
         whiteSpace: 'nowrap', fontFamily: 'inherit',
       }}
@@ -147,15 +148,16 @@ export function NudgeButton({
     </button>
   )
 
-  // ── Event type dropdown ────────────────────────────────────────────────────
+  // ── Event type dropdown — dark ─────────────────────────────────────────────
   const dropdownEl = step === 'dropdown' && (
     <div
       ref={portalRef}
       style={{
         position: 'fixed', top: pos.top, left: pos.left,
-        zIndex: 9999, background: 'white', borderRadius: '12px',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.08)',
-        padding: '6px', minWidth: '176px',
+        zIndex: 9999, background: '#1a1a1a', borderRadius: '14px',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.3)',
+        border: '1px solid #2a2a2a',
+        padding: '6px', minWidth: '180px',
       }}
     >
       {EVENT_TYPES.map(t => (
@@ -168,31 +170,32 @@ export function NudgeButton({
             background: 'none', border: 'none',
             cursor: t.free ? 'pointer' : 'default',
             textAlign: 'left', fontSize: '14px',
-            color: t.free ? '#111' : '#c0c0c0',
+            color: t.free ? '#e0e0e0' : '#444',
             fontFamily: 'inherit', transition: 'background 0.1s',
           }}
-          onMouseEnter={e => { if (t.free) (e.currentTarget).style.background = '#f4f3ff' }}
+          onMouseEnter={e => { if (t.free) (e.currentTarget).style.background = '#252525' }}
           onMouseLeave={e => { (e.currentTarget).style.background = 'none' }}
         >
           <span style={{ fontSize: '16px' }}>{t.icon}</span>
           <span style={{ flex: 1 }}>{t.label}</span>
           {!t.free && (
-            <span style={{ fontSize: '11px', color: '#7F77DD', fontWeight: 700 }}>Boost</span>
+            <span style={{ fontSize: '11px', color: ACCENT, fontWeight: 700 }}>Boost</span>
           )}
         </button>
       ))}
     </div>
   )
 
-  // ── Plan details popover ───────────────────────────────────────────────────
+  // ── Plan details popover — dark ────────────────────────────────────────────
   const popoverEl = step === 'popover' && (
     <div
       ref={portalRef}
       style={{
         position: 'fixed', top: pos.top, left: pos.left,
-        zIndex: 9999, background: 'white', borderRadius: '16px',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.08)',
-        padding: '18px', width: '288px',
+        zIndex: 9999, background: '#1a1a1a', borderRadius: '16px',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.3)',
+        border: '1px solid #2a2a2a',
+        padding: '18px', width: '296px',
       }}
     >
       {/* Plan name */}
@@ -204,8 +207,8 @@ export function NudgeButton({
           placeholder={windowLabel ? `e.g. Game night, Hangout…` : 'Name your plan…'}
           autoFocus
           style={inputStyle}
-          onFocus={e => (e.target.style.borderColor = '#7F77DD')}
-          onBlur={e  => (e.target.style.borderColor = '#e5e5e5')}
+          onFocus={e => (e.target.style.borderColor = ACCENT)}
+          onBlur={e  => (e.target.style.borderColor = '#2a2a2a')}
         />
       </div>
 
@@ -214,13 +217,14 @@ export function NudgeButton({
         <div style={{
           display: 'flex', alignItems: 'center', gap: '6px',
           padding: '7px 10px', borderRadius: '8px',
-          background: '#f4f3ff', fontSize: '13px', color: '#5a5490',
+          background: `${ACCENT}18`, fontSize: '13px', color: '#c4bff5',
           marginBottom: '12px', fontWeight: 500,
+          border: `1px solid ${ACCENT}22`,
         }}>
           <span>📅</span>
           <span>{windowLabel}</span>
           {windowTimeLabel && (
-            <span style={{ color: '#9b97cc' }}>· {windowTimeLabel}</span>
+            <span style={{ color: `${ACCENT}88` }}>· {windowTimeLabel}</span>
           )}
         </div>
       )}
@@ -232,9 +236,9 @@ export function NudgeButton({
           value={note}
           onChange={e => setNote(e.target.value)}
           placeholder="Bring snacks, BYOB…"
-          style={{ ...inputStyle, color: '#555' }}
-          onFocus={e => (e.target.style.borderColor = '#7F77DD')}
-          onBlur={e  => (e.target.style.borderColor = '#e5e5e5')}
+          style={{ ...inputStyle, color: '#888' }}
+          onFocus={e => (e.target.style.borderColor = ACCENT)}
+          onBlur={e  => (e.target.style.borderColor = '#2a2a2a')}
         />
       </div>
 
@@ -244,9 +248,12 @@ export function NudgeButton({
           onClick={() => setStep('dropdown')}
           style={{
             flex: 1, padding: '9px 0', borderRadius: '9px',
-            border: '1.5px solid #e5e5e5', background: 'none',
+            border: '1px solid #2a2a2a', background: 'none',
             fontSize: '13px', color: '#666', cursor: 'pointer', fontFamily: 'inherit',
+            transition: 'border-color .15s, color .15s',
           }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = '#3a3a3a'; e.currentTarget.style.color = '#999' }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = '#2a2a2a'; e.currentTarget.style.color = '#666' }}
         >
           Back
         </button>
@@ -255,12 +262,12 @@ export function NudgeButton({
           disabled={loading || !title.trim()}
           style={{
             flex: 2, padding: '9px 0', borderRadius: '9px',
-            background: '#7F77DD', border: 'none', color: 'white',
+            background: ACCENT, border: 'none', color: 'white',
             fontSize: '13px', fontWeight: 700,
             cursor: loading || !title.trim() ? 'default' : 'pointer',
-            opacity: !title.trim() ? 0.5 : 1,
+            opacity: !title.trim() ? 0.4 : 1,
             transition: 'opacity 0.15s',
-            boxShadow: '0 2px 10px rgba(127,119,221,0.35)',
+            boxShadow: `0 2px 10px ${ACCENT}44`,
             fontFamily: 'inherit',
           }}
         >
@@ -285,13 +292,13 @@ export function NudgeButton({
 // ─── Style constants ──────────────────────────────────────────────────────────
 
 const labelStyle: React.CSSProperties = {
-  display: 'block', fontSize: '11px', fontWeight: 700, color: '#999',
+  display: 'block', fontSize: '11px', fontWeight: 700, color: '#555',
   textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '5px',
 }
 
 const inputStyle: React.CSSProperties = {
   width: '100%', padding: '8px 10px', borderRadius: '9px',
-  border: '1.5px solid #e5e5e5', fontSize: '14px', outline: 'none',
+  border: '1.5px solid #2a2a2a', fontSize: '14px', outline: 'none',
   boxSizing: 'border-box', fontFamily: 'inherit',
-  background: 'white', color: '#111', transition: 'border-color 0.15s',
+  background: '#141414', color: '#e0e0e0', transition: 'border-color 0.15s',
 }

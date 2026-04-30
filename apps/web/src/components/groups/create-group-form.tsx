@@ -3,6 +3,8 @@
 import { useState, useTransition } from 'react'
 import { createGroup } from '@/lib/actions/groups'
 
+const ACCENT = '#7F77DD'
+
 const VIBES = [
   { id: 'gaming',    label: 'Gaming',       emoji: '🎮', interests: ['gaming'],              group_type: 'recurring' },
   { id: 'nights',    label: 'Nights out',   emoji: '🌙', interests: ['bars'],                group_type: 'recurring' },
@@ -93,7 +95,7 @@ export function CreateGroupForm({ isPodium, boostCount }: Props) {
       formData.set('group_type', selected?.group_type ?? 'recurring')
       formData.set('occasion', '')
       formData.set('interests', JSON.stringify(selected?.interests ?? []))
-      formData.set('theme_color', '#7F77DD')
+      formData.set('theme_color', ACCENT)
       formData.set('banner_url', '')
       formData.set('description', '')
       formData.set('use_boost', 'false')
@@ -138,7 +140,7 @@ export function CreateGroupForm({ isPodium, boostCount }: Props) {
                 padding: '14px 16px',
                 paddingRight: '130px',
                 borderRadius: '12px',
-                border: `1.5px solid ${name.trim().length >= 2 ? '#6366f155' : '#222'}`,
+                border: `1.5px solid ${name.trim().length >= 2 ? `${ACCENT}55` : '#222'}`,
                 background: '#161616',
                 color: '#fff',
                 fontSize: '16px',
@@ -184,9 +186,9 @@ export function CreateGroupForm({ isPodium, boostCount }: Props) {
                   style={{
                     display: 'flex', alignItems: 'center', gap: '7px',
                     padding: '9px 16px', borderRadius: '10px',
-                    border: `1px solid ${on ? '#6366f155' : '#222'}`,
-                    background: on ? '#6366f112' : '#161616',
-                    color: on ? '#a5b4fc' : '#666',
+                    border: `1px solid ${on ? `${ACCENT}55` : '#222'}`,
+                    background: on ? `${ACCENT}12` : '#161616',
+                    color: on ? '#c4bff5' : '#666',
                     fontSize: '13px', fontWeight: on ? 600 : 500,
                     cursor: 'pointer', fontFamily: 'inherit',
                     transition: 'all .12s',
@@ -211,7 +213,7 @@ export function CreateGroupForm({ isPodium, boostCount }: Props) {
           disabled={!canSubmit || isPending}
           style={{
             width: '100%', padding: '15px', borderRadius: '12px', border: 'none',
-            background: canSubmit ? '#6366f1' : '#1a1a1a',
+            background: canSubmit ? ACCENT : '#1a1a1a',
             color: canSubmit ? '#fff' : '#333',
             fontSize: '16px', fontWeight: 700,
             cursor: canSubmit && !isPending ? 'pointer' : 'default',

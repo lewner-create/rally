@@ -19,7 +19,7 @@ export default async function NewPlanPage({ params }: Props) {
     <CreatePlanForm
       groupId={groupId}
       groupName={group.name}
-      themeColor={(group as any).theme_color ?? '#6366f1'}
+      themeColor={(group as any).theme_color ?? '#7F77DD'}
     />
   )
 }

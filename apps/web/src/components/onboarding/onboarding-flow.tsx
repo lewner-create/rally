@@ -97,6 +97,7 @@ export function OnboardingFlow({ profile }: OnboardingFlowProps) {
   const router = useRouter()
   const [step, setStep] = useState(1)
   const [isPending, startTransition] = useTransition()
+  const [error, setError] = useState<string | null>(null)
 
   const [displayName, setDisplayName] = useState(profile.display_name ?? '')
   const [username, setUsername]       = useState(profile.username ?? '')
@@ -110,19 +111,34 @@ export function OnboardingFlow({ profile }: OnboardingFlowProps) {
     setPresets(prev => prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id])
 
   const handleFinish = () => {
+    setError(null)
     startTransition(async () => {
-      await Promise.all([
-        updateProfile({
-          display_name: displayName,
-          username,
-          preferences: {
-            interests,
-            onboarded: true,
-          },
-        }),
-        saveWeeklyAvailability(presetsToWeekly(presets)),
-      ])
-      router.push('/dashboard')
+      try {
+        // Merge preferences rather than replace — preserve any existing keys
+        const existingPrefs = profile.preferences ?? {}
+        await Promise.all([
+          updateProfile({
+            display_name: displayName,
+            username,
+            preferences: {
+              ...existingPrefs,
+              interests,
+              onboarded: true,
+            },
+          }),
+          saveWeeklyAvailability(presetsToWeekly(presets)),
+        ])
+        router.push('/dashboard')
+      } catch (err: any) {
+        // Surface a friendly error based on the message
+        const msg: string = err?.message ?? ''
+        if (msg.includes('unique') || msg.includes('duplicate') || msg.includes('already')) {
+          setError('That username is already taken — try a different one.')
+          setStep(1) // Send them back to fix it
+        } else {
+          setError('Something went wrong. Please try again.')
+        }
+      }
     })
   }
 
@@ -147,6 +163,17 @@ export function OnboardingFlow({ profile }: OnboardingFlowProps) {
             ))}
           </div>
         </div>
+
+        {/* ── Global error banner ── */}
+        {error && (
+          <div style={{
+            marginBottom: '20px', padding: '12px 16px', borderRadius: '12px',
+            background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)',
+            color: '#f87171', fontSize: '14px',
+          }}>
+            {error}
+          </div>
+        )}
 
         {/* ── Step 1: Name ── */}
         {step === 1 && (
@@ -180,19 +207,25 @@ export function OnboardingFlow({ profile }: OnboardingFlowProps) {
                   }}>@</span>
                   <input
                     value={username}
-                    onChange={e => setUsername(e.target.value.replace(/[^a-z0-9_]/gi, '').toLowerCase())}
+                    onChange={e => {
+                      setError(null) // Clear error when they start typing
+                      setUsername(e.target.value.replace(/[^a-z0-9_]/gi, '').toLowerCase())
+                    }}
                     placeholder="username"
                     style={{ ...inputStyle, paddingLeft: '28px' }}
                     onFocus={e => (e.target.style.borderColor = accent)}
                     onBlur={e  => (e.target.style.borderColor = '#2a2a2a')}
                   />
                 </div>
+                <p style={{ fontSize: '11px', color: '#444', marginTop: '5px' }}>
+                  Letters, numbers, and underscores only
+                </p>
               </div>
             </div>
             <button
-              onClick={() => setStep(2)}
-              disabled={!displayName.trim() || !username.trim()}
-              style={primaryBtnStyle(!!displayName.trim() && !!username.trim())}
+              onClick={() => { setError(null); setStep(2) }}
+              disabled={!displayName.trim() || username.trim().length < 3}
+              style={primaryBtnStyle(!!displayName.trim() && username.trim().length >= 3)}
             >
               Continue
             </button>
@@ -245,8 +278,11 @@ export function OnboardingFlow({ profile }: OnboardingFlowProps) {
             <h1 style={{ fontSize: '26px', fontWeight: 800, margin: '0 0 8px' }}>
               When are you usually free?
             </h1>
-            <p style={{ fontSize: '14px', color: '#666', margin: '0 0 32px' }}>
-              This sets your default availability. You can always adjust it later.
+            <p style={{ fontSize: '14px', color: '#666', margin: '0 0 4px' }}>
+              Pick what fits your week — you can always respond differently later.
+            </p>
+            <p style={{ fontSize: '12px', color: '#444', margin: '0 0 28px' }}>
+              Select at least one to help Rally suggest good times.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '32px' }}>
               {PRESETS.map(p => {
@@ -284,15 +320,26 @@ export function OnboardingFlow({ profile }: OnboardingFlowProps) {
               })}
             </div>
             <div style={{ display: 'flex', gap: '10px' }}>
-              <button onClick={() => setStep(2)} style={ghostBtnStyle}>Back</button>
+              <button onClick={() => setStep(2)} style={ghostBtnStyle} disabled={isPending}>
+                Back
+              </button>
               <button
                 onClick={handleFinish}
-                disabled={isPending}
-                style={{ ...primaryBtnStyle(true), flex: 1, opacity: isPending ? 0.7 : 1 }}
+                disabled={isPending || presets.length === 0}
+                style={{
+                  ...primaryBtnStyle(presets.length > 0),
+                  flex: 1,
+                  opacity: isPending ? 0.7 : 1,
+                }}
               >
                 {isPending ? 'Setting up...' : "Let's go"}
               </button>
             </div>
+            {presets.length === 0 && (
+              <p style={{ fontSize: '12px', color: '#444', textAlign: 'center', marginTop: '12px' }}>
+                Pick at least one time to continue
+              </p>
+            )}
           </div>
         )}
 

@@ -15,10 +15,18 @@ function dismissKey(groupId: string) {
   return `rally_prompt_dismissed_${groupId}_${today}`
 }
 
+function formatTimeLabel(start?: string, end?: string) {
+  if (!start || !end) return undefined
+  const fmt = (t: string) => {
+    const [h] = t.split(':').map(Number)
+    return h === 0 ? '12am' : h < 12 ? `${h}am` : h === 12 ? '12pm' : `${h - 12}pm`
+  }
+  return `${fmt(start)} – ${fmt(end)}`
+}
+
 export function ProactiveBanner({ groupId, prompt }: ProactiveBannerProps) {
   const [visible, setVisible] = useState(false)
 
-  // Only show if not dismissed today
   useEffect(() => {
     try {
       const dismissed = localStorage.getItem(dismissKey(groupId))
@@ -57,18 +65,13 @@ export function ProactiveBanner({ groupId, prompt }: ProactiveBannerProps) {
         }
       `}</style>
 
-      {/* Spark + message */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
         <span style={{ fontSize: '20px', flexShrink: 0 }}>✨</span>
-        <p style={{
-          fontSize: '14px', fontWeight: 600, color: 'white',
-          margin: 0, lineHeight: 1.4,
-        }}>
+        <p style={{ fontSize: '14px', fontWeight: 600, color: 'white', margin: 0, lineHeight: 1.4 }}>
           {prompt.message}
         </p>
       </div>
 
-      {/* CTA + dismiss */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
         <NudgeButton
           groupId={groupId}
@@ -76,6 +79,7 @@ export function ProactiveBanner({ groupId, prompt }: ProactiveBannerProps) {
           windowStart={prompt.windowStart}
           windowEnd={prompt.windowEnd}
           windowLabel={prompt.windowLabel}
+          windowTimeLabel={formatTimeLabel(prompt.windowStart, prompt.windowEnd)}
         />
         <button
           onClick={handleDismiss}

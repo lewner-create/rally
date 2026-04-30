@@ -70,6 +70,7 @@ export async function postCheckWhosIn(params: {
 
   if (cardErr || !card) return { error: cardErr?.message ?? 'Failed to create plan' }
 
+  // Post the interactive plan card to chat
   const { error: msgErr } = await supabase
     .from('chat_messages')
     .insert({
@@ -82,8 +83,37 @@ export async function postCheckWhosIn(params: {
 
   if (msgErr) return { error: msgErr.message }
 
+  // Get sender name for the radio notification
+  const { data: sender } = await supabase
+    .from('profiles')
+    .select('display_name, username')
+    .eq('id', user.id)
+    .single()
+
+  const senderName = sender?.display_name ?? sender?.username ?? 'Someone'
+
+  const dateStr = params.proposedDate
+    ? new Date(params.proposedDate + 'T12:00:00').toLocaleDateString('en-US', {
+        weekday: 'short', month: 'short', day: 'numeric',
+      })
+    : null
+
+  const notifText = dateStr
+    ? `👋 ${senderName} is checking who's in for "${params.title}" · ${dateStr}`
+    : `👋 ${senderName} is checking who's in for "${params.title}"`
+
+  // Post radio notification so members know to look at the plan card
+  await supabase
+    .from('chat_messages')
+    .insert({
+      group_id:     params.groupId,
+      user_id:      user.id,
+      content:      notifText,
+      message_type: 'radio',
+    })
+
   revalidatePath(`/groups/${params.groupId}`)
-  return {}
+  return { id: card.id }
 }
 
 // ─── Respond to a plan card ───────────────────────────────────────────────────

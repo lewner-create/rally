@@ -17,7 +17,7 @@ function initials(name: string) {
 
 const SECTION_LABEL: React.CSSProperties = {
   fontSize: '10px', fontWeight: 700, letterSpacing: '.08em',
-  textTransform: 'uppercase', color: '#888780', margin: '0 0 12px',
+  textTransform: 'uppercase', color: '#555', margin: '0 0 12px',
 }
 
 export default async function GroupPage({ params }: { params: Promise<{ groupId: string }> }) {
@@ -49,14 +49,15 @@ export default async function GroupPage({ params }: { params: Promise<{ groupId:
       <div style={{
         width: '256px', flexShrink: 0,
         display: 'flex', flexDirection: 'column',
-        overflowY: 'auto', borderRight: '0.5px solid #E8E6E0',
-        padding: '24px 20px', background: '#fff',
+        overflowY: 'auto', borderRight: '1px solid #1e1e1e',
+        padding: '24px 20px', background: '#111',
       }}>
         <Link
           href="/dashboard"
           style={{
             display: 'inline-flex', alignItems: 'center', gap: '6px',
-            fontSize: '12px', color: '#aaa', textDecoration: 'none', marginBottom: '22px',
+            fontSize: '12px', color: '#555', textDecoration: 'none', marginBottom: '22px',
+            transition: 'color 0.15s',
           }}
         >
           <ArrowLeft size={13} /> Dashboard
@@ -72,35 +73,36 @@ export default async function GroupPage({ params }: { params: Promise<{ groupId:
           }}>
             {initials(group.name)}
           </div>
-          <h1 style={{ fontSize: '16px', fontWeight: 700, margin: '0 0 3px', color: '#111', letterSpacing: '-0.1px' }}>
+          <h1 style={{ fontSize: '16px', fontWeight: 700, margin: '0 0 3px', color: '#f0f0f0', letterSpacing: '-0.1px' }}>
             {group.name}
           </h1>
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <Users size={11} color="#aaa" />
-            <span style={{ fontSize: '12px', color: '#aaa' }}>
+            <Users size={11} color="#555" />
+            <span style={{ fontSize: '12px', color: '#555' }}>
               {group.group_members.length} of 6 members
             </span>
           </div>
           {(group as any).description && (
-            <p style={{ fontSize: '12px', color: '#aaa', marginTop: '5px', lineHeight: 1.5 }}>
+            <p style={{ fontSize: '12px', color: '#555', marginTop: '5px', lineHeight: 1.5 }}>
               {(group as any).description}
             </p>
           )}
         </div>
 
-        <div style={{ borderTop: '0.5px solid #E8E6E0', margin: '0 0 18px' }} />
+        <div style={{ borderTop: '1px solid #1e1e1e', margin: '0 0 18px' }} />
 
         <div style={{ flex: 1 }}>
           <p style={SECTION_LABEL}>Members</p>
           <MemberList members={group.group_members} currentUserId={user.id} />
         </div>
 
-        <div style={{ borderTop: '0.5px solid #E8E6E0', margin: '18px 0 14px' }} />
+        <div style={{ borderTop: '1px solid #1e1e1e', margin: '18px 0 14px' }} />
         <Link
           href={`/groups/${groupId}/settings`}
           style={{
             display: 'flex', alignItems: 'center', gap: '7px',
-            fontSize: '13px', color: '#aaa', textDecoration: 'none', padding: '5px 0',
+            fontSize: '13px', color: '#555', textDecoration: 'none', padding: '5px 0',
+            transition: 'color 0.15s',
           }}
         >
           <Settings size={13} /> Group settings
@@ -108,7 +110,7 @@ export default async function GroupPage({ params }: { params: Promise<{ groupId:
 
         {isAdmin && (
           <>
-            <div style={{ borderTop: '0.5px solid #E8E6E0', margin: '14px 0' }} />
+            <div style={{ borderTop: '1px solid #1e1e1e', margin: '14px 0' }} />
             <div>
               <p style={SECTION_LABEL}>Invite people</p>
               <InvitePanel groupId={group.id} initialInvites={invites} />

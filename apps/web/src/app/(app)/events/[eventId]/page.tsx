@@ -9,13 +9,13 @@ type Props = {
 }
 
 const EVENT_TYPE_META: Record<string, { emoji: string; label: string }> = {
-  vacation:   { emoji: '\u2708\uFE0F',       label: 'Vacation'   },
-  day_trip:   { emoji: '\uD83D\uDE97',       label: 'Day trip'   },
-  road_trip:  { emoji: '\uD83D\uDEE3\uFE0F', label: 'Road trip'  },
-  game_night: { emoji: '\uD83C\uDFAE',       label: 'Game night' },
-  hangout:    { emoji: '\uD83D\uDECB\uFE0F', label: 'Hangout'    },
-  meetup:     { emoji: '\uD83D\uDC4B',       label: 'Meetup'     },
-  moto_trip:  { emoji: '\uD83C\uDFCD\uFE0F', label: 'Moto trip'  },
+  vacation:   { emoji: '✈️',  label: 'Vacation'   },
+  day_trip:   { emoji: '🚗',  label: 'Day trip'   },
+  road_trip:  { emoji: '🛣️', label: 'Road trip'  },
+  game_night: { emoji: '🎮',  label: 'Game night' },
+  hangout:    { emoji: '🛋️', label: 'Hangout'    },
+  meetup:     { emoji: '👋',  label: 'Meetup'     },
+  moto_trip:  { emoji: '🏍️', label: 'Moto trip'  },
 }
 
 function formatDate(iso: string | null) {
@@ -70,7 +70,7 @@ export default async function EventPage({ params }: Props) {
 
   const userRsvp   = (rsvps ?? []).find((r) => r.user_id === user.id)
   const isCreator  = event.created_by === user.id
-  const typeMeta   = EVENT_TYPE_META[event.event_type] ?? { emoji: '\uD83D\uDCC5', label: event.event_type }
+  const typeMeta   = EVENT_TYPE_META[event.event_type] ?? { emoji: '📅', label: event.event_type }
   const goingCount = (rsvps ?? []).filter((r) => r.rsvp_status === 'yes').length
   const accentColor = (event.groups as any)?.theme_color ?? '#6366f1'
   const groupName   = (event.groups as any)?.name ?? ''
@@ -148,7 +148,7 @@ export default async function EventPage({ params }: Props) {
                     {event.starts_at && (
                       <span className="text-sm text-[#aaa]">
                         {formatTime(event.starts_at)}
-                        {event.ends_at && ` \u2013 ${formatTime(event.ends_at)}`}
+                        {event.ends_at && ` – ${formatTime(event.ends_at)}`}
                       </span>
                     )}
                   </div>

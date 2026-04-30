@@ -76,7 +76,7 @@ function AvatarStack({ members, size = 26 }: { members: MemberProfile[]; size?: 
             display:         'flex',
             alignItems:      'center',
             justifyContent:  'center',
-            border:          '2px solid white',
+            border:          '2px solid rgba(255,255,255,0.15)',
             marginLeft:      i > 0 ? -size * 0.28 : 0,
             zIndex:          shown.length - i,
             position:        'relative',
@@ -91,14 +91,14 @@ function AvatarStack({ members, size = 26 }: { members: MemberProfile[]; size?: 
           width:         size,
           height:        size,
           borderRadius:  '50%',
-          background:    'rgba(255,255,255,0.15)',
-          color:         'rgba(255,255,255,0.8)',
+          background:    'rgba(255,255,255,0.1)',
+          color:         'rgba(255,255,255,0.6)',
           fontSize:      size * 0.34,
           fontWeight:    700,
           display:       'flex',
           alignItems:    'center',
           justifyContent:'center',
-          border:        '2px solid white',
+          border:        '2px solid rgba(255,255,255,0.15)',
           marginLeft:    -size * 0.28,
           position:      'relative',
           flexShrink:    0,
@@ -134,7 +134,7 @@ function AvatarStackDark({ members, size = 24 }: { members: MemberProfile[]; siz
             display:         'flex',
             alignItems:      'center',
             justifyContent:  'center',
-            border:          '2px solid rgba(255,255,255,0.12)',
+            border:          '2px solid rgba(255,255,255,0.08)',
             marginLeft:      i > 0 ? -size * 0.28 : 0,
             zIndex:          shown.length - i,
             position:        'relative',
@@ -149,14 +149,14 @@ function AvatarStackDark({ members, size = 24 }: { members: MemberProfile[]; siz
           width:         size,
           height:        size,
           borderRadius:  '50%',
-          background:    'rgba(255,255,255,0.1)',
-          color:         'rgba(255,255,255,0.5)',
+          background:    'rgba(255,255,255,0.08)',
+          color:         'rgba(255,255,255,0.4)',
           fontSize:      size * 0.34,
           fontWeight:    700,
           display:       'flex',
           alignItems:    'center',
           justifyContent:'center',
-          border:        '2px solid rgba(255,255,255,0.12)',
+          border:        '2px solid rgba(255,255,255,0.08)',
           marginLeft:    -size * 0.28,
           position:      'relative',
           flexShrink:    0,
@@ -183,11 +183,11 @@ export async function OpenWindows({ groupId, tier }: OpenWindowsProps) {
     return (
       <div
         className="rounded-2xl p-8 text-center border border-dashed"
-        style={{ borderColor: '#D3D1C7' }}
+        style={{ borderColor: '#2a2a2a' }}
       >
-        <Calendar className="h-8 w-8 mx-auto mb-3" style={{ color: '#B4B2A9' }} />
-        <p className="text-sm font-medium mb-1">No open windows yet</p>
-        <p className="text-xs text-muted-foreground">
+        <Calendar className="h-8 w-8 mx-auto mb-3" style={{ color: '#444' }} />
+        <p className="text-sm font-medium mb-1" style={{ color: '#888' }}>No open windows yet</p>
+        <p className="text-xs" style={{ color: '#555' }}>
           Members can set their typical availability on the availability page.
         </p>
       </div>
@@ -203,18 +203,22 @@ export async function OpenWindows({ groupId, tier }: OpenWindowsProps) {
     <div className="space-y-3">
 
       {/* ── Best window: dark hero card ────────────────────────────────────── */}
+      {/* NOTE: overflow-hidden is on the inner decoration wrapper only, NOT the card root,
+          so the NudgeButton portal is never clipped by border-radius. */}
       <div
-        className="rounded-2xl p-6 relative overflow-hidden"
+        className="rounded-2xl p-6 relative"
         style={{
           background: 'linear-gradient(145deg, #2C2C2A 0%, #1C1B1A 55%, #26215C 100%)',
           boxShadow: '0 12px 40px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.12)',
         }}
       >
-        {/* Glow orb */}
-        <div
-          className="absolute -top-12 -right-12 w-36 h-36 rounded-full pointer-events-none"
-          style={{ background: 'radial-gradient(circle, rgba(127,119,221,0.2) 0%, transparent 70%)' }}
-        />
+        {/* Glow orb — isolated in its own overflow-hidden wrapper so it doesn't clip the button */}
+        <div className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none">
+          <div
+            className="absolute -top-12 -right-12 w-36 h-36 rounded-full"
+            style={{ background: 'radial-gradient(circle, rgba(127,119,221,0.2) 0%, transparent 70%)' }}
+          />
+        </div>
 
         <div className="relative">
           {/* Eyebrow */}
@@ -244,8 +248,8 @@ export async function OpenWindows({ groupId, tier }: OpenWindowsProps) {
           </p>
 
           {/* Avatar stack + CTA */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
               <AvatarStack members={best.members} size={28} />
               {best.members.length > 0 && (
                 <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.45)', fontWeight: 500 }}>
@@ -253,14 +257,16 @@ export async function OpenWindows({ groupId, tier }: OpenWindowsProps) {
                 </span>
               )}
             </div>
-            <NudgeButton
-              groupId={groupId}
-              windowDate={bestSlot.windowDate}
-              windowStart={bestSlot.windowStart}
-              windowEnd={bestSlot.windowEnd}
-              windowLabel={`${bestLabel} · ${bestSlot.shortDate}`}
-              windowTimeLabel={bestSlot.windowTimeLabel}
-            />
+            <div style={{ flexShrink: 0 }}>
+              <NudgeButton
+                groupId={groupId}
+                windowDate={bestSlot.windowDate}
+                windowStart={bestSlot.windowStart}
+                windowEnd={bestSlot.windowEnd}
+                windowLabel={`${bestLabel} · ${bestSlot.shortDate}`}
+                windowTimeLabel={bestSlot.windowTimeLabel}
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -276,9 +282,8 @@ export async function OpenWindows({ groupId, tier }: OpenWindowsProps) {
             key={i}
             className="rounded-xl px-4 py-3.5"
             style={{
-              background: '#fff',
-              border: '0.5px solid #E8E6E0',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+              background: '#1a1a1a',
+              border: '1px solid #252525',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
@@ -287,14 +292,14 @@ export async function OpenWindows({ groupId, tier }: OpenWindowsProps) {
                 <div
                   style={{
                     width: '7px', height: '7px', borderRadius: '50%', flexShrink: 0,
-                    background: isGood ? '#1D9E75' : '#B4B2A9',
+                    background: isGood ? '#1D9E75' : '#444',
                   }}
                 />
                 <div style={{ minWidth: 0 }}>
-                  <p style={{ fontSize: '14px', fontWeight: 600, color: '#111', margin: 0, lineHeight: 1.3 }}>
+                  <p style={{ fontSize: '14px', fontWeight: 600, color: '#f0f0f0', margin: 0, lineHeight: 1.3 }}>
                     {label}
                   </p>
-                  <p style={{ fontSize: '12px', color: '#aaa', margin: '2px 0 0' }}>
+                  <p style={{ fontSize: '12px', color: '#555', margin: '2px 0 0' }}>
                     {slot.shortDate} · {slot.time}
                   </p>
                 </div>
@@ -321,10 +326,10 @@ export async function OpenWindows({ groupId, tier }: OpenWindowsProps) {
       {tier === 0 && (
         <div
           className="rounded-xl px-4 py-3 flex items-center gap-3"
-          style={{ background: '#EEEDFE', border: '0.5px solid #AFA9EC' }}
+          style={{ background: 'rgba(127,119,221,0.1)', border: '1px solid rgba(127,119,221,0.2)' }}
         >
           <Lock className="h-3.5 w-3.5 flex-shrink-0" style={{ color: '#7F77DD' }} />
-          <p className="text-sm" style={{ color: '#534AB7' }}>
+          <p className="text-sm" style={{ color: '#9b97cc' }}>
             Free groups see up to 3 windows. Boost your group to unlock more.
           </p>
         </div>

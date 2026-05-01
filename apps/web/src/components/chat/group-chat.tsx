@@ -17,9 +17,10 @@ export function GroupChat({ groupId, currentUserId }: GroupChatProps) {
   useEffect(() => {
     createClient()
       .from('chat_messages')
-      .select('*, profiles(id, display_name, username)')
+      .select('*, profiles(id, display_name, username), event:event_id(id, title, event_type)')
       .eq('group_id', groupId)
-      .is('event_id', null)
+      // No event_id filter — group chat shows all messages.
+      // Event-tagged messages render with a context pill in ChatPanel.
       .order('created_at', { ascending: true })
       .limit(50)
       .then(({ data }) => {

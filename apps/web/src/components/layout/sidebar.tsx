@@ -1,154 +1,60 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { useState, useRef } from 'react'
-import { Settings, LogOut, MessageSquare, Plus, LayoutDashboard } from 'lucide-react'
+import { usePathname, useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { Settings, LogOut, MessageSquare, Plus, LayoutDashboard, ChevronLeft, ChevronRight } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
+import { AvailabilitySheet } from '@/components/availability/availability-sheet'
 
 interface Group {
-  id: string
-  name: string
-  slug: string
+  id:          string
+  name:        string
+  slug:        string
   theme_color: string | null
-  banner_url?: string | null
 }
 
 interface SidebarProps {
   groups: Group[]
 }
 
-// Resolve banner_url to a CSS background style for the group icon
-function getGroupIconStyle(group: Group): React.CSSProperties {
-  const color = group.theme_color ?? '#7F77DD'
-  if (!group.banner_url) return { background: color }
-  if (group.banner_url.startsWith('gradient:')) {
-    return { background: group.banner_url.replace('gradient:', '') }
-  }
-  // It's an image URL — use as cover
-  return {
-    backgroundImage: `url(${group.banner_url})`,
-    backgroundSize: 'cover',
-    backgroundPosition: 'center',
-  }
-}
-
-function Tooltip({ text, y }: { text: string; y: number }) {
-  return (
-    <div
-      className="fixed z-[999] pointer-events-none"
-      style={{ left: 68, top: y, transform: 'translateY(-50%)' }}
-    >
-      <div className="flex items-center gap-1.5">
-        {/* Arrow */}
-        <div
-          className="w-1.5 h-1.5 rotate-45 bg-[#2c2c2c] border-l border-t border-[#3a3a3a]"
-          style={{ flexShrink: 0 }}
-        />
-        <div
-          className="bg-[#2c2c2c] text-white text-xs font-medium px-2.5 py-1.5 rounded-lg border border-[#3a3a3a] whitespace-nowrap shadow-xl"
-          style={{ letterSpacing: '0.01em' }}
-        >
-          {text}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function NavIcon({
-  href,
-  icon: Icon,
-  label,
-  active,
-  onTooltip,
-}: {
-  href: string
-  icon: React.ElementType
-  label: string
-  active: boolean
-  onTooltip: (y: number | null) => void
-}) {
-  return (
-    <Link
-      href={href}
-      onMouseEnter={(e) => {
-        const rect = e.currentTarget.getBoundingClientRect()
-        onTooltip(rect.top + rect.height / 2)
-      }}
-      onMouseLeave={() => onTooltip(null)}
-      className={cn(
-        'w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-150',
-        active
-          ? 'bg-[var(--rally-primary-surface)] text-[var(--rally-primary-text)]'
-          : 'text-[#555] hover:text-[#aaa] hover:bg-[#1e1e1e]'
-      )}
-    >
-      <Icon className="h-[18px] w-[18px]" />
-    </Link>
-  )
-}
-
-function GroupIcon({
-  group,
-  active,
-  onTooltip,
-}: {
-  group: Group
-  active: boolean
-  onTooltip: (y: number | null) => void
-}) {
-  const color = group.theme_color ?? '#7F77DD'
-  const iconStyle = getGroupIconStyle(group)
-  const initial = group.name.charAt(0).toUpperCase()
-  // Check if it's an image (not a solid color or gradient)
-  const isImage = group.banner_url && !group.banner_url.startsWith('gradient:')
-
-  return (
-    <Link
-      href={`/groups/${group.id}`}
-      onMouseEnter={(e) => {
-        const rect = e.currentTarget.getBoundingClientRect()
-        onTooltip(rect.top + rect.height / 2)
-      }}
-      onMouseLeave={() => onTooltip(null)}
-      className="relative group/icon block"
-    >
-      {/* Active ring */}
-      {active && (
-        <div
-          className="absolute inset-0 rounded-2xl"
-          style={{
-            boxShadow: `0 0 0 2px ${color}`,
-          }}
-        />
-      )}
-      <div
-        className={cn(
-          'w-10 h-10 rounded-2xl flex items-center justify-center text-sm font-bold text-white overflow-hidden transition-all duration-150',
-          active
-            ? 'rounded-[14px]'
-            : 'rounded-[20px] group-hover/icon:rounded-[14px]'
-        )}
-        style={iconStyle}
-      >
-        {!isImage && <span style={{ textShadow: '0 1px 2px rgba(0,0,0,0.4)' }}>{initial}</span>}
-      </div>
-
-      {/* Activity badge slot — wire to real data later */}
-      {/* {hasUnread && (
-        <div className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-[#ef4444] border-2 border-[#0f0f0f]" />
-      )} */}
-    </Link>
-  )
-}
-
 export function Sidebar({ groups }: SidebarProps) {
   const pathname = usePathname()
-  const router = useRouter()
-  const [tooltip, setTooltip] = useState<{ text: string; y: number } | null>(null)
+  const router   = useRouter()
+
+  const [collapsed,   setCollapsed]   = useState(false)
+  const [lastGroupId, setLastGroupId] = useState<string | null>(null)
+
+  // Extract group ID from URL
+  const groupIdFromPath = pathname.match(/\/groups\/([0-9a-f-]{36})/)?.[1] ?? null
+
+  // Persist last visited group
+  useEffect(() => {
+    if (groupIdFromPath) {
+      try { localStorage.setItem('rally_last_group', groupIdFromPath) } catch {}
+      setLastGroupId(groupIdFromPath)
+    } else {
+      try { setLastGroupId(localStorage.getItem('rally_last_group')) } catch {}
+    }
+  }, [groupIdFromPath])
+
+  // Restore collapsed state
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('rally_sidebar_collapsed')
+      if (stored !== null) setCollapsed(stored === 'true')
+    } catch {}
+  }, [])
+
+  const toggleCollapsed = () => {
+    const next = !collapsed
+    setCollapsed(next)
+    try { localStorage.setItem('rally_sidebar_collapsed', String(next)) } catch {}
+  }
+
+  const activeGroupId = groupIdFromPath ?? lastGroupId
+  const isGroupActive = (id: string) => id === activeGroupId
 
   async function handleSignOut() {
     const supabase = createClient()
@@ -156,136 +62,253 @@ export function Sidebar({ groups }: SidebarProps) {
     router.push('/login')
   }
 
-  const isGroupActive = (id: string) =>
-    pathname.startsWith(`/groups/${id}`) ||
-    pathname.startsWith(`/events/`) || // partial — no group ID in URL, best-effort
-    pathname.startsWith(`/plans/`)
-
-  const exactGroupActive = (id: string) => pathname.startsWith(`/groups/${id}`)
+  // Nav item class — compact centered square when collapsed, full row when expanded
+  const navItemCn = (active: boolean) => cn(
+    'flex items-center rounded-md text-sm font-medium transition-colors',
+    collapsed
+      ? 'justify-center w-9 h-9 mx-auto'
+      : 'gap-2.5 px-2.5 py-2 w-full',
+    active
+      ? 'bg-[#7F77DD22] text-[#9b97dd]'
+      : 'text-[#666] hover:bg-[#1a1728] hover:text-[#e0e0e0]'
+  )
 
   return (
-    <>
-      {/* Fixed tooltip rendered outside sidebar overflow */}
-      {tooltip && <Tooltip text={tooltip.text} y={tooltip.y} />}
+    <aside style={{
+      background: '#0e0c1c', borderRight: '1px solid #1e1b2e',
+      display: 'flex', flexDirection: 'column', height: '100%',
+      width: collapsed ? '56px' : '224px', flexShrink: 0,
+      transition: 'width 0.2s ease', overflow: 'hidden',
+    }}>
 
-      <aside
-        className="flex flex-col h-full border-r"
-        style={{
-          width: 60,
-          minWidth: 60,
-          background: '#0e0d14',
-          borderColor: '#1e1c2a',
-        }}
-      >
-        {/* Wordmark — just the "r" glyph */}
-        <div className="flex items-center justify-center h-14 flex-shrink-0">
-          <span
-            className="text-[20px] font-semibold leading-none select-none"
-            style={{
-              color: 'var(--rally-primary)',
-              letterSpacing: '-0.03em',
-              fontFamily: 'inherit',
-            }}
-          >
-            r
+      {/* Header — wordmark + toggle */}
+      <div style={{
+        display: 'flex', alignItems: 'center',
+        justifyContent: collapsed ? 'center' : 'space-between',
+        padding: collapsed ? '16px 0' : '18px 16px 14px',
+      }}>
+        {!collapsed && (
+          <span style={{ fontSize: '22px', fontWeight: 500, letterSpacing: '-0.03em', color: '#7F77DD', lineHeight: 1 }}>
+            rally
           </span>
-        </div>
+        )}
+        <button
+          onClick={toggleCollapsed}
+          title={collapsed ? 'Expand' : 'Collapse'}
+          style={{
+            width: '22px', height: '22px', borderRadius: '6px',
+            background: 'none', border: '1px solid #2a2a2a',
+            cursor: 'pointer', color: '#444', flexShrink: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            transition: 'border-color 0.15s, color 0.15s',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = '#555'; e.currentTarget.style.color = '#888' }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = '#2a2a2a'; e.currentTarget.style.color = '#444' }}
+        >
+          {collapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
+        </button>
+      </div>
 
-        {/* Top divider */}
-        <div className="mx-3 h-px" style={{ background: '#1e1c2a' }} />
+      {/* Nav */}
+      <nav style={{
+        flex: 1, overflowY: 'auto', overflowX: 'hidden',
+        padding: collapsed ? '4px 0' : '0 12px',
+        display: 'flex', flexDirection: 'column', gap: '2px',
+      }}>
 
-        {/* Main nav icons */}
-        <div className="flex flex-col items-center gap-1 px-[10px] pt-3 pb-2">
-          <NavIcon
-            href="/dashboard"
-            icon={LayoutDashboard}
-            label="Dashboard"
-            active={pathname === '/dashboard'}
-            onTooltip={(y) =>
-              y !== null
-                ? setTooltip({ text: 'Dashboard', y })
-                : setTooltip(null)
-            }
-          />
-          <NavIcon
-            href="/messages"
-            icon={MessageSquare}
-            label="Messages"
-            active={pathname.startsWith('/messages')}
-            onTooltip={(y) =>
-              y !== null
-                ? setTooltip({ text: 'Messages', y })
-                : setTooltip(null)
-            }
-          />
-        </div>
+        <Link href="/messages" className={navItemCn(pathname.startsWith('/messages'))} title={collapsed ? 'Messages' : ''}>
+          <MessageSquare className="h-4 w-4 shrink-0" />
+          {!collapsed && 'Messages'}
+        </Link>
 
-        {/* Groups divider */}
-        <div className="mx-3 h-px mt-1" style={{ background: '#1e1c2a' }} />
+        <Link href="/dashboard" className={navItemCn(pathname === '/dashboard')} title={collapsed ? 'Dashboard' : ''}>
+          <LayoutDashboard className="h-4 w-4 shrink-0" />
+          {!collapsed && 'Dashboard'}
+        </Link>
 
-        {/* Group icons */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col items-center gap-2 px-[10px] py-3">
-          {groups.map((g) => (
-            <GroupIcon
-              key={g.id}
-              group={g}
-              active={exactGroupActive(g.id)}
-              onTooltip={(y) =>
-                y !== null
-                  ? setTooltip({ text: g.name, y })
-                  : setTooltip(null)
+        {/* Groups */}
+        <div style={{ paddingTop: '8px' }}>
+          {!collapsed && (
+            <p style={{
+              fontSize: '10px', fontWeight: 700, textTransform: 'uppercase',
+              letterSpacing: '0.08em', color: '#3d3856', padding: '4px 10px 6px',
+            }}>Groups</p>
+          )}
+
+          <div style={{
+            display: 'flex', flexDirection: 'column',
+            gap: collapsed ? '6px' : '2px',
+            alignItems: collapsed ? 'center' : 'stretch',
+          }}>
+            {groups.map(g => {
+              const active = isGroupActive(g.id)
+              const color  = g.theme_color ?? '#7F77DD'
+
+              if (collapsed) {
+                return (
+                  <Link
+                    key={g.id}
+                    href={`/groups/${g.id}`}
+                    title={g.name}
+                    style={{
+                      width: '36px', height: '36px',
+                      borderRadius: active ? '10px' : '14px',
+                      background: active ? color + '30' : color + '18',
+                      border: '1.5px solid ' + (active ? color + '55' : 'transparent'),
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '13px', fontWeight: 900, color,
+                      textDecoration: 'none', flexShrink: 0,
+                      transition: 'border-radius 0.2s, background 0.15s, border-color 0.15s',
+                    }}
+                    onMouseEnter={e => {
+                      if (!active) {
+                        const el = e.currentTarget as HTMLElement
+                        el.style.background = color + '2e'
+                        el.style.borderColor = color + '44'
+                        el.style.borderRadius = '10px'
+                      }
+                    }}
+                    onMouseLeave={e => {
+                      if (!active) {
+                        const el = e.currentTarget as HTMLElement
+                        el.style.background = color + '18'
+                        el.style.borderColor = 'transparent'
+                        el.style.borderRadius = '14px'
+                      }
+                    }}
+                  >
+                    {g.name[0]?.toUpperCase()}
+                  </Link>
+                )
               }
-            />
-          ))}
 
-          {/* New group */}
-          <Link
-            href="/groups/new"
-            onMouseEnter={(e) => {
-              const rect = e.currentTarget.getBoundingClientRect()
-              setTooltip({ text: 'New group', y: rect.top + rect.height / 2 })
-            }}
-            onMouseLeave={() => setTooltip(null)}
-            className="w-10 h-10 rounded-2xl flex items-center justify-center transition-all duration-150 hover:rounded-[14px]"
-            style={{
-              background: 'rgba(127,119,221,0.1)',
-              border: '1.5px dashed rgba(127,119,221,0.35)',
-              color: '#7F77DD',
-            }}
-          >
-            <Plus className="h-4 w-4" />
-          </Link>
+              return (
+                <Link
+                  key={g.id}
+                  href={`/groups/${g.id}`}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '8px',
+                    padding: '6px 8px', borderRadius: '8px',
+                    background: active ? color + '18' : 'transparent',
+                    border: active ? '1px solid ' + color + '33' : '1px solid transparent',
+                    textDecoration: 'none',
+                    transition: 'background 0.15s, border-color 0.15s',
+                  }}
+                  onMouseEnter={e => {
+                    if (!active) {
+                      const el = e.currentTarget as HTMLElement
+                      el.style.background = color + '10'
+                      const icon = el.querySelector('.g-icon') as HTMLElement
+                      if (icon) { icon.style.background = color + '2e'; icon.style.borderColor = color + '44' }
+                    }
+                  }}
+                  onMouseLeave={e => {
+                    if (!active) {
+                      const el = e.currentTarget as HTMLElement
+                      el.style.background = 'transparent'
+                      const icon = el.querySelector('.g-icon') as HTMLElement
+                      if (icon) { icon.style.background = color + '18'; icon.style.borderColor = 'transparent' }
+                    }
+                  }}
+                >
+                  <div
+                    className="g-icon"
+                    style={{
+                      width: '24px', height: '24px', flexShrink: 0,
+                      borderRadius: active ? '7px' : '10px',
+                      background: active ? color + '30' : color + '18',
+                      border: '1.5px solid ' + (active ? color + '55' : 'transparent'),
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '10px', fontWeight: 900, color,
+                      transition: 'border-radius 0.2s, background 0.15s, border-color 0.15s',
+                    }}
+                  >
+                    {g.name[0]?.toUpperCase()}
+                  </div>
+                  <span style={{
+                    fontSize: '13px', fontWeight: 500,
+                    color: active ? color : '#d0d0d0',
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    transition: 'color 0.15s', flex: 1,
+                  }}>
+                    {g.name}
+                  </span>
+                </Link>
+              )
+            })}
+
+            {/* New group */}
+            {collapsed ? (
+              <Link
+                href="/groups/new"
+                title="New group"
+                style={{
+                  width: '36px', height: '36px', borderRadius: '14px',
+                  background: 'rgba(127,119,221,0.12)',
+                  border: '1.5px solid rgba(127,119,221,0.25)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: '#7F77DD', textDecoration: 'none',
+                  transition: 'border-radius 0.2s',
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderRadius = '10px' }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderRadius = '14px' }}
+              >
+                <Plus size={16} />
+              </Link>
+            ) : (
+              <Link
+                href="/groups/new"
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '8px',
+                  padding: '7px 8px', marginTop: '2px', borderRadius: '8px',
+                  background: 'rgba(127,119,221,0.10)',
+                  border: '1px solid rgba(127,119,221,0.22)',
+                  color: '#7F77DD', textDecoration: 'none',
+                  fontSize: '13px', fontWeight: 600,
+                }}
+              >
+                <Plus className="h-4 w-4 shrink-0" />
+                New group
+              </Link>
+            )}
+          </div>
         </div>
+      </nav>
 
-        {/* Bottom divider */}
-        <div className="mx-3 h-px" style={{ background: '#1e1c2a' }} />
+      {/* Bottom */}
+      <div style={{
+        borderTop: '1px solid #1e1b2e',
+        padding: collapsed ? '8px 0' : '8px 12px',
+        display: 'flex', flexDirection: 'column',
+        alignItems: collapsed ? 'center' : 'stretch',
+        gap: '2px',
+      }}>
+        <AvailabilitySheet
+          triggerClassName={collapsed
+            ? 'flex items-center justify-center w-9 h-9 mx-auto rounded-md text-[#666] hover:bg-[#1a1728] hover:text-[#e0e0e0] transition-colors'
+            : 'w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md text-sm font-medium transition-colors text-[#666] hover:bg-[#1a1728] hover:text-[#e0e0e0]'
+          }
+          collapsed={collapsed}
+        />
 
-        {/* Bottom actions */}
-        <div className="flex flex-col items-center gap-1 px-[10px] py-3">
-          <NavIcon
-            href="/settings"
-            icon={Settings}
-            label="Settings"
-            active={pathname === '/settings'}
-            onTooltip={(y) =>
-              y !== null
-                ? setTooltip({ text: 'Settings', y })
-                : setTooltip(null)
-            }
-          />
-          <button
-            onClick={handleSignOut}
-            onMouseEnter={(e) => {
-              const rect = e.currentTarget.getBoundingClientRect()
-              setTooltip({ text: 'Sign out', y: rect.top + rect.height / 2 })
-            }}
-            onMouseLeave={() => setTooltip(null)}
-            className="w-10 h-10 rounded-xl flex items-center justify-center text-[#555] hover:text-[#aaa] hover:bg-[#1e1e1e] transition-all duration-150"
-          >
-            <LogOut className="h-[18px] w-[18px]" />
-          </button>
-        </div>
-      </aside>
-    </>
+        <Link
+          href="/settings"
+          title={collapsed ? 'Settings' : ''}
+          className={navItemCn(pathname === '/settings')}
+        >
+          <Settings className="h-4 w-4 shrink-0" />
+          {!collapsed && 'Settings'}
+        </Link>
+
+        <button
+          onClick={handleSignOut}
+          title={collapsed ? 'Sign out' : ''}
+          className={navItemCn(false)}
+        >
+          <LogOut className="h-4 w-4 shrink-0" />
+          {!collapsed && 'Sign out'}
+        </button>
+      </div>
+    </aside>
   )
 }

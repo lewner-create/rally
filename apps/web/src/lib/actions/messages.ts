@@ -18,6 +18,12 @@ export interface MessageWithProfile {
     display_name: string | null
     username: string | null
   } | null
+  // Joined event — present when message is tagged to an event
+  event: {
+    id: string
+    title: string
+    event_type: string
+  } | null
 }
 
 export async function getMessages(
@@ -32,16 +38,18 @@ export async function getMessages(
 
   let query = supabase
     .from('chat_messages')
-    .select('*, profiles(id, display_name, username)')
+    .select('*, profiles(id, display_name, username), event:event_id(id, title, event_type)')
     .eq('group_id', groupId)
     .order('created_at', { ascending: true })
     .limit(limit)
 
   if (eventId) {
+    // Lens mode — only messages tagged to this specific event
     query = query.eq('event_id', eventId)
-  } else {
-    query = query.is('event_id', null)
   }
+  // Group chat mode — intentionally no event_id filter.
+  // All messages for this group are shown; event-tagged messages
+  // render with a context pill so the conversation stays unified.
 
   const { data, error } = await query
   if (error) throw error

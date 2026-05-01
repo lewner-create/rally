@@ -13,13 +13,8 @@ import {
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type EventType =
-  | 'vacation'
-  | 'day_trip'
-  | 'road_trip'
-  | 'game_night'
-  | 'hangout'
-  | 'meetup'
-  | 'moto_trip'
+  | 'vacation' | 'day_trip' | 'road_trip'
+  | 'game_night' | 'hangout' | 'meetup' | 'moto_trip'
   | string
 
 type CostCategory = 'Lodging' | 'Food' | 'Gas' | 'Activities' | 'Other'
@@ -54,9 +49,10 @@ type Props = {
   eventType: EventType
   members: Member[]
   isCreator: boolean
+  readOnly?: boolean
 }
 
-// ─── Config: what to show per event type ─────────────────────────────────────
+// ─── Config ───────────────────────────────────────────────────────────────────
 
 const ALL_CATEGORIES: CostCategory[] = ['Lodging', 'Food', 'Gas', 'Activities', 'Other']
 
@@ -71,12 +67,8 @@ const CATEGORIES_BY_TYPE: Record<string, CostCategory[]> = {
 }
 
 type DetailFields = {
-  address: boolean
-  location_url: boolean
-  booking_links: boolean
-  confirmation: boolean
-  pay_by: boolean
-  notes: boolean
+  address: boolean; location_url: boolean; booking_links: boolean
+  confirmation: boolean; pay_by: boolean; notes: boolean
 }
 
 const DETAIL_FIELDS_BY_TYPE: Record<string, DetailFields> = {
@@ -102,8 +94,6 @@ function getDetailFieldsForType(type: EventType): DetailFields {
   return DETAIL_FIELDS_BY_TYPE[type] ?? DEFAULT_DETAIL_FIELDS
 }
 
-// ─── Formatters ───────────────────────────────────────────────────────────────
-
 function fmtAmount(n: number) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n)
 }
@@ -119,19 +109,10 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 }
 
 function FieldInput({
-  label,
-  value,
-  onChange,
-  placeholder,
-  type = 'text',
-  disabled,
+  label, value, onChange, placeholder, type = 'text', disabled,
 }: {
-  label: string
-  value: string
-  onChange: (v: string) => void
-  placeholder?: string
-  type?: string
-  disabled?: boolean
+  label: string; value: string; onChange: (v: string) => void
+  placeholder?: string; type?: string; disabled?: boolean
 }) {
   return (
     <div className="mb-3">
@@ -142,24 +123,17 @@ function FieldInput({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         disabled={disabled}
-        className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-white placeholder-[#444] focus:outline-none focus:border-[#444] disabled:opacity-50 transition-colors"
+        className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-white placeholder-[#444] focus:outline-none focus:border-[#444] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       />
     </div>
   )
 }
 
 function TextareaInput({
-  label,
-  value,
-  onChange,
-  placeholder,
-  disabled,
+  label, value, onChange, placeholder, disabled,
 }: {
-  label: string
-  value: string
-  onChange: (v: string) => void
-  placeholder?: string
-  disabled?: boolean
+  label: string; value: string; onChange: (v: string) => void
+  placeholder?: string; disabled?: boolean
 }) {
   return (
     <div className="mb-3">
@@ -170,7 +144,7 @@ function TextareaInput({
         placeholder={placeholder}
         disabled={disabled}
         rows={3}
-        className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-white placeholder-[#444] focus:outline-none focus:border-[#444] disabled:opacity-50 transition-colors resize-none"
+        className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-white placeholder-[#444] focus:outline-none focus:border-[#444] disabled:opacity-50 disabled:cursor-not-allowed transition-colors resize-none"
       />
     </div>
   )
@@ -178,7 +152,7 @@ function TextareaInput({
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function EventDetails({ eventId, eventType, members, isCreator }: Props) {
+export default function EventDetails({ eventId, eventType, members, isCreator, readOnly = false }: Props) {
   const categories = getCategoriesForType(eventType)
   const detailFields = getDetailFieldsForType(eventType)
 
@@ -190,7 +164,6 @@ export default function EventDetails({ eventId, eventType, members, isCreator }:
   const [loading, setLoading] = useState(true)
   const [saving, startSave] = useTransition()
 
-  // New cost form
   const [newLabel, setNewLabel] = useState('')
   const [newCategory, setNewCategory] = useState<CostCategory>(categories[0])
   const [newAmount, setNewAmount] = useState('')
@@ -200,10 +173,7 @@ export default function EventDetails({ eventId, eventType, members, isCreator }:
 
   useEffect(() => {
     async function load() {
-      const [d, c] = await Promise.all([
-        getEventDetails(eventId),
-        getEventCosts(eventId),
-      ])
+      const [d, c] = await Promise.all([getEventDetails(eventId), getEventCosts(eventId)])
       if (d) setDetails(d as Details)
       if (c) setCosts(c as Cost[])
       setLoading(false)
@@ -211,44 +181,37 @@ export default function EventDetails({ eventId, eventType, members, isCreator }:
     load()
   }, [eventId])
 
-  // Auto-update new category default when eventType changes
-  useEffect(() => {
-    setNewCategory(categories[0])
-  }, [eventType])
+  useEffect(() => { setNewCategory(categories[0]) }, [eventType])
 
   function handleDetailChange(field: keyof Details, value: string) {
     setDetails((prev) => ({ ...prev, [field]: value || null }))
   }
 
   function handleSaveDetails() {
-    startSave(async () => {
-      await saveEventDetails(eventId, details)
-    })
+    startSave(async () => { await saveEventDetails(eventId, details) })
   }
 
   async function handleAddCost() {
     if (!newLabel.trim() || !newAmount) return
     const cost = await addEventCost(eventId, {
-      label: newLabel.trim(),
-      category: newCategory,
+      label: newLabel.trim(), category: newCategory,
       amount: parseFloat(newAmount),
       responsible_user_id: newResponsible || null,
       payment_url: newPayUrl || null,
     })
     if (cost) setCosts((prev) => [...prev, cost as Cost])
-    setNewLabel('')
-    setNewAmount('')
-    setNewResponsible('')
-    setNewPayUrl('')
+    setNewLabel(''); setNewAmount(''); setNewResponsible(''); setNewPayUrl('')
     setAddingCost(false)
   }
 
   async function handleTogglePaid(costId: string) {
+    if (readOnly) return
     await toggleCostPaid(costId)
     setCosts((prev) => prev.map((c) => c.id === costId ? { ...c, paid: !c.paid } : c))
   }
 
   async function handleDeleteCost(costId: string) {
+    if (readOnly) return
     await deleteEventCost(costId)
     setCosts((prev) => prev.filter((c) => c.id !== costId))
   }
@@ -263,7 +226,15 @@ export default function EventDetails({ eventId, eventType, members, isCreator }:
   return (
     <div className="space-y-6">
 
-      {/* ── Costs section ────────────────────────────────────────────────── */}
+      {/* Read-only notice */}
+      {readOnly && (
+        <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-[#1a1a1a] border border-[#2a2a2a]">
+          <span className="text-[#555] text-sm">🔒</span>
+          <p className="text-xs text-[#555]">This event has ended — costs and details are locked.</p>
+        </div>
+      )}
+
+      {/* ── Costs ─────────────────────────────────────────────────────────── */}
       <div>
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold text-white text-sm">Costs</h3>
@@ -274,11 +245,10 @@ export default function EventDetails({ eventId, eventType, members, isCreator }:
           )}
         </div>
 
-        {costs.length === 0 && !addingCost && (
-          <p className="text-[#444] text-sm mb-3">No costs added yet.</p>
+        {costs.length === 0 && (
+          <p className="text-[#444] text-sm mb-3">No costs added.</p>
         )}
 
-        {/* Cost line items grouped by category */}
         {categories.map((cat) => {
           const catCosts = costs.filter((c) => c.category === cat)
           if (catCosts.length === 0) return null
@@ -293,11 +263,12 @@ export default function EventDetails({ eventId, eventType, members, isCreator }:
                   <div className="flex items-center gap-3 min-w-0">
                     <button
                       onClick={() => handleTogglePaid(cost.id)}
+                      disabled={readOnly}
                       className={`w-5 h-5 rounded-md border flex-shrink-0 flex items-center justify-center transition-colors ${
                         cost.paid
                           ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400'
                           : 'border-[#333] text-transparent'
-                      }`}
+                      } disabled:cursor-not-allowed`}
                     >
                       ✓
                     </button>
@@ -314,23 +285,17 @@ export default function EventDetails({ eventId, eventType, members, isCreator }:
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0 ml-3">
                     {cost.payment_url && (
-                      <a
-                        href={cost.payment_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs text-indigo-400 hover:underline"
-                      >
+                      <a href={cost.payment_url} target="_blank" rel="noopener noreferrer"
+                        className="text-xs text-indigo-400 hover:underline">
                         Pay
                       </a>
                     )}
                     <span className={`text-sm font-medium ${cost.paid ? 'text-[#555]' : 'text-white'}`}>
                       {fmtAmount(cost.amount)}
                     </span>
-                    {isCreator && (
-                      <button
-                        onClick={() => handleDeleteCost(cost.id)}
-                        className="text-[#444] hover:text-red-400 transition-colors text-xs ml-1"
-                      >
+                    {isCreator && !readOnly && (
+                      <button onClick={() => handleDeleteCost(cost.id)}
+                        className="text-[#444] hover:text-red-400 transition-colors text-xs ml-1">
                         ✕
                       </button>
                     )}
@@ -341,146 +306,121 @@ export default function EventDetails({ eventId, eventType, members, isCreator }:
           )
         })}
 
-        {/* Add cost form */}
-        {addingCost ? (
-          <div
-            className="rounded-xl p-4 mt-2"
-            style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}
-          >
-            <div className="grid grid-cols-2 gap-2 mb-2">
-              <input
-                placeholder="Label (e.g. Airbnb)"
-                value={newLabel}
-                onChange={(e) => setNewLabel(e.target.value)}
-                className="col-span-2 bg-[#111] border border-[#333] rounded-lg px-3 py-2 text-sm text-white placeholder-[#444] focus:outline-none focus:border-[#555]"
-              />
-              <select
-                value={newCategory}
-                onChange={(e) => setNewCategory(e.target.value as CostCategory)}
-                className="bg-[#111] border border-[#333] rounded-lg px-3 py-2 text-sm text-white focus:outline-none"
-              >
-                {categories.map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
-              <input
-                type="number"
-                placeholder="Amount"
-                value={newAmount}
-                onChange={(e) => setNewAmount(e.target.value)}
-                className="bg-[#111] border border-[#333] rounded-lg px-3 py-2 text-sm text-white placeholder-[#444] focus:outline-none"
-              />
-              <select
-                value={newResponsible}
-                onChange={(e) => setNewResponsible(e.target.value)}
-                className="bg-[#111] border border-[#333] rounded-lg px-3 py-2 text-sm text-white focus:outline-none"
-              >
-                <option value="">Who's responsible?</option>
-                {members.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.display_name ?? m.username}
-                  </option>
-                ))}
-              </select>
-              <input
-                placeholder="Payment link (optional)"
-                value={newPayUrl}
-                onChange={(e) => setNewPayUrl(e.target.value)}
-                className="bg-[#111] border border-[#333] rounded-lg px-3 py-2 text-sm text-white placeholder-[#444] focus:outline-none"
-              />
+        {/* Add cost — hidden when read-only */}
+        {!readOnly && (
+          addingCost ? (
+            <div className="rounded-xl p-4 mt-2" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}>
+              <div className="grid grid-cols-2 gap-2 mb-2">
+                <input
+                  placeholder="Label (e.g. Airbnb)"
+                  value={newLabel}
+                  onChange={(e) => setNewLabel(e.target.value)}
+                  className="col-span-2 bg-[#111] border border-[#333] rounded-lg px-3 py-2 text-sm text-white placeholder-[#444] focus:outline-none focus:border-[#555]"
+                />
+                <select
+                  value={newCategory}
+                  onChange={(e) => setNewCategory(e.target.value as CostCategory)}
+                  className="bg-[#111] border border-[#333] rounded-lg px-3 py-2 text-sm text-white focus:outline-none"
+                >
+                  {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+                <input
+                  type="number"
+                  placeholder="Amount"
+                  value={newAmount}
+                  onChange={(e) => setNewAmount(e.target.value)}
+                  className="bg-[#111] border border-[#333] rounded-lg px-3 py-2 text-sm text-white placeholder-[#444] focus:outline-none"
+                />
+                <select
+                  value={newResponsible}
+                  onChange={(e) => setNewResponsible(e.target.value)}
+                  className="bg-[#111] border border-[#333] rounded-lg px-3 py-2 text-sm text-white focus:outline-none"
+                >
+                  <option value="">Who's responsible?</option>
+                  {members.map((m) => (
+                    <option key={m.id} value={m.id}>{m.display_name ?? m.username}</option>
+                  ))}
+                </select>
+                <input
+                  placeholder="Payment link (optional)"
+                  value={newPayUrl}
+                  onChange={(e) => setNewPayUrl(e.target.value)}
+                  className="bg-[#111] border border-[#333] rounded-lg px-3 py-2 text-sm text-white placeholder-[#444] focus:outline-none"
+                />
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleAddCost}
+                  disabled={!newLabel.trim() || !newAmount}
+                  className="flex-1 py-2 rounded-lg text-sm font-semibold bg-indigo-600 text-white disabled:opacity-40 hover:bg-indigo-500 transition-colors"
+                >
+                  Add cost
+                </button>
+                <button
+                  onClick={() => setAddingCost(false)}
+                  className="px-4 py-2 rounded-lg text-sm text-[#666] hover:text-white transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
-            <div className="flex gap-2">
-              <button
-                onClick={handleAddCost}
-                disabled={!newLabel.trim() || !newAmount}
-                className="flex-1 py-2 rounded-lg text-sm font-semibold bg-indigo-600 text-white disabled:opacity-40 hover:bg-indigo-500 transition-colors"
-              >
-                Add cost
-              </button>
-              <button
-                onClick={() => setAddingCost(false)}
-                className="px-4 py-2 rounded-lg text-sm text-[#666] hover:text-white transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        ) : (
-          <button
-            onClick={() => setAddingCost(true)}
-            className="flex items-center gap-2 text-sm text-[#555] hover:text-white transition-colors mt-2"
-          >
-            <span className="w-5 h-5 rounded-md bg-[#1e1e1e] flex items-center justify-center text-xs">+</span>
-            Add a cost
-          </button>
+          ) : (
+            <button
+              onClick={() => setAddingCost(true)}
+              className="flex items-center gap-2 text-sm text-[#555] hover:text-white transition-colors mt-2"
+            >
+              <span className="w-5 h-5 rounded-md bg-[#1e1e1e] flex items-center justify-center text-xs">+</span>
+              Add a cost
+            </button>
+          )
         )}
       </div>
 
-      {/* ── Details section ───────────────────────────────────────────────── */}
+      {/* ── Details ───────────────────────────────────────────────────────── */}
       <div>
         <h3 className="font-semibold text-white text-sm mb-3">The details</h3>
 
         {detailFields.address && (
-          <FieldInput
-            label="Address / location"
-            value={details.address ?? ''}
+          <FieldInput label="Address / location" value={details.address ?? ''}
             onChange={(v) => handleDetailChange('address', v)}
-            placeholder="123 Main St, City"
-          />
+            placeholder="123 Main St, City" disabled={readOnly} />
         )}
-
         {detailFields.location_url && (
-          <FieldInput
-            label="Maps link"
-            value={details.location_url ?? ''}
+          <FieldInput label="Maps link" value={details.location_url ?? ''}
             onChange={(v) => handleDetailChange('location_url', v)}
-            placeholder="https://maps.google.com/..."
-          />
+            placeholder="https://maps.google.com/..." disabled={readOnly} />
         )}
-
         {detailFields.booking_links && (
-          <TextareaInput
-            label="Booking links"
-            value={details.booking_links ?? ''}
+          <TextareaInput label="Booking links" value={details.booking_links ?? ''}
             onChange={(v) => handleDetailChange('booking_links', v)}
-            placeholder="Airbnb, flights, rental car…"
-          />
+            placeholder="Airbnb, flights, rental car…" disabled={readOnly} />
         )}
-
         {detailFields.confirmation && (
-          <FieldInput
-            label="Confirmation #"
-            value={details.confirmation ?? ''}
+          <FieldInput label="Confirmation #" value={details.confirmation ?? ''}
             onChange={(v) => handleDetailChange('confirmation', v)}
-            placeholder="CONF-12345"
-          />
+            placeholder="CONF-12345" disabled={readOnly} />
         )}
-
         {detailFields.pay_by && (
-          <FieldInput
-            label="Pay by date"
-            value={details.pay_by ?? ''}
+          <FieldInput label="Pay by date" value={details.pay_by ?? ''}
             onChange={(v) => handleDetailChange('pay_by', v)}
-            type="date"
-          />
+            type="date" disabled={readOnly} />
         )}
-
         {detailFields.notes && (
-          <TextareaInput
-            label="Notes"
-            value={details.notes ?? ''}
+          <TextareaInput label="Notes" value={details.notes ?? ''}
             onChange={(v) => handleDetailChange('notes', v)}
-            placeholder="Anything else the group should know…"
-          />
+            placeholder="Anything else the group should know…" disabled={readOnly} />
         )}
 
-        <button
-          onClick={handleSaveDetails}
-          disabled={saving}
-          className="mt-2 px-4 py-2 rounded-lg text-sm font-semibold bg-[#1e1e1e] border border-[#2a2a2a] text-white hover:bg-[#252525] disabled:opacity-50 transition-colors"
-        >
-          {saving ? 'Saving…' : 'Save details'}
-        </button>
+        {/* Save button — hidden when read-only */}
+        {!readOnly && (
+          <button
+            onClick={handleSaveDetails}
+            disabled={saving}
+            className="mt-2 px-4 py-2 rounded-lg text-sm font-semibold bg-[#1e1e1e] border border-[#2a2a2a] text-white hover:bg-[#252525] disabled:opacity-50 transition-colors"
+          >
+            {saving ? 'Saving…' : 'Save details'}
+          </button>
+        )}
       </div>
     </div>
   )

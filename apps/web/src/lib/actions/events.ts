@@ -7,7 +7,7 @@ import { generateInviteToken, slugify } from '@/lib/name-generator'
 
 export type EventType   = 'game_night' | 'hangout' | 'meetup' | 'day_trip' | 'road_trip' | 'moto_trip' | 'vacation'
 export type RsvpStatus  = 'yes' | 'maybe' | 'no'
-export type EventStatus = 'draft' | 'published' | 'cancelled'
+export type EventStatus = 'draft' | 'published' | 'cancelled' | 'completed'
 
 // ─── Create ────────────────────────────────────────────────────────────────
 
@@ -85,11 +85,26 @@ export async function getEventsForGroup(groupId: string) {
     `)
     .eq('group_id', groupId)
     .neq('status', 'cancelled')
+    .neq('status', 'completed')
     .gte('starts_at', new Date().toISOString())
     .order('starts_at', { ascending: true })
     .limit(5)
 
   return (data ?? []) as any[]
+}
+
+export async function getCompletedEventsForGroup(groupId: string) {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('events')
+    .select('id, title, event_type, starts_at, ends_at')
+    .eq('group_id', groupId)
+    .lt('ends_at', new Date().toISOString())
+    .neq('status', 'cancelled')
+    .order('starts_at', { ascending: false })
+    .limit(20)
+
+  return (data ?? []) as { id: string; title: string; event_type: string; starts_at: string | null; ends_at: string | null }[]
 }
 
 export async function getEventAttendees(eventId: string) {
@@ -106,6 +121,65 @@ export async function getEventAttendees(eventId: string) {
     rsvp_status: string
     profiles: { id: string; display_name: string | null; username: string | null; avatar_url: string | null } | null
   }>
+}
+
+// ─── Completed state ───────────────────────────────────────────────────────
+
+export async function markEventCompleted(eventId: string) {
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('events')
+    .update({ status: 'completed' })
+    .eq('id', eventId)
+  if (error) console.error('Failed to mark event completed:', error.message)
+}
+
+// ─── Photos ────────────────────────────────────────────────────────────────
+
+export async function getEventPhotos(eventId: string) {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('event_photos')
+    .select('id, public_url, created_at, uploader:uploader_id(display_name, username)')
+    .eq('event_id', eventId)
+    .order('created_at', { ascending: false })
+
+  return (data ?? []) as {
+    id: string
+    public_url: string
+    created_at: string
+    uploader: { display_name: string | null; username: string } | null
+  }[]
+}
+
+export async function saveEventPhoto(eventId: string, publicUrl: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+
+  const { data, error } = await supabase
+    .from('event_photos')
+    .insert({ event_id: eventId, uploader_id: user.id, public_url: publicUrl })
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Failed to save photo:', error.message)
+    return null
+  }
+  revalidatePath(`/events/${eventId}`)
+  return data
+}
+
+export async function deleteEventPhoto(photoId: string, eventId: string) {
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('event_photos')
+    .delete()
+    .eq('id', photoId)
+
+  if (error) console.error('Failed to delete photo:', error.message)
+  else revalidatePath(`/events/${eventId}`)
 }
 
 // ─── RSVP ──────────────────────────────────────────────────────────────────
@@ -155,8 +229,6 @@ export async function joinGroupViaEventInvite(groupSlug: string, inviteSlug: str
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect(`/login?next=/invite/${groupSlug}/${inviteSlug}`)
 
-  // Look up the event to get group_id — event invites live on the events table,
-  // not group_invites, so joinGroupBySlug was querying the wrong table entirely
   const { data: event } = await supabase
     .from('events')
     .select('id, group_id')
@@ -169,7 +241,6 @@ export async function joinGroupViaEventInvite(groupSlug: string, inviteSlug: str
 
   const groupId = event.group_id
 
-  // Already a member — send back to invite page to RSVP
   const { data: existing } = await supabase
     .from('group_members')
     .select('id')
@@ -179,7 +250,6 @@ export async function joinGroupViaEventInvite(groupSlug: string, inviteSlug: str
 
   if (existing) redirect(`/invite/${groupSlug}/${inviteSlug}`)
 
-  // Capacity check
   const { count } = await supabase
     .from('group_members')
     .select('id', { count: 'exact', head: true })

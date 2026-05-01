@@ -5,34 +5,32 @@ import { saveWeeklyAvailability, type WeeklyAvailability, type DayKey } from '@/
 
 // ─── Types + constants ────────────────────────────────────────────────────────
 
-const ACCENT = '#7F77DD'
-
 const ALL_DAYS:     DayKey[] = ['mon','tue','wed','thu','fri','sat','sun']
 const WEEKDAYS:     DayKey[] = ['mon','tue','wed','thu','fri']
 const WEEKEND:      DayKey[] = ['sat','sun']
 const FRI_WEEKEND:  DayKey[] = ['fri','sat','sun']
 
 type Preset = {
-  id: string
+  id:    string
   label: string
   emoji: string
-  desc: string
-  days: DayKey[]
+  desc:  string
+  days:  DayKey[]
   hours: number[]
 }
 
 const PRESETS: Preset[] = [
-  { id: 'weeknights',     label: 'Weeknights',     emoji: '🌆', desc: 'Mon–Fri evenings',    days: WEEKDAYS,       hours: [18,19,20,21,22] },
-  { id: 'weekend-days',   label: 'Weekend days',   emoji: '☀️', desc: 'Sat & Sun daytime',   days: WEEKEND,        hours: [10,11,12,13,14,15,16,17] },
-  { id: 'weekend-nights', label: 'Weekend nights', emoji: '🌙', desc: 'Fri–Sun evenings',    days: FRI_WEEKEND,    hours: [18,19,20,21,22] },
-  { id: 'mornings',       label: 'Mornings',       emoji: '🌅', desc: 'Every day, 8am–noon', days: ALL_DAYS,       hours: [8,9,10,11] },
-  { id: 'midday',         label: 'Midday',         emoji: '⛅', desc: 'Every day, noon–5pm', days: ALL_DAYS,       hours: [12,13,14,15,16] },
-  { id: 'late-nights',    label: 'Late nights',    emoji: '🌃', desc: 'Any day, 10pm+',      days: ALL_DAYS,       hours: [22] },
+  { id: 'weeknights',     label: 'Weeknights',     emoji: '🌆', desc: 'Mon–Fri evenings',    days: WEEKDAYS,    hours: [18,19,20,21,22] },
+  { id: 'weekend-days',   label: 'Weekend days',   emoji: '☀️', desc: 'Sat & Sun daytime',   days: WEEKEND,     hours: [10,11,12,13,14,15,16,17] },
+  { id: 'weekend-nights', label: 'Weekend nights', emoji: '🌙', desc: 'Fri–Sun evenings',    days: FRI_WEEKEND, hours: [18,19,20,21,22] },
+  { id: 'mornings',       label: 'Mornings',       emoji: '🌅', desc: 'Every day, 8am–noon', days: ALL_DAYS,    hours: [8,9,10,11] },
+  { id: 'midday',         label: 'Midday',         emoji: '⛅', desc: 'Every day, noon–5pm', days: ALL_DAYS,    hours: [12,13,14,15,16] },
+  { id: 'late-nights',    label: 'Late nights',    emoji: '🌃', desc: 'Any day, 10pm+',      days: ALL_DAYS,    hours: [22] },
 ]
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function buildAvailability(activeIds: Set<string>): WeeklyAvailability {
+export function buildAvailability(activeIds: Set<string>): WeeklyAvailability {
   const sets: Record<DayKey, Set<number>> = {
     mon: new Set(), tue: new Set(), wed: new Set(), thu: new Set(),
     fri: new Set(), sat: new Set(), sun: new Set(),
@@ -47,23 +45,20 @@ function buildAvailability(activeIds: Set<string>): WeeklyAvailability {
   ) as WeeklyAvailability
 }
 
-function detectActivePresets(avail: WeeklyAvailability): Set<string> {
+export function detectActivePresets(avail: WeeklyAvailability): Set<string> {
   const active = new Set<string>()
   PRESETS.forEach(p => {
-    const allCovered = p.days.every(day =>
-      p.hours.every(h => avail[day]?.includes(h))
-    )
-    if (allCovered) active.add(p.id)
+    if (p.days.every(day => p.hours.every(h => avail[day]?.includes(h)))) {
+      active.add(p.id)
+    }
   })
   return active
 }
 
 function buildSummary(activeIds: Set<string>): string | null {
   if (activeIds.size === 0) return null
-
-  const has = (id: string) => activeIds.has(id)
+  const has       = (id: string) => activeIds.has(id)
   const weekendBoth = has('weekend-days') && has('weekend-nights')
-
   const parts: string[] = []
   if (has('weeknights'))    parts.push('weeknights')
   if (weekendBoth)          parts.push('weekends')
@@ -74,7 +69,6 @@ function buildSummary(activeIds: Set<string>): string | null {
   if (has('mornings'))    parts.push('mornings')
   if (has('midday'))      parts.push('midday')
   if (has('late-nights')) parts.push('late nights')
-
   if (parts.length === 0) return null
   if (activeIds.size >= 5) return "Looks like you have a lot of flexibility"
   if (parts.length === 1) return `Looks like you're mostly free ${parts[0]}`
@@ -83,15 +77,15 @@ function buildSummary(activeIds: Set<string>): string | null {
   return `Looks like you're mostly free ${parts.join(', ')}, and ${last}`
 }
 
-// ─── Inline mini grid ─────────────────────────────────────────────────────────
+// ─── Mini grid ────────────────────────────────────────────────────────────────
 
 const PERIODS = [
-  { label: 'Morning',   hours: [8,9,10,11]          },
-  { label: 'Afternoon', hours: [12,13,14,15,16,17]  },
-  { label: 'Evening',   hours: [18,19,20,21,22]     },
+  { label: 'Morning',   hours: [8,9,10,11]         },
+  { label: 'Afternoon', hours: [12,13,14,15,16,17] },
+  { label: 'Evening',   hours: [18,19,20,21,22]    },
 ]
-const ALL_HOURS = PERIODS.flatMap(p => p.hours)
-const GRID_DAYS = [
+const ALL_HOURS   = PERIODS.flatMap(p => p.hours)
+const GRID_DAYS   = [
   { key: 'mon' as DayKey, short: 'Mon' },
   { key: 'tue' as DayKey, short: 'Tue' },
   { key: 'wed' as DayKey, short: 'Wed' },
@@ -108,7 +102,7 @@ function fmtH(h: number) {
   return `${h - 12}pm`
 }
 
-function MiniGrid({
+export function MiniGrid({
   avail, onChange,
 }: {
   avail: WeeklyAvailability
@@ -121,13 +115,11 @@ function MiniGrid({
 
   const paint = (d: DayKey, h: number, mode: 'paint' | 'erase') => {
     const hours = avail[d] ?? []
-    let next: number[]
-    if (mode === 'paint') {
-      if (hours.includes(h)) return
-      next = [...hours, h].sort((a, b) => a - b)
-    } else {
-      next = hours.filter(x => x !== h)
-    }
+    const next  = mode === 'paint'
+      ? hours.includes(h) ? hours : [...hours, h].sort((a, b) => a - b)
+      : hours.filter(x => x !== h)
+    if (next.length === hours.length && mode === 'paint' && hours.includes(h)) return
+    if (next.length === hours.length && mode === 'erase') return
     onChange({ ...avail, [d]: next })
   }
 
@@ -140,10 +132,10 @@ function MiniGrid({
 
   return (
     <div style={{ overflowX: 'auto' }}>
-      <div style={{ minWidth: '440px', userSelect: 'none' }}
+      <div
+        style={{ minWidth: '440px', userSelect: 'none' }}
         onMouseLeave={() => setHovCell(null)}
       >
-        {/* Day headers */}
         <div style={{ display: 'grid', gridTemplateColumns: COL, gap: '2px', marginBottom: '6px' }}>
           <div />
           {GRID_DAYS.map(d => {
@@ -156,7 +148,7 @@ function MiniGrid({
                   fontSize: '10px', fontWeight: 700, textTransform: 'uppercase',
                   letterSpacing: '.07em', textAlign: 'center', padding: '4px 2px',
                   background: 'none', border: 'none', cursor: 'pointer',
-                  color: any ? ACCENT : '#333', fontFamily: 'inherit',
+                  color: any ? '#10b981' : '#333', fontFamily: 'inherit',
                   borderRadius: '4px', transition: 'color .1s',
                 }}
               >{d.short}</button>
@@ -164,7 +156,6 @@ function MiniGrid({
           })}
         </div>
 
-        {/* Period rows */}
         {PERIODS.map(period => (
           <div key={period.label}>
             <div style={{ display: 'grid', gridTemplateColumns: COL, gap: '2px', margin: '6px 0 2px' }}>
@@ -183,18 +174,17 @@ function MiniGrid({
                   </div>
                   {GRID_DAYS.map(d => {
                     const free = isFree(d.key, hour)
-                    const hov = hovCell?.d === d.key && hovCell?.h === hour
+                    const hov  = hovCell?.d === d.key && hovCell?.h === hour
                     let bg = '#1e1e1e', border = '1px solid #272727'
-                    if (free) { bg = `${ACCENT}cc`; border = `1px solid ${ACCENT}88` }
-                    else if (hov) { bg = `${ACCENT}22`; border = `1px solid ${ACCENT}40` }
+                    if (free)      { bg = '#059669'; border = '1px solid #047857' }
+                    else if (hov)  { bg = '#10b98122'; border = '1px solid #10b98140' }
                     return (
                       <div
                         key={d.key}
                         onMouseDown={(e) => {
                           e.preventDefault()
                           const mode = free ? 'erase' : 'paint'
-                          dragRef.dragging = true
-                          dragRef.mode = mode
+                          dragRef.dragging = true; dragRef.mode = mode
                           paint(d.key, hour, mode)
                         }}
                         onMouseEnter={() => {
@@ -216,25 +206,30 @@ function MiniGrid({
   )
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
+// ─── Shared picker body ───────────────────────────────────────────────────────
+// Used by both the full page and the sheet variant.
 
-export function AvailabilityPicker({ initial }: { initial: WeeklyAvailability }) {
-  const [activeIds, setActiveIds]   = useState<Set<string>>(() => detectActivePresets(initial))
-  const [avail, setAvail]           = useState<WeeklyAvailability>(initial)
-  const [gridOpen, setGridOpen]     = useState(false)
-  const [saved, setSaved]           = useState(false)
-  const [saving, startSave]         = useTransition()
+export function AvailabilityPickerBody({
+  initial,
+  onSaved,
+}: {
+  initial: WeeklyAvailability
+  onSaved?: () => void
+}) {
+  const [activeIds,   setActiveIds]   = useState<Set<string>>(() => detectActivePresets(initial))
+  const [avail,       setAvail]       = useState<WeeklyAvailability>(initial)
+  const [gridOpen,    setGridOpen]    = useState(false)
+  const [saved,       setSaved]       = useState(false)
+  const [saving,      startSave]      = useTransition()
 
   const hasSelection = activeIds.size > 0 || ALL_HOURS.some(h => ALL_DAYS.some(d => avail[d]?.includes(h)))
-  const summary = buildSummary(activeIds)
+  const summary      = buildSummary(activeIds)
 
   function togglePreset(id: string) {
     setActiveIds(prev => {
       const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      const newAvail = buildAvailability(next)
-      setAvail(newAvail)
+      next.has(id) ? next.delete(id) : next.add(id)
+      setAvail(buildAvailability(next))
       setSaved(false)
       return next
     })
@@ -250,154 +245,133 @@ export function AvailabilityPicker({ initial }: { initial: WeeklyAvailability })
     startSave(async () => {
       await saveWeeklyAvailability(avail)
       setSaved(true)
+      onSaved?.()
     })
   }
 
   return (
+    <div>
+      {/* Preset cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '8px', marginBottom: '20px' }}>
+        {PRESETS.map(p => {
+          const on = activeIds.has(p.id)
+          return (
+            <button
+              key={p.id}
+              onClick={() => togglePreset(p.id)}
+              style={{
+                background: on ? '#6366f110' : '#161616',
+                border: `1px solid ${on ? '#6366f155' : '#222'}`,
+                borderRadius: '12px', padding: '12px 10px 10px',
+                cursor: 'pointer', textAlign: 'left',
+                display: 'flex', flexDirection: 'column', gap: '4px',
+                position: 'relative', overflow: 'hidden',
+                transition: 'border-color .15s, background .15s, transform .1s',
+                transform: on ? 'scale(1.02)' : 'scale(1)',
+                fontFamily: 'inherit',
+                boxShadow: on ? '0 0 0 1px #6366f133' : 'none',
+              }}
+            >
+              <div style={{
+                position: 'absolute', top: '7px', right: '7px',
+                width: '14px', height: '14px', borderRadius: '50%',
+                background: on ? '#6366f1' : 'transparent',
+                border: `1px solid ${on ? '#6366f1' : '#2a2a2a'}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '8px', color: '#fff',
+              }}>
+                {on && '✓'}
+              </div>
+              <div style={{ fontSize: '18px', lineHeight: 1 }}>{p.emoji}</div>
+              <div style={{ fontSize: '12px', fontWeight: 600, color: on ? '#a5b4fc' : '#ccc', lineHeight: 1.2 }}>
+                {p.label}
+              </div>
+              <div style={{ fontSize: '10px', color: on ? '#6366f166' : '#3a3a3a', lineHeight: 1.3 }}>
+                {p.desc}
+              </div>
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Summary */}
+      <div style={{
+        borderRadius: '10px', padding: '12px 14px',
+        background: '#161616', border: `1px solid ${summary ? '#6366f130' : '#1e1e1e'}`,
+        marginBottom: '18px', display: 'flex', alignItems: 'center', gap: '9px',
+        transition: 'border-color .3s', minHeight: '46px',
+      }}>
+        <span style={{ fontSize: '14px', flexShrink: 0 }}>{summary ? '✦' : '○'}</span>
+        <p style={{ fontSize: '12px', color: summary ? '#a5b4fc' : '#444', lineHeight: 1.5, margin: 0 }}>
+          {summary ?? 'Pick at least one time that fits your typical week'}
+        </p>
+      </div>
+
+      {/* Adjust times disclosure */}
+      <button
+        onClick={() => setGridOpen(v => !v)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: '7px',
+          background: 'none', border: 'none', cursor: 'pointer',
+          padding: '3px 0', marginBottom: '12px', fontFamily: 'inherit',
+        }}
+      >
+        <span style={{
+          fontSize: '11px', color: '#333', display: 'inline-block',
+          transform: gridOpen ? 'rotate(90deg)' : 'rotate(0deg)',
+          transition: 'transform .2s',
+        }}>›</span>
+        <span style={{ fontSize: '12px', color: '#444' }}>Adjust specific times</span>
+      </button>
+
+      <div style={{
+        overflow: 'hidden',
+        maxHeight: gridOpen ? '560px' : '0px',
+        opacity: gridOpen ? 1 : 0,
+        transition: 'max-height .35s ease, opacity .25s ease',
+        marginBottom: gridOpen ? '18px' : '0',
+      }}>
+        <div style={{ background: '#161616', border: '1px solid #1e1e1e', borderRadius: '12px', padding: '16px' }}>
+          <MiniGrid avail={avail} onChange={handleGridChange} />
+          <p style={{ fontSize: '11px', color: '#2a2a2a', marginTop: '10px', textAlign: 'center' }}>
+            Click a day header to toggle the whole day
+          </p>
+        </div>
+      </div>
+
+      {/* Save */}
+      <button
+        onClick={handleSave}
+        disabled={!hasSelection || saving}
+        style={{
+          width: '100%', padding: '13px',
+          borderRadius: '12px',
+          background: saved ? '#059669' : hasSelection ? '#6366f1' : '#1a1a1a',
+          color: hasSelection ? '#fff' : '#333',
+          border: 'none', fontSize: '14px', fontWeight: 700,
+          cursor: hasSelection && !saving ? 'pointer' : 'default',
+          fontFamily: 'inherit', transition: 'background .2s, color .2s',
+        }}
+      >
+        {saving ? 'Saving…' : saved ? 'Saved ✓' : 'Looks good'}
+      </button>
+    </div>
+  )
+}
+
+// ─── Full page variant ────────────────────────────────────────────────────────
+
+export function AvailabilityPicker({ initial }: { initial: WeeklyAvailability }) {
+  return (
     <div style={{ minHeight: '100vh', background: '#0f0f0f', color: '#fff' }}>
       <div style={{ maxWidth: '560px', margin: '0 auto', padding: '40px 24px 80px' }}>
-
-        {/* Header */}
         <h1 style={{ fontSize: '22px', fontWeight: 700, color: '#fff', margin: '0 0 8px', letterSpacing: '-.3px' }}>
           When are you usually free?
         </h1>
         <p style={{ fontSize: '13px', color: '#555', margin: '0 0 32px', lineHeight: 1.6 }}>
           Pick what fits your week — you can always respond differently later.
         </p>
-
-        {/* Preset cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '10px', marginBottom: '24px' }}>
-          {PRESETS.map(p => {
-            const on = activeIds.has(p.id)
-            return (
-              <button
-                key={p.id}
-                onClick={() => togglePreset(p.id)}
-                style={{
-                  background: on ? `${ACCENT}12` : '#161616',
-                  border: `1px solid ${on ? `${ACCENT}44` : '#222'}`,
-                  borderRadius: '14px',
-                  padding: '14px 12px 12px',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '5px',
-                  position: 'relative',
-                  overflow: 'hidden',
-                  transition: 'border-color .15s, background .15s, transform .1s',
-                  transform: on ? 'scale(1.02)' : 'scale(1)',
-                  fontFamily: 'inherit',
-                  boxShadow: on ? `0 0 0 1px ${ACCENT}22` : 'none',
-                }}
-              >
-                {/* Checkmark */}
-                <div style={{
-                  position: 'absolute', top: '8px', right: '8px',
-                  width: '16px', height: '16px', borderRadius: '50%',
-                  background: on ? ACCENT : 'transparent',
-                  border: `1px solid ${on ? ACCENT : '#2a2a2a'}`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '9px', color: '#fff',
-                  transition: 'background .15s, border-color .15s',
-                  flexShrink: 0,
-                }}>
-                  {on && '✓'}
-                </div>
-                <div style={{ fontSize: '20px', lineHeight: 1 }}>{p.emoji}</div>
-                <div style={{ fontSize: '13px', fontWeight: 600, color: on ? '#c4bff5' : '#ccc', lineHeight: 1.2, transition: 'color .15s' }}>
-                  {p.label}
-                </div>
-                <div style={{ fontSize: '11px', color: on ? `${ACCENT}88` : '#3a3a3a', lineHeight: 1.4, transition: 'color .15s' }}>
-                  {p.desc}
-                </div>
-              </button>
-            )
-          })}
-        </div>
-
-        {/* Summary / hint */}
-        <div style={{
-          borderRadius: '12px',
-          padding: '14px 16px',
-          background: '#161616',
-          border: `1px solid ${summary ? `${ACCENT}25` : '#1e1e1e'}`,
-          marginBottom: '24px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px',
-          transition: 'border-color .3s',
-          minHeight: '52px',
-        }}>
-          <span style={{ fontSize: '16px', flexShrink: 0 }}>{summary ? '✦' : '○'}</span>
-          <p style={{ fontSize: '13px', color: summary ? '#c4bff5' : '#444', lineHeight: 1.5, margin: 0, transition: 'color .3s' }}>
-            {summary ?? 'Pick at least one time that fits your typical week'}
-          </p>
-        </div>
-
-        {/* Adjust specific times disclosure */}
-        <button
-          onClick={() => setGridOpen(v => !v)}
-          style={{
-            display: 'flex', alignItems: 'center', gap: '8px',
-            background: 'none', border: 'none', cursor: 'pointer',
-            padding: '4px 0', marginBottom: '14px', fontFamily: 'inherit',
-          }}
-        >
-          <span style={{
-            fontSize: '11px', color: '#333', display: 'inline-block',
-            transform: gridOpen ? 'rotate(90deg)' : 'rotate(0deg)',
-            transition: 'transform .2s',
-          }}>›</span>
-          <span style={{ fontSize: '13px', color: '#444', transition: 'color .15s' }}
-            onMouseEnter={e => (e.currentTarget.style.color = '#888')}
-            onMouseLeave={e => (e.currentTarget.style.color = '#444')}
-          >
-            Adjust specific times
-          </span>
-        </button>
-
-        {/* Grid disclosure */}
-        <div style={{
-          overflow: 'hidden',
-          maxHeight: gridOpen ? '600px' : '0px',
-          opacity: gridOpen ? 1 : 0,
-          transition: 'max-height .35s ease, opacity .25s ease',
-          marginBottom: gridOpen ? '24px' : '0',
-        }}>
-          <div style={{
-            background: '#161616', border: '1px solid #1e1e1e',
-            borderRadius: '14px', padding: '18px',
-          }}>
-            <MiniGrid avail={avail} onChange={handleGridChange} />
-            <p style={{ fontSize: '11px', color: '#2a2a2a', marginTop: '12px', textAlign: 'center', lineHeight: 1.6 }}>
-              Click a day header to toggle the whole day
-            </p>
-          </div>
-        </div>
-
-        {/* Save button */}
-        <button
-          onClick={handleSave}
-          disabled={!hasSelection || saving}
-          style={{
-            width: '100%',
-            padding: '14px',
-            borderRadius: '12px',
-            background: saved ? '#1D9E75' : hasSelection ? ACCENT : '#1a1a1a',
-            color: hasSelection ? '#fff' : '#333',
-            border: 'none',
-            fontSize: '15px',
-            fontWeight: 700,
-            cursor: hasSelection && !saving ? 'pointer' : 'default',
-            fontFamily: 'inherit',
-            transition: 'background .2s, color .2s',
-            letterSpacing: '-.1px',
-          }}
-        >
-          {saving ? 'Saving…' : saved ? 'Saved ✓' : 'Looks good'}
-        </button>
-
+        <AvailabilityPickerBody initial={initial} />
       </div>
     </div>
   )

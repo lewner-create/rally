@@ -23,23 +23,27 @@ function fmtTime(h: number) {
 }
 
 function fmtDateLine(date: string, start: string, end: string) {
-  const d = new Date(`${date}T${start}`)
+  const d      = new Date(`${date}T${start}`)
   const DAYS   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
   const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
-  const sh = new Date(`${date}T${start}`).getHours()
-  const eh = new Date(`${date}T${end}`).getHours()
+  const sh     = new Date(`${date}T${start}`).getHours()
+  const eh     = new Date(`${date}T${end}`).getHours()
   return `${DAYS[d.getDay()]} ${MONTHS[d.getMonth()]} ${d.getDate()} · ${fmtTime(sh)} – ${fmtTime(eh)}`
 }
 
 // ─── Avatar stack ─────────────────────────────────────────────────────────────
 
-type AvatarProfile = { id: string; display_name: string | null; username: string | null; avatar_url: string | null }
+type AvatarProfile = {
+  id: string
+  display_name: string | null
+  username: string | null
+  avatar_url: string | null
+}
 
 function AvatarStack({ profiles }: { profiles: AvatarProfile[] }) {
   const shown = profiles.slice(0, 3)
   const extra = profiles.length - shown.length
   const SIZE  = 20
-
   return (
     <div style={{ display: 'flex' }}>
       {shown.map((p, i) => (
@@ -50,7 +54,7 @@ function AvatarStack({ profiles }: { profiles: AvatarProfile[] }) {
           backgroundSize: 'cover',
           color: 'white', fontSize: 8, fontWeight: 700,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          border: '1.5px solid white',
+          border: '1.5px solid #2a2a2a',
           marginLeft: i > 0 ? -5 : 0,
           position: 'relative', zIndex: shown.length - i, flexShrink: 0,
         }}>
@@ -60,9 +64,9 @@ function AvatarStack({ profiles }: { profiles: AvatarProfile[] }) {
       {extra > 0 && (
         <div style={{
           width: SIZE, height: SIZE, borderRadius: '50%',
-          background: '#E8E6E0', color: '#777', fontSize: 8, fontWeight: 700,
+          background: '#333', color: '#aaa', fontSize: 8, fontWeight: 700,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          border: '1.5px solid white', marginLeft: -5,
+          border: '1.5px solid #2a2a2a', marginLeft: -5,
           position: 'relative', flexShrink: 0,
         }}>+{extra}</div>
       )}
@@ -87,7 +91,7 @@ export function PlanCard({ planCardId, currentUserId }: PlanCardProps) {
   const [responding,   setResponding]   = useState(false)
   const [locking,      setLocking]      = useState(false)
 
-  // ── Initial load ────────────────────────────────────────────────────────────
+  // ── Load ────────────────────────────────────────────────────────────────────
   useEffect(() => {
     const supabase = createClient()
 
@@ -99,10 +103,8 @@ export function PlanCard({ planCardId, currentUserId }: PlanCardProps) {
           .select('*, profiles(id, display_name, username, avatar_url)')
           .eq('plan_card_id', planCardId),
       ])
-
       if (cardRes.data) {
         setCard(cardRes.data as PlanCardType)
-        // Get member count
         const { count } = await supabase
           .from('group_members')
           .select('*', { count: 'exact', head: true })
@@ -115,8 +117,6 @@ export function PlanCard({ planCardId, currentUserId }: PlanCardProps) {
 
     load()
 
-    // ── Realtime: responses ──────────────────────────────────────────────────
-    // Use a unique channel name per mount to avoid StrictMode double-subscribe errors
     const channel = supabase
       .channel(`plan-card-${planCardId}-${Date.now()}`)
       .on('postgres_changes' as any, {
@@ -142,22 +142,21 @@ export function PlanCard({ planCardId, currentUserId }: PlanCardProps) {
     return () => { supabase.removeChannel(channel) }
   }, [planCardId])
 
-  // ── Derived state ───────────────────────────────────────────────────────────
-  const myResponse  = responses.find(r => r.user_id === currentUserId)?.response
-  const inList      = responses.filter(r => r.response === 'in')
-  const maybeList   = responses.filter(r => r.response === 'maybe')
-  const cantList    = responses.filter(r => r.response === 'cant')
-  const inCount     = inList.length
-  const isCreator   = card?.created_by === currentUserId
-  const isLocked    = card?.status === 'locked'
-  const threshold   = Math.max(3, Math.ceil(totalMembers * 0.5))
-  const shouldLock  = inCount >= threshold && !isLocked
+  // ── Derived ─────────────────────────────────────────────────────────────────
+  const myResponse = responses.find(r => r.user_id === currentUserId)?.response
+  const inList     = responses.filter(r => r.response === 'in')
+  const maybeList  = responses.filter(r => r.response === 'maybe')
+  const cantList   = responses.filter(r => r.response === 'cant')
+  const inCount    = inList.length
+  const isCreator  = card?.created_by === currentUserId
+  const isLocked   = card?.status === 'locked'
+  const threshold  = Math.max(3, Math.ceil(totalMembers * 0.5))
+  const shouldLock = inCount >= threshold && !isLocked
 
   // ── Handlers ────────────────────────────────────────────────────────────────
   const handleRespond = async (r: 'in' | 'maybe' | 'cant') => {
     if (responding || isLocked || !card) return
     setResponding(true)
-    // Optimistic
     setResponses(prev => [
       ...prev.filter(x => x.user_id !== currentUserId),
       { id: 'temp', plan_card_id: planCardId, user_id: currentUserId, response: r, created_at: '' },
@@ -170,62 +169,54 @@ export function PlanCard({ planCardId, currentUserId }: PlanCardProps) {
     if (locking || !card) return
     setLocking(true)
     const result = await lockInPlanCard(planCardId)
-    if (result.eventId) {
-      router.push(`/events/${result.eventId}`)
-    } else {
-      setLocking(false)
-    }
+    if (result.eventId) router.push(`/events/${result.eventId}`)
+    else setLocking(false)
   }
 
   // ── Loading ──────────────────────────────────────────────────────────────────
   if (loading || !card) {
     return (
       <div style={{
-        maxWidth: '300px', borderRadius: '16px',
-        background: 'white', border: '0.5px solid #E8E6E0',
-        padding: '16px', fontSize: '13px', color: '#ccc',
+        borderRadius: '14px', padding: '16px',
+        background: '#161616', fontSize: '13px', color: '#555',
       }}>
-        Loading plan...
+        Loading plan…
       </div>
     )
   }
 
   const icon = EVENT_ICONS[card.event_type] ?? '📅'
-
   const toProfiles = (rows: PlanCardResponseRow[]): AvatarProfile[] =>
     rows.map(r => r.profiles ?? { id: r.user_id, display_name: null, username: null, avatar_url: null })
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <div style={{
-      maxWidth: '300px', width: '100%',
-      borderRadius: '16px', overflow: 'hidden',
-      border: '0.5px solid #E8E6E0',
-      boxShadow: '0 2px 12px rgba(0,0,0,0.07)',
+      width: '100%', borderRadius: '14px', overflow: 'hidden',
+      background: '#161616',
     }}>
 
       {/* Header */}
       <div style={{
         padding: '14px 16px 12px',
         background: isLocked
-          ? 'linear-gradient(135deg, #1D9E75 0%, #15795A 100%)'
-          : 'linear-gradient(135deg, #7F77DD 0%, #5a5490 100%)',
-        color: 'white',
+          ? 'linear-gradient(135deg, #1a6b50 0%, #134f3c 100%)'
+          : 'linear-gradient(135deg, #4c4899 0%, #373580 100%)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '5px' }}>
           <span style={{ fontSize: '15px' }}>{icon}</span>
           <span style={{
-            fontSize: '10px', fontWeight: 700, opacity: 0.65,
-            textTransform: 'uppercase', letterSpacing: '.07em',
+            fontSize: '10px', fontWeight: 700, opacity: 0.7,
+            textTransform: 'uppercase', letterSpacing: '.07em', color: 'white',
           }}>
             {isLocked ? 'Locked in ✓' : "Who's in?"}
           </span>
         </div>
-        <p style={{ fontSize: '15px', fontWeight: 700, margin: '0 0 4px', lineHeight: 1.25 }}>
+        <p style={{ fontSize: '15px', fontWeight: 700, margin: '0 0 4px', lineHeight: 1.25, color: 'white' }}>
           {card.title}
         </p>
         {card.proposed_date && card.proposed_start && card.proposed_end && (
-          <p style={{ fontSize: '12px', opacity: 0.7, margin: 0 }}>
+          <p style={{ fontSize: '12px', opacity: 0.65, margin: 0, color: 'white' }}>
             {fmtDateLine(card.proposed_date, card.proposed_start, card.proposed_end)}
           </p>
         )}
@@ -235,22 +226,22 @@ export function PlanCard({ planCardId, currentUserId }: PlanCardProps) {
       <div style={{
         display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
         padding: '12px 14px', gap: '8px',
-        borderBottom: '0.5px solid #F0EEE8',
-        background: '#FAFAF9',
+        borderBottom: '1px solid #222',
+        background: '#1a1a1a',
       }}>
         {([
-          { key: 'in',    label: "In",     emoji: '✅', color: '#1D9E75', list: inList    },
-          { key: 'maybe', label: "Maybe",  emoji: '🤔', color: '#B8860B', list: maybeList },
-          { key: 'cant',  label: "Can't",  emoji: '❌', color: '#999',    list: cantList  },
+          { key: 'in',    label: 'In',    emoji: '✅', color: '#34d399', list: inList    },
+          { key: 'maybe', label: 'Maybe', emoji: '🤔', color: '#fbbf24', list: maybeList },
+          { key: 'cant',  label: "Can't", emoji: '❌', color: '#666',    list: cantList  },
         ] as const).map(bucket => (
           <div key={bucket.key} style={{ textAlign: 'center' }}>
-            <p style={{ fontSize: '11px', fontWeight: 700, color: bucket.color, margin: '0 0 4px' }}>
+            <p style={{ fontSize: '11px', fontWeight: 700, color: bucket.color, margin: '0 0 5px' }}>
               {bucket.emoji} {bucket.list.length}
             </p>
             <div style={{ display: 'flex', justifyContent: 'center' }}>
               {bucket.list.length > 0
                 ? <AvatarStack profiles={toProfiles(bucket.list)} />
-                : <span style={{ fontSize: '10px', color: '#ddd' }}>{bucket.label}</span>
+                : <span style={{ fontSize: '10px', color: '#444' }}>{bucket.label}</span>
               }
             </div>
           </div>
@@ -259,7 +250,7 @@ export function PlanCard({ planCardId, currentUserId }: PlanCardProps) {
 
       {/* Actions */}
       {!isLocked ? (
-        <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '8px', background: '#161616' }}>
 
           {/* Response buttons */}
           <div style={{ display: 'flex', gap: '5px' }}>
@@ -267,9 +258,9 @@ export function PlanCard({ planCardId, currentUserId }: PlanCardProps) {
               const labels = { in: "I'm in", maybe: 'Maybe', cant: "Can't" }
               const active = myResponse === r
               const activeColors = {
-                in:    { bg: '#1D9E75', border: '#1D9E75' },
-                maybe: { bg: '#D4A017', border: '#D4A017' },
-                cant:  { bg: '#D85A30', border: '#D85A30' },
+                in:    { bg: '#1a6b50', border: '#1a6b50' },
+                maybe: { bg: '#92400e', border: '#92400e' },
+                cant:  { bg: '#7f1d1d', border: '#7f1d1d' },
               }
               const ac = activeColors[r]
               return (
@@ -279,9 +270,9 @@ export function PlanCard({ planCardId, currentUserId }: PlanCardProps) {
                   disabled={responding}
                   style={{
                     flex: 1, padding: '8px 4px', borderRadius: '9px',
-                    background: active ? ac.bg : 'white',
-                    color: active ? 'white' : '#555',
-                    border: `1.5px solid ${active ? ac.border : '#E8E6E0'}`,
+                    background: active ? ac.bg : '#222',
+                    color: active ? 'white' : '#888',
+                    border: `1px solid ${active ? ac.border : '#2a2a2a'}`,
                     fontSize: '12px', fontWeight: 600,
                     cursor: responding ? 'default' : 'pointer',
                     fontFamily: 'inherit', transition: 'all 0.15s',
@@ -293,14 +284,14 @@ export function PlanCard({ planCardId, currentUserId }: PlanCardProps) {
             })}
           </div>
 
-          {/* Lock it in — creator only, when threshold met */}
+          {/* Lock it in — creator only */}
           {shouldLock && isCreator && (
             <div style={{
               padding: '10px 12px', borderRadius: '10px',
-              background: '#E6F7F1', border: '1px solid #A8DECE',
+              background: '#0d2e20', border: '1px solid #1a4a31',
               display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px',
             }}>
-              <p style={{ fontSize: '12px', fontWeight: 600, color: '#0A6640', margin: 0 }}>
+              <p style={{ fontSize: '12px', fontWeight: 600, color: '#34d399', margin: 0 }}>
                 Looks like this is happening 👀
               </p>
               <button
@@ -308,11 +299,10 @@ export function PlanCard({ planCardId, currentUserId }: PlanCardProps) {
                 disabled={locking}
                 style={{
                   padding: '7px 12px', borderRadius: '9999px',
-                  background: '#1D9E75', color: 'white', border: 'none',
+                  background: '#1a6b50', color: 'white', border: 'none',
                   fontSize: '12px', fontWeight: 700,
                   cursor: locking ? 'default' : 'pointer',
                   fontFamily: 'inherit', whiteSpace: 'nowrap',
-                  boxShadow: '0 2px 8px rgba(29,158,117,0.35)',
                 }}
               >
                 {locking ? 'Locking…' : 'Lock it in →'}
@@ -320,20 +310,19 @@ export function PlanCard({ planCardId, currentUserId }: PlanCardProps) {
             </div>
           )}
 
-          {/* Threshold hint for non-creators */}
           {shouldLock && !isCreator && (
-            <p style={{ fontSize: '11px', color: '#1D9E75', fontWeight: 600, textAlign: 'center', margin: 0 }}>
-              {inCount} people are in — waiting for the organizer
+            <p style={{ fontSize: '11px', color: '#34d399', fontWeight: 600, textAlign: 'center', margin: 0 }}>
+              {inCount} people are in — waiting for the organiser
             </p>
           )}
         </div>
       ) : (
-        /* Locked state */
+        /* Locked footer */
         <div style={{
-          padding: '12px 16px',
+          padding: '12px 16px', background: '#161616',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
-          <p style={{ fontSize: '13px', fontWeight: 600, color: '#1D9E75', margin: 0 }}>
+          <p style={{ fontSize: '13px', fontWeight: 600, color: '#34d399', margin: 0 }}>
             This is happening! 🎉
           </p>
           {card.event_id && (

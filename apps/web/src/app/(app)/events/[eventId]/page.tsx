@@ -3,11 +3,13 @@ import { redirect, notFound } from 'next/navigation'
 import EventTabs from '@/components/events/event-tabs'
 import { ChatPanel } from '@/components/chat/chat-panel'
 import RsvpSection from '@/components/events/rsvp-section'
+import { markEventCompleted } from '@/lib/actions/events'
 
 type Props = {
   params: Promise<{ eventId: string }>
 }
 
+// Literal emoji — no surrogate pairs, no unicode escapes
 const EVENT_TYPE_META: Record<string, { emoji: string; label: string }> = {
   vacation:   { emoji: '✈️',  label: 'Vacation'   },
   day_trip:   { emoji: '🚗',  label: 'Day trip'   },
@@ -27,12 +29,14 @@ function formatDate(iso: string | null) {
 
 function formatTime(iso: string | null) {
   if (!iso) return null
-  const d = new Date(iso)
-  const h = d.getHours()
-  const m = d.getMinutes()
+  const d      = new Date(iso)
+  const h      = d.getHours()
+  const m      = d.getMinutes()
   const suffix = h >= 12 ? 'pm' : 'am'
-  const hour = h > 12 ? h - 12 : h === 0 ? 12 : h
-  return m === 0 ? `${hour}${suffix}` : `${hour}:${String(m).padStart(2, '0')}${suffix}`
+  const hour   = h > 12 ? h - 12 : h === 0 ? 12 : h
+  return m === 0
+    ? `${hour}${suffix}`
+    : `${hour}:${String(m).padStart(2, '0')}${suffix}`
 }
 
 export default async function EventPage({ params }: Props) {
@@ -46,13 +50,23 @@ export default async function EventPage({ params }: Props) {
     .from('events')
     .select(`
       id, title, description, event_type, starts_at, ends_at,
-      created_by, group_id,
+      created_by, group_id, status, banner_url,
       groups ( id, name, slug, theme_color )
     `)
     .eq('id', eventId)
     .single()
 
   if (error || !event) notFound()
+
+  // Derive completed state
+  const now        = new Date()
+  const hasEnded   = event.ends_at ? new Date(event.ends_at) < now : false
+  const isCompleted = event.status === 'completed' || hasEnded
+
+  // Auto-mark in DB the first time we detect it's over
+  if (hasEnded && event.status !== 'completed' && event.status !== 'cancelled') {
+    await markEventCompleted(eventId)
+  }
 
   const { data: rsvps } = await supabase
     .from('event_attendees')
@@ -66,13 +80,18 @@ export default async function EventPage({ params }: Props) {
 
   const members = (groupMembers ?? [])
     .map((m) => m.profiles)
-    .filter(Boolean) as { id: string; display_name: string | null; username: string; avatar_url: string | null }[]
+    .filter(Boolean) as {
+      id: string
+      display_name: string | null
+      username: string
+      avatar_url: string | null
+    }[]
 
-  const userRsvp   = (rsvps ?? []).find((r) => r.user_id === user.id)
-  const isCreator  = event.created_by === user.id
-  const typeMeta   = EVENT_TYPE_META[event.event_type] ?? { emoji: '📅', label: event.event_type }
-  const goingCount = (rsvps ?? []).filter((r) => r.rsvp_status === 'yes').length
-  const accentColor = (event.groups as any)?.theme_color ?? '#7F77DD'
+  const userRsvp    = (rsvps ?? []).find((r) => r.user_id === user.id)
+  const isCreator   = event.created_by === user.id
+  const typeMeta    = EVENT_TYPE_META[event.event_type] ?? { emoji: '📅', label: event.event_type }
+  const goingCount  = (rsvps ?? []).filter((r) => r.rsvp_status === 'yes').length
+  const accentColor = (event.groups as any)?.theme_color ?? '#6366f1'
   const groupName   = (event.groups as any)?.name ?? ''
   const groupId     = event.group_id
 
@@ -84,7 +103,7 @@ export default async function EventPage({ params }: Props) {
       {(rsvps ?? []).length > 0 && (
         <div>
           <p className="text-[10px] uppercase tracking-widest text-[#555] font-semibold mb-2">
-            Who&apos;s in &middot; {goingCount} going
+            {isCompleted ? 'Who came' : "Who's in"} &middot; {goingCount} going
           </p>
           <div className="flex flex-wrap gap-2">
             {(rsvps ?? [])
@@ -92,7 +111,10 @@ export default async function EventPage({ params }: Props) {
               .map((r) => {
                 const p = r.profiles as any
                 return (
-                  <div key={r.user_id} className="flex items-center gap-1.5 bg-[#1a1a1a] rounded-lg px-2.5 py-1.5">
+                  <div
+                    key={r.user_id}
+                    className="flex items-center gap-1.5 bg-[#1a1a1a] rounded-lg px-2.5 py-1.5"
+                  >
                     <div className="w-5 h-5 rounded-full bg-[#333] overflow-hidden flex items-center justify-center text-[10px] text-white">
                       {p?.avatar_url
                         ? <img src={p.avatar_url} alt="" className="w-full h-full object-cover" />
@@ -116,6 +138,7 @@ export default async function EventPage({ params }: Props) {
 
           {/* Left column */}
           <div className="flex-1 px-4 py-6 lg:px-8 lg:py-8 lg:max-w-[560px]">
+
             <a
               href={`/groups/${groupId}`}
               className="inline-flex items-center gap-1.5 text-[#555] text-sm hover:text-white transition-colors mb-6"
@@ -136,10 +159,22 @@ export default async function EventPage({ params }: Props) {
                   {typeMeta.emoji}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[11px] uppercase tracking-widest font-semibold mb-1" style={{ color: accentColor }}>
-                    {typeMeta.label}
-                  </p>
-                  <h1 className="text-xl font-bold text-white leading-tight mb-2">{event.title}</h1>
+                  <div className="flex items-center gap-2 mb-1">
+                    <p
+                      className="text-[11px] uppercase tracking-widest font-semibold"
+                      style={{ color: accentColor }}
+                    >
+                      {typeMeta.label}
+                    </p>
+                    {isCompleted && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#2a2a2a] text-[#666] uppercase tracking-widest">
+                        Completed
+                      </span>
+                    )}
+                  </div>
+                  <h1 className="text-xl font-bold text-white leading-tight mb-2">
+                    {event.title}
+                  </h1>
                   <div className="flex flex-wrap gap-x-4 gap-y-1">
                     {event.starts_at && (
                       <span className="text-sm text-[#aaa]">{formatDate(event.starts_at)}</span>
@@ -155,37 +190,42 @@ export default async function EventPage({ params }: Props) {
               </div>
             </div>
 
-            <div className="mb-5">
-              <RsvpSection
-                eventId={eventId}
-                currentRsvp={userRsvp?.rsvp_status ?? null}
-              />
-            </div>
+            {/* RSVP — hidden for completed events */}
+            {!isCompleted && (
+              <div className="mb-5">
+                <RsvpSection
+                  eventId={eventId}
+                  currentRsvp={userRsvp?.rsvp_status ?? null}
+                />
+              </div>
+            )}
 
             <EventTabs
               eventId={eventId}
               eventType={event.event_type}
               members={members}
               isCreator={isCreator}
+              isCompleted={isCompleted}
               aboutSlot={aboutSlot}
             />
           </div>
 
-          {/* Right column — chat, fills full height */}
+          {/* Right column — chat */}
           <div
-            className="hidden lg:flex lg:w-[340px] lg:border-l lg:flex-col"
-            style={{ borderColor: '#1e1e1e', position: 'sticky', top: 0, height: '100vh' }}
+            className="lg:w-[340px] lg:border-l lg:sticky lg:top-0 lg:h-screen flex flex-col"
+            style={{ borderColor: '#1e1e1e' }}
           >
-            <div className="px-4 py-4 border-b flex-shrink-0" style={{ borderColor: '#1e1e1e' }}>
-              <p className="text-xs uppercase tracking-widest text-[#555] font-semibold">Plan chat</p>
+            <div className="px-4 py-4 border-b" style={{ borderColor: '#1e1e1e' }}>
+              <p className="text-xs uppercase tracking-widest text-[#555] font-semibold">
+                {isCompleted ? 'Group chat' : 'Plan chat'}
+              </p>
             </div>
-            <div className="flex-1 min-h-0">
+            <div className="flex-1 overflow-hidden">
               <ChatPanel
                 groupId={groupId}
                 currentUserId={user.id}
                 eventId={eventId}
                 initialMessages={[]}
-                height="100%"
               />
             </div>
           </div>

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import EventDetails from '@/components/events/event-details'
+import MomentsTab from '@/components/events/moments-tab'
 
 type Member = {
   id: string
@@ -14,41 +15,36 @@ type Props = {
   eventType: string
   members: Member[]
   isCreator: boolean
+  isCompleted: boolean
   aboutSlot: React.ReactNode
 }
 
-const TABS = [
-  { id: 'about',   label: 'About' },
-  { id: 'details', label: 'Costs & details' },
-] as const
+type TabId = 'about' | 'details' | 'moments'
 
-type TabId = typeof TABS[number]['id']
-
-export default function EventTabs({ eventId, eventType, members, isCreator, aboutSlot }: Props) {
+export default function EventTabs({ eventId, eventType, members, isCreator, isCompleted, aboutSlot }: Props) {
   const [active, setActive] = useState<TabId>('about')
+
+  const tabs: { id: TabId; label: string }[] = [
+    { id: 'about',   label: 'About' },
+    { id: 'details', label: 'Costs & details' },
+    ...(isCompleted ? [{ id: 'moments' as TabId, label: '📷 Moments' }] : []),
+  ]
 
   return (
     <div>
       {/* Tab strip */}
-      <div
-        className="flex border-b mb-5"
-        style={{ borderColor: '#1e1e1e' }}
-      >
-        {TABS.map((tab) => (
+      <div className="flex border-b mb-5" style={{ borderColor: '#1e1e1e' }}>
+        {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActive(tab.id)}
             className={`px-4 py-2.5 text-sm font-medium transition-colors relative ${
-              active === tab.id
-                ? 'text-white'
-                : 'text-[#555] hover:text-[#999]'
+              active === tab.id ? 'text-white' : 'text-[#555] hover:text-[#999]'
             }`}
           >
             {tab.label}
             {active === tab.id && (
-              <span
-                className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-500 rounded-t-full"
-              />
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-500 rounded-t-full" />
             )}
           </button>
         ))}
@@ -64,7 +60,11 @@ export default function EventTabs({ eventId, eventType, members, isCreator, abou
           eventType={eventType}
           members={members}
           isCreator={isCreator}
+          readOnly={isCompleted}
         />
+      )}
+      {active === 'moments' && isCompleted && (
+        <MomentsTab eventId={eventId} />
       )}
     </div>
   )

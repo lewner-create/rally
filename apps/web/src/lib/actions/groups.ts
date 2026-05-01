@@ -19,7 +19,6 @@ export async function createGroup(formData: FormData) {
   const themeColor  = (formData.get('theme_color')  as string) || '#7F77DD'
   const bannerUrl   = (formData.get('banner_url')   as string) || null
   const description = (formData.get('description')  as string) || null
-  const useBoost    = formData.get('use_boost') === 'true'
 
   let interests: string[] = []
   try { interests = JSON.parse(formData.get('interests') as string ?? '[]') } catch {}
@@ -30,7 +29,6 @@ export async function createGroup(formData: FormData) {
       name,
       owner_id:    user.id,
       tier:        0,
-      boost_count: 0,
       group_type:  groupType,
       occasion:    occasion || null,
       interests,
@@ -45,32 +43,13 @@ export async function createGroup(formData: FormData) {
 
   const { error: memberError } = await supabase
     .from('group_members')
-    .insert({ group_id: group.id, user_id: user.id, role: 'admin', boost_active: false })
+    .insert({ group_id: group.id, user_id: user.id, role: 'admin' })
 
   if (memberError) return { error: memberError.message }
 
-  if (useBoost) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('boost_count')
-      .eq('id', user.id)
-      .single()
-
-    if (profile && profile.boost_count > 0) {
-      await supabase
-        .from('profiles')
-        .update({ boost_count: profile.boost_count - 1 })
-        .eq('id', user.id)
-
-      await supabase
-        .from('groups')
-        .update({ tier: 1, boost_count: 1 })
-        .eq('id', group.id)
-    }
-  }
-
   revalidatePath('/dashboard')
-  redirect(`/dashboard?new=${group.id}`)}
+  redirect(`/dashboard?new=${group.id}`)
+}
 
 export async function getMyGroups() {
   const supabase = await createClient()
@@ -79,7 +58,7 @@ export async function getMyGroups() {
 
   const { data, error } = await supabase
     .from('group_members')
-    .select('group_id, role, groups(id, name, tier, boost_count, created_at)')
+    .select('group_id, role, groups(id, name, tier, created_at)')
     .eq('user_id', user.id)
 
   if (error || !data) return []
@@ -87,7 +66,7 @@ export async function getMyGroups() {
   return data as {
     group_id: string
     role: 'admin' | 'member'
-    groups: { id: string; name: string; tier: number; boost_count: number; created_at: string }
+    groups: { id: string; name: string; tier: number; created_at: string }
   }[]
 }
 
@@ -96,28 +75,31 @@ export async function getGroupWithMembers(groupId: string) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
+  // Check membership first — use maybeSingle() so missing row returns null, not an error
   const { data: membership } = await supabase
     .from('group_members')
     .select('role')
     .eq('group_id', groupId)
     .eq('user_id', user.id)
-    .single()
+    .maybeSingle()
 
   if (!membership) return null
 
-  const { data: group } = await supabase
+  // Fetch group with all columns the UI needs
+  const { data: group, error } = await supabase
     .from('groups')
     .select(`
-      id, name, tier, boost_count, created_at,
+      id, name, slug, owner_id, tier, created_at,
+      theme_color, banner_url, description, interests,
       group_members (
-        id, role, boost_active, joined_at, user_id,
+        id, role, joined_at, user_id,
         profiles ( id, username, display_name, avatar_url )
       )
     `)
     .eq('id', groupId)
     .single()
 
-  if (!group) return null
+  if (error || !group) return null
   return { ...group, myRole: membership.role as 'admin' | 'member' }
 }
 
@@ -126,7 +108,6 @@ export async function createInviteLink(groupId: string) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Not authenticated' }
 
-  // Get group name to build the group slug portion of the URL
   const { data: group } = await supabase
     .from('groups')
     .select('name')
@@ -135,7 +116,6 @@ export async function createInviteLink(groupId: string) {
 
   const groupSlug = slugify(group?.name ?? 'group')
 
-  // Retry up to 8 times on slug collision
   for (let attempt = 0; attempt < 8; attempt++) {
     const slug = generateInviteToken()
     const { data, error } = await supabase
@@ -147,7 +127,6 @@ export async function createInviteLink(groupId: string) {
     if (!error) {
       return { token: data.token, slug: data.slug, groupSlug: data.group_slug }
     }
-    // Only retry on unique constraint violations
     if (!error.message.includes('unique') && !error.message.includes('duplicate')) {
       return { error: error.message }
     }
@@ -174,8 +153,6 @@ export async function revokeInvite(inviteId: string) {
   revalidatePath('/groups')
 }
 
-// ─── Preview by hex token (old links, backward compat) ───────────────────────
-
 export async function getInvitePreview(token: string) {
   const supabase = await createClient()
   const { data } = await supabase
@@ -186,14 +163,10 @@ export async function getInvitePreview(token: string) {
     .single()
 
   return data as {
-    id: string
-    group_id: string
-    expires_at: string
+    id: string; group_id: string; expires_at: string
     groups: { id: string; name: string }
   } | null
 }
-
-// ─── Preview by fun slug (new links) ─────────────────────────────────────────
 
 export async function getInvitePreviewBySlug(groupSlug: string, slug: string) {
   const supabase = await createClient()
@@ -206,15 +179,10 @@ export async function getInvitePreviewBySlug(groupSlug: string, slug: string) {
     .single()
 
   return data as {
-    id: string
-    group_id: string
-    token: string
-    expires_at: string
+    id: string; group_id: string; token: string; expires_at: string
     groups: { id: string; name: string }
   } | null
 }
-
-// ─── Join by hex token (backward compat) ─────────────────────────────────────
 
 export async function joinGroupByToken(token: string) {
   const supabase = await createClient()
@@ -229,15 +197,12 @@ export async function joinGroupByToken(token: string) {
     .single()
 
   if (!invite) return { error: 'This invite link is invalid or has expired.' }
-
   if (invite.max_uses !== null && invite.use_count >= invite.max_uses) {
     return { error: 'This invite link has reached its maximum uses.' }
   }
 
   return joinGroup(invite.group_id, invite.id, invite.use_count)
 }
-
-// ─── Join by fun slug ─────────────────────────────────────────────────────────
 
 export async function joinGroupBySlug(groupSlug: string, slug: string) {
   const supabase = await createClient()
@@ -253,15 +218,12 @@ export async function joinGroupBySlug(groupSlug: string, slug: string) {
     .single()
 
   if (!invite) return { error: 'This invite link is invalid or has expired.' }
-
   if (invite.max_uses !== null && invite.use_count >= invite.max_uses) {
     return { error: 'This invite link has reached its maximum uses.' }
   }
 
   return joinGroup(invite.group_id, invite.id, invite.use_count)
 }
-
-// ─── Shared join logic ────────────────────────────────────────────────────────
 
 async function joinGroup(groupId: string, inviteId: string, useCount: number) {
   const supabase = await createClient()
@@ -295,7 +257,6 @@ async function joinGroup(groupId: string, inviteId: string, useCount: number) {
     group_id: groupId,
     user_id:  user.id,
     role:     'member',
-    boost_active: false,
   })
 
   if (error) return { error: error.message }
@@ -349,7 +310,6 @@ export async function inviteByUsername(groupId: string, username: string) {
     group_id: groupId,
     user_id:  profile.id,
     role:     'member',
-    boost_active: false,
   })
 
   if (error) return { error: error.message }
@@ -372,8 +332,6 @@ export async function leaveGroup(groupId: string) {
   revalidatePath('/dashboard')
   redirect('/dashboard')
 }
-// ─── Update group ─────────────────────────────────────────────────────────────
-// Paste this block at the bottom of groups.ts
 
 export async function updateGroup(groupId: string, fields: {
   name?:        string
@@ -386,7 +344,6 @@ export async function updateGroup(groupId: string, fields: {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  // Admin check
   const { data: membership } = await supabase
     .from('group_members')
     .select('role')
@@ -415,14 +372,11 @@ export async function updateGroup(groupId: string, fields: {
   return { success: true }
 }
 
-// ─── Remove member ────────────────────────────────────────────────────────────
-
 export async function removeMember(groupId: string, targetUserId: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  // Must be admin and cannot remove yourself via this path
   const { data: membership } = await supabase
     .from('group_members')
     .select('role')
@@ -443,8 +397,6 @@ export async function removeMember(groupId: string, targetUserId: string) {
   revalidatePath(`/groups/${groupId}/settings`)
   return { success: true }
 }
-
-// ─── Delete group (admin only) ────────────────────────────────────────────────
 
 export async function deleteGroup(groupId: string) {
   const supabase = await createClient()
@@ -470,6 +422,3 @@ export async function deleteGroup(groupId: string) {
   revalidatePath('/dashboard')
   redirect('/dashboard')
 }
-
-// ─── Update group ─────────────────────────────────────────────────────────────
-// Paste this block at the bottom of groups.ts

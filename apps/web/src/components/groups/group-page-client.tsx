@@ -6,13 +6,6 @@ import { GroupChatDrawer } from '@/components/groups/group-chat-drawer'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Creator = {
-  id?: string
-  display_name: string | null
-  username: string
-  avatar_url: string | null
-}
-
 type ActiveCard = {
   id: string
   title: string
@@ -21,18 +14,26 @@ type ActiveCard = {
   proposed_start: string | null
   proposed_end: string | null
   status: 'open' | 'locked'
-  created_at?: string | null
-  creator?: Creator | null
   response_counts?: { in: number; maybe: number; cant: number }
+  creator_name?: string | null
+  creator_avatar?: string | null
 }
 
 type Event = {
   id: string
-  name: string
+  title: string   // DB column is title (not name)
   event_type: string
   starts_at: string | null
   ends_at: string | null
   location: string | null
+}
+
+type CompletedEvent = {
+  id: string
+  title: string
+  event_type: string
+  starts_at: string | null
+  ends_at: string | null
 }
 
 type Prompt = {
@@ -46,11 +47,13 @@ type Props = {
   groupId: string
   themeColor: string
   events?: Event[]
+  completedEvents?: CompletedEvent[]
   activeCards?: ActiveCard[]
   prompt?: Prompt
   currentUserId?: string
   tier?: string
   openWindowsSlot?: React.ReactNode
+  // Legacy optional
   groupName?: string
   bannerUrl?: string | null
   description?: string | null
@@ -79,77 +82,46 @@ function formatTime(t: string | null) {
   return m === 0 ? `${hour}${suffix}` : `${hour}:${String(m).padStart(2, '0')}${suffix}`
 }
 
-function timeAgo(iso: string | null | undefined): string {
-  if (!iso) return ''
-  const diff = Date.now() - new Date(iso).getTime()
-  const mins = Math.floor(diff / 60_000)
-  if (mins < 1) return 'just now'
-  if (mins < 60) return `${mins}m ago`
-  const hours = Math.floor(mins / 60)
-  if (hours < 24) return `${hours}h ago`
-  const days = Math.floor(hours / 24)
-  return `${days}d ago`
-}
-
-function CreatorAvatar({ creator }: { creator: Creator }) {
-  const name = creator.display_name ?? creator.username
-  return (
-    <div
-      className="w-5 h-5 rounded-full overflow-hidden flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0"
-      style={{ background: '#333' }}
-      title={name}
-    >
-      {creator.avatar_url
-        ? <img src={creator.avatar_url} alt="" className="w-full h-full object-cover" />
-        : name.charAt(0).toUpperCase()
-      }
-    </div>
-  )
-}
-
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function ActivePlanCard({ card, accent }: { card: ActiveCard; accent: string }) {
   const counts = card.response_counts ?? { in: 0, maybe: 0, cant: 0 }
-  const total  = counts.in + counts.maybe + counts.cant
+  const total = counts.in + counts.maybe + counts.cant
 
   return (
     <Link href={`/plans/${card.id}`} className="block">
       <div
-        className="rounded-xl p-4 transition-all hover:border-[#333]"
+        className="rounded-xl p-4 transition-colors hover:border-[#333]"
         style={{ background: '#1a1a1a', border: '1px solid #252525' }}
       >
-        {/* Header row — creator + timestamp */}
-        <div className="flex items-center gap-2 mb-3">
-          {card.creator && <CreatorAvatar creator={card.creator} />}
-          <span className="text-[#555] text-[11px] truncate min-w-0">
-            {card.creator
-              ? <><span className="text-[#888]">{card.creator.display_name ?? card.creator.username}</span> asked</>
-              : 'Checking who\'s in'
-            }
-          </span>
-          {card.created_at && (
-            <span className="text-[#3a3a3a] text-[10px] flex-shrink-0 ml-auto">
-              {timeAgo(card.created_at)}
-            </span>
-          )}
-        </div>
-
-        {/* Card body */}
         <div className="flex items-start justify-between gap-3 mb-3">
           <div className="min-w-0">
-            <div className="flex items-center gap-1.5 mb-1">
-              <span className="text-base leading-none">{EVENT_TYPE_EMOJI[card.event_type] ?? '📅'}</span>
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <span className="text-base">{EVENT_TYPE_EMOJI[card.event_type] ?? '📅'}</span>
               <span className="text-[10px] uppercase tracking-widest font-semibold" style={{ color: accent }}>
-                who's in?
+                checking who's in
               </span>
             </div>
-            <p className="text-white font-semibold text-sm truncate">{card.title}</p>
+            <p className="text-white font-medium text-sm truncate">{card.title}</p>
             {card.proposed_date && (
-              <p className="text-[#555] text-xs mt-0.5">
+              <p className="text-[#666] text-xs mt-0.5">
                 {formatDate(card.proposed_date)}
                 {card.proposed_start && ` · ${formatTime(card.proposed_start)}`}
               </p>
+            )}
+            {card.creator_name && (
+              <div className="flex items-center gap-1.5 mt-1.5">
+                <div className="w-4 h-4 rounded-full bg-[#333] overflow-hidden flex items-center justify-center text-[9px] text-white flex-shrink-0"
+                  style={{ background: card.creator_avatar ? 'transparent' : '#555' }}>
+                  {card.creator_avatar
+                    ? <img src={card.creator_avatar} alt="" className="w-full h-full object-cover" />
+                    : card.creator_name.charAt(0).toUpperCase()
+                  }
+                </div>
+                <span className="text-[#555] text-[11px] truncate">
+                  {card.creator_name} is checking who's in
+                </span>
+              </div>
             )}
           </div>
           <span
@@ -159,52 +131,78 @@ function ActivePlanCard({ card, accent }: { card: ActiveCard; accent: string }) 
             {counts.in} in
           </span>
         </div>
-
-        {/* Response bar */}
-        {total > 0 ? (
+        {total > 0 && (
           <>
-            <div className="flex h-1 rounded-full overflow-hidden gap-0.5 mb-1.5">
-              {counts.in > 0 && (
-                <div className="bg-emerald-500 rounded-full" style={{ width: `${(counts.in / total) * 100}%` }} />
-              )}
-              {counts.maybe > 0 && (
-                <div className="bg-yellow-500 rounded-full" style={{ width: `${(counts.maybe / total) * 100}%` }} />
-              )}
+            <div className="flex h-1.5 rounded-full overflow-hidden gap-0.5">
+              {counts.in > 0 && <div className="bg-emerald-500 rounded-full" style={{ width: `${(counts.in / total) * 100}%` }} />}
+              {counts.maybe > 0 && <div className="bg-yellow-500 rounded-full" style={{ width: `${(counts.maybe / total) * 100}%` }} />}
               <div className="bg-[#2a2a2a] rounded-full flex-1" />
             </div>
-            <div className="flex gap-3 text-[11px]">
+            <div className="flex gap-3 mt-1.5 text-xs">
               <span className="text-emerald-500">{counts.in} in</span>
               <span className="text-yellow-500">{counts.maybe} maybe</span>
-              <span className="text-[#444]">{counts.cant} can't</span>
+              <span className="text-[#555]">{counts.cant} can't</span>
             </div>
           </>
-        ) : (
-          <p className="text-[#3a3a3a] text-[11px]">No responses yet — tap to vote</p>
         )}
       </div>
     </Link>
   )
 }
 
-function UpcomingEventRow({ event }: { event: Event }) {
+// Human-readable event type labels
+const EVENT_TYPE_LABELS: Record<string, string> = {
+  vacation:   'Vacation',   day_trip:   'Day trip',
+  road_trip:  'Road trip',  game_night: 'Game night',
+  hangout:    'Hangout',    meetup:     'Meetup',
+  moto_trip:  'Moto trip',
+}
+
+function UpcomingEventRow({ event, accent }: { event: Event; accent: string }) {
+  const typeLabel = EVENT_TYPE_LABELS[event.event_type] ?? event.event_type.replace(/_/g, ' ')
+  const title     = event.title?.trim() || null
+
   return (
     <Link href={`/events/${event.id}`} className="block">
       <div
-        className="flex items-center gap-3 py-2.5 border-b last:border-0 hover:bg-[#1e1e1e] -mx-4 px-4 transition-colors"
-        style={{ borderColor: '#222' }}
+        className="rounded-xl p-3 mb-2 last:mb-0 transition-colors hover:opacity-90"
+        style={{ background: '#1a1a1a', border: '1px solid #252525' }}
       >
-        <span className="text-lg w-7 text-center flex-shrink-0">
+        <div className="flex items-center gap-1.5 mb-1">
+          <span className="text-sm leading-none">{EVENT_TYPE_EMOJI[event.event_type] ?? '📅'}</span>
+          <span className="text-[10px] uppercase tracking-widest font-semibold" style={{ color: accent }}>
+            {typeLabel}
+          </span>
+        </div>
+        <p className="text-white text-sm font-semibold leading-snug mb-0.5 truncate">
+          {title ?? typeLabel}
+        </p>
+        <p className="text-[#555] text-xs">
+          {formatDate(event.starts_at) ?? 'Date TBD'}
+          {event.starts_at && ` · ${formatTime(event.starts_at.split('T')[1] ?? '')}`}
+        </p>
+      </div>
+    </Link>
+  )
+}
+
+function CompletedEventRow({ event }: { event: CompletedEvent }) {
+  return (
+    <Link href={`/events/${event.id}`} className="block">
+      <div
+        className="flex items-center gap-3 py-2.5 border-b last:border-0 hover:bg-[#1a1a1a] -mx-4 px-4 transition-colors"
+        style={{ borderColor: '#1e1e1e' }}
+      >
+        <span className="text-lg w-7 text-center flex-shrink-0 opacity-40">
           {EVENT_TYPE_EMOJI[event.event_type] ?? '📅'}
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-white text-sm font-medium truncate">{event.name}</p>
-          <p className="text-[#555] text-xs">
-            {formatDate(event.starts_at?.split('T')[0]) ?? 'Date TBD'}
-            {event.starts_at && ` · ${formatTime(event.starts_at?.split('T')[1] ?? '')}`}
-            {event.location && ` · ${event.location}`}
+          <p className="text-[#666] text-sm truncate">{event.title}</p>
+          <p className="text-[#444] text-xs">
+            {formatDate(event.starts_at) ?? 'No date'} · Completed
           </p>
         </div>
-        <span className="text-[#444] flex-shrink-0">→</span>
+        <span className="text-[#2a2a2a] flex-shrink-0 text-xs">📷</span>
       </div>
     </Link>
   )
@@ -239,22 +237,24 @@ export function GroupPageClient({
   groupId,
   themeColor,
   events = [],
+  completedEvents = [],
   activeCards = [],
   prompt,
   currentUserId,
   openWindowsSlot,
 }: Props) {
   const [tab, setTab] = useState<'overview' | 'plans'>('overview')
+  const [pastExpanded, setPastExpanded] = useState(false)
 
-  const accent = themeColor ?? '#7F77DD'
+  const accent = themeColor ?? '#6366f1'
   const plansBadge = activeCards.length + events.length
 
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto" style={{ background: '#0f0f0f' }}>
+    <div className="flex-1 min-h-0 overflow-y-auto" style={{ background: '#111' }}>
       <div className="max-w-2xl mx-auto px-6 py-6 pb-24">
 
         {/* Tab strip */}
-        <div className="flex border-b mb-6" style={{ borderColor: '#1e1e1e' }}>
+        <div className="flex border-b mb-6" style={{ borderColor: '#222' }}>
           {([
             { id: 'overview', label: 'Overview' },
             { id: 'plans',    label: 'Plans', badge: plansBadge },
@@ -263,7 +263,7 @@ export function GroupPageClient({
               key={t.id}
               onClick={() => setTab(t.id)}
               className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium relative transition-colors ${
-                tab === t.id ? 'text-white' : 'text-[#444] hover:text-[#888]'
+                tab === t.id ? 'text-white' : 'text-[#555] hover:text-[#999]'
               }`}
             >
               {t.label}
@@ -354,6 +354,7 @@ export function GroupPageClient({
         {/* Plans tab */}
         {tab === 'plans' && (
           <div>
+            {/* Active plan cards */}
             {activeCards.length > 0 && (
               <div className="mb-6">
                 <p className="text-[10px] uppercase tracking-widest font-semibold text-[#555] mb-3">Active</p>
@@ -364,13 +365,13 @@ export function GroupPageClient({
                 </div>
               </div>
             )}
+
+            {/* Upcoming events */}
             {events.length > 0 ? (
-              <div>
-                <p className="text-[10px] uppercase tracking-widest font-semibold text-[#555] mb-2">Upcoming plans</p>
-                <div className="rounded-xl" style={{ background: '#1a1a1a', border: '1px solid #222' }}>
-                  <div className="px-4">
-                    {events.map((event) => <UpcomingEventRow key={event.id} event={event} />)}
-                  </div>
+              <div className="mb-6">
+                <p className="text-[10px] uppercase tracking-widest font-semibold text-[#555] mb-2">Upcoming</p>
+                <div className="space-y-2">
+                    {events.map((event) => <UpcomingEventRow key={event.id} event={event} accent={accent} />)}
                 </div>
               </div>
             ) : activeCards.length === 0 ? (
@@ -387,6 +388,36 @@ export function GroupPageClient({
                 </Link>
               </div>
             ) : null}
+
+            {/* Past events — collapsible */}
+            {completedEvents.length > 0 && (
+              <div>
+                <button
+                  onClick={() => setPastExpanded((v) => !v)}
+                  className="flex items-center gap-2 w-full text-left mb-2 group"
+                >
+                  <p className="text-[10px] uppercase tracking-widest font-semibold text-[#444] group-hover:text-[#666] transition-colors">
+                    Past events · {completedEvents.length}
+                  </p>
+                  <span
+                    className={`text-[#444] text-xs transition-transform group-hover:text-[#666] ${pastExpanded ? 'rotate-180' : ''}`}
+                    style={{ display: 'inline-block' }}
+                  >
+                    ▾
+                  </span>
+                </button>
+
+                {pastExpanded && (
+                  <div className="rounded-xl overflow-hidden" style={{ background: '#141414', border: '1px solid #1e1e1e' }}>
+                    <div className="px-4">
+                      {completedEvents.map((event) => (
+                        <CompletedEventRow key={event.id} event={event} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>

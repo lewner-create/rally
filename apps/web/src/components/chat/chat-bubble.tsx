@@ -42,6 +42,7 @@ export function ChatBubble() {
         'postgres_changes' as any,
         { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `group_id=eq.${groupId}` },
         (payload: any) => {
+          // Count unread for ALL group messages (not just non-event ones)
           if (!open && payload.new?.user_id !== uid) setUnread(n => n + 1)
         }
       )
@@ -55,9 +56,9 @@ export function ChatBubble() {
     if (!open || !groupId) return
     createClient()
       .from('chat_messages')
-      .select('*, profiles(id, display_name, username)')
+      .select('*, profiles(id, display_name, username), event:event_id(id, title, event_type)')
       .eq('group_id', groupId)
-      .is('event_id', null)
+      // No event_id filter — bubble shows all group messages including event-tagged ones
       .order('created_at', { ascending: true })
       .limit(50)
       .then(({ data }) => setMsgs((data ?? []) as MessageWithProfile[]))
@@ -82,12 +83,12 @@ export function ChatBubble() {
       </button>
 
       {open && groupId && (
-        <div style={{ position: 'fixed', bottom: '88px', right: '24px', width: '360px', height: '480px', background: 'white', borderRadius: '20px', boxShadow: '0 8px 40px rgba(0,0,0,0.18)', zIndex: 999, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          <div style={{ padding: '14px 16px', borderBottom: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '15px', fontWeight: 700, color: '#111' }}>Group chat</span>
+        <div style={{ position: 'fixed', bottom: '88px', right: '24px', width: '360px', height: '480px', background: '#111', borderRadius: '20px', boxShadow: '0 8px 40px rgba(0,0,0,0.4)', zIndex: 999, display: 'flex', flexDirection: 'column', overflow: 'hidden', border: '1px solid #1e1e1e' }}>
+          <div style={{ padding: '14px 16px', borderBottom: '1px solid #1e1e1e', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '15px', fontWeight: 700, color: '#fff' }}>Group chat</span>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
               <button onClick={() => router.push('/messages')} style={{ fontSize: '12px', color: '#7F77DD', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, fontFamily: 'inherit' }}>Open →</button>
-              <button onClick={() => setOpen(false)} style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#f5f5f5', border: 'none', cursor: 'pointer', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999' }}>×</button>
+              <button onClick={() => setOpen(false)} style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#1e1e1e', border: 'none', cursor: 'pointer', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666' }}>×</button>
             </div>
           </div>
           <div style={{ flex: 1, overflow: 'hidden' }}>

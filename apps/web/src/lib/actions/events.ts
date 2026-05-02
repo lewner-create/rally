@@ -7,7 +7,7 @@ import { generateInviteToken, slugify } from '@/lib/name-generator'
 
 export type EventType   = 'game_night' | 'hangout' | 'meetup' | 'day_trip' | 'road_trip' | 'moto_trip' | 'vacation'
 export type RsvpStatus  = 'yes' | 'maybe' | 'no'
-export type EventStatus = 'draft' | 'published' | 'cancelled' | 'completed'
+export type EventStatus = 'draft' | 'published' | 'cancelled'
 
 // ─── Create ────────────────────────────────────────────────────────────────
 
@@ -21,6 +21,8 @@ export async function createEvent(params: {
   status?: EventStatus
   bannerUrl?: string
   groupName?: string
+  location?: string
+  games?: string[]
 }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -40,6 +42,8 @@ export async function createEvent(params: {
       banner_url:        params.bannerUrl ?? null,
       invite_slug:       generateInviteToken(),
       invite_group_slug: slugify(params.groupName ?? 'group'),
+      location:          params.location ?? null,
+      games:             params.games ?? null,
     })
     .select()
     .single()
@@ -47,6 +51,70 @@ export async function createEvent(params: {
   if (error) throw new Error(error.message)
   revalidatePath(`/groups/${params.groupId}`)
   return data
+}
+
+// ─── Update (host edit post-creation) ─────────────────────────────────────
+
+export async function updateEvent(eventId: string, params: {
+  title?: string
+  startsAt?: string
+  endsAt?: string
+  description?: string
+  bannerUrl?: string | null
+  location?: string | null
+  games?: string[] | null
+}) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  // Verify caller is the event creator
+  const { data: existing } = await supabase
+    .from('events')
+    .select('created_by, group_id')
+    .eq('id', eventId)
+    .single()
+
+  if (!existing || existing.created_by !== user.id) {
+    throw new Error('Not authorised to edit this event')
+  }
+
+  const updates: Record<string, unknown> = {}
+  if (params.title      !== undefined) updates.title       = params.title
+  if (params.startsAt   !== undefined) updates.starts_at   = params.startsAt
+  if (params.endsAt     !== undefined) updates.ends_at     = params.endsAt
+  if (params.description!== undefined) updates.description = params.description
+  if (params.bannerUrl  !== undefined) updates.banner_url  = params.bannerUrl
+  if (params.location   !== undefined) updates.location    = params.location
+  if (params.games      !== undefined) updates.games       = params.games
+
+  const { data, error } = await supabase
+    .from('events')
+    .update(updates)
+    .eq('id', eventId)
+    .select()
+    .single()
+
+  if (error) throw new Error(error.message)
+
+  revalidatePath(`/events/${eventId}`)
+  revalidatePath(`/groups/${existing.group_id}`)
+  return data
+}
+
+// ─── Mark completed ────────────────────────────────────────────────────────
+
+export async function markEventCompleted(eventId: string) {
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from('events')
+    .update({ status: 'completed' as any })
+    .eq('id', eventId)
+    .lt('ends_at', new Date().toISOString())
+
+  if (error) throw new Error(error.message)
+  revalidatePath(`/events/${eventId}`)
 }
 
 // ─── Read ───────────────────────────────────────────────────────────────────
@@ -85,7 +153,6 @@ export async function getEventsForGroup(groupId: string) {
     `)
     .eq('group_id', groupId)
     .neq('status', 'cancelled')
-    .neq('status', 'completed')
     .gte('starts_at', new Date().toISOString())
     .order('starts_at', { ascending: true })
     .limit(5)
@@ -97,14 +164,16 @@ export async function getCompletedEventsForGroup(groupId: string) {
   const supabase = await createClient()
   const { data } = await supabase
     .from('events')
-    .select('id, title, event_type, starts_at, ends_at')
+    .select(`
+      *,
+      event_attendees (user_id, rsvp_status, profiles:user_id (id, display_name, username, avatar_url))
+    `)
     .eq('group_id', groupId)
-    .lt('ends_at', new Date().toISOString())
-    .neq('status', 'cancelled')
+    .eq('status', 'completed' as any)
     .order('starts_at', { ascending: false })
-    .limit(20)
+    .limit(10)
 
-  return (data ?? []) as { id: string; title: string; event_type: string; starts_at: string | null; ends_at: string | null }[]
+  return (data ?? []) as any[]
 }
 
 export async function getEventAttendees(eventId: string) {
@@ -123,63 +192,43 @@ export async function getEventAttendees(eventId: string) {
   }>
 }
 
-// ─── Completed state ───────────────────────────────────────────────────────
-
-export async function markEventCompleted(eventId: string) {
-  const supabase = await createClient()
-  const { error } = await supabase
-    .from('events')
-    .update({ status: 'completed' })
-    .eq('id', eventId)
-  if (error) console.error('Failed to mark event completed:', error.message)
-}
-
-// ─── Photos ────────────────────────────────────────────────────────────────
-
 export async function getEventPhotos(eventId: string) {
   const supabase = await createClient()
   const { data } = await supabase
     .from('event_photos')
-    .select('id, public_url, created_at, uploader:uploader_id(display_name, username)')
+    .select('*, uploader:uploader_id (id, display_name, avatar_url)')
     .eq('event_id', eventId)
     .order('created_at', { ascending: false })
 
-  return (data ?? []) as {
-    id: string
-    public_url: string
-    created_at: string
-    uploader: { display_name: string | null; username: string } | null
-  }[]
+  return (data ?? []) as any[]
 }
 
 export async function saveEventPhoto(eventId: string, publicUrl: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
+  if (!user) redirect('/login')
 
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from('event_photos')
     .insert({ event_id: eventId, uploader_id: user.id, public_url: publicUrl })
-    .select()
-    .single()
 
-  if (error) {
-    console.error('Failed to save photo:', error.message)
-    return null
-  }
+  if (error) throw new Error(error.message)
   revalidatePath(`/events/${eventId}`)
-  return data
 }
 
 export async function deleteEventPhoto(photoId: string, eventId: string) {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
   const { error } = await supabase
     .from('event_photos')
     .delete()
     .eq('id', photoId)
+    .eq('uploader_id', user.id)
 
-  if (error) console.error('Failed to delete photo:', error.message)
-  else revalidatePath(`/events/${eventId}`)
+  if (error) throw new Error(error.message)
+  revalidatePath(`/events/${eventId}`)
 }
 
 // ─── RSVP ──────────────────────────────────────────────────────────────────

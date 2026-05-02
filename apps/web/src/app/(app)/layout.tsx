@@ -26,7 +26,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex h-screen overflow-hidden">
-      <Sidebar groups={userGroups} />
+      <Sidebar groups={userGroups} currentUserId={user.id} />
       <main className="flex-1 overflow-y-auto" style={{ background: '#0f0f0f' }}>
         {children}
         <ChatBubble />

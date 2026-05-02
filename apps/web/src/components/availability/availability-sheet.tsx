@@ -1,156 +1,170 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { getWeeklyAvailability, type WeeklyAvailability } from '@/lib/actions/availability'
 import { AvailabilityPickerBody } from '@/components/availability/availability-picker'
-import { Calendar, X } from 'lucide-react'
-import { cn } from '@/lib/utils'
 
-interface AvailabilitySheetProps {
-  triggerClassName?: string
-  triggerStyle?: React.CSSProperties
-  collapsed?: boolean
+interface Props {
+  isOpen:   boolean
+  onClose:  () => void
+  /** Accent color passed through to preset chips / save button */
+  accentColor?: string
 }
 
-export function AvailabilitySheet({ triggerClassName, triggerStyle, collapsed }: AvailabilitySheetProps) {
-  const [open,    setOpen]    = useState(false)
-  const [data,    setData]    = useState<WeeklyAvailability | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [mounted, setMounted] = useState(false)
+function defaultWeekly(): WeeklyAvailability {
+  return { mon:[], tue:[], wed:[], thu:[], fri:[], sat:[], sun:[] }
+}
 
+export function AvailabilitySheet({ isOpen, onClose, accentColor = '#7F77DD' }: Props) {
+  const [visible,  setVisible]  = useState(false)
+  const [avail,    setAvail]    = useState<WeeklyAvailability | null>(null)
+  const [loaded,   setLoaded]   = useState(false)
+  const [mounted,  setMounted]  = useState(false)
+
+  // SSR safety
   useEffect(() => { setMounted(true) }, [])
 
-  // Lock body scroll when sheet is open
+  // Animate in / out
   useEffect(() => {
-    if (open) {
+    if (isOpen) {
+      requestAnimationFrame(() => setVisible(true))
+    } else {
+      setVisible(false)
+    }
+  }, [isOpen])
+
+  // Load availability on first open
+  useEffect(() => {
+    if (!isOpen || loaded) return
+    getWeeklyAvailability().then(data => {
+      setAvail(data)
+      setLoaded(true)
+    })
+  }, [isOpen, loaded])
+
+  // Lock body scroll while open
+  useEffect(() => {
+    if (isOpen) {
       document.body.style.overflow = 'hidden'
     } else {
       document.body.style.overflow = ''
     }
     return () => { document.body.style.overflow = '' }
-  }, [open])
+  }, [isOpen])
 
-  const handleOpen = async () => {
-    setOpen(true)
-    if (!data) {
-      setLoading(true)
-      const weekly = await getWeeklyAvailability()
-      setData(weekly)
-      setLoading(false)
-    }
-  }
+  // Keyboard close
+  useEffect(() => {
+    if (!isOpen) return
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') handleClose() }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [isOpen])
 
-  const handleClose = () => setOpen(false)
+  const handleClose = useCallback(() => {
+    setVisible(false)
+    setTimeout(onClose, 320)
+  }, [onClose])
 
-  // ── Trigger button ───────────────────────────────────────────────────────
-  const trigger = (
-    <button
-      onClick={handleOpen}
-      className={triggerClassName}
-      style={triggerStyle}
-      title={collapsed ? 'Availability' : ''}
-    >
-      <Calendar className="h-4 w-4 shrink-0" />
-      {!collapsed && 'Availability'}
-    </button>
-  )
+  const handleSaved = useCallback(() => {
+    // Auto-close after the "Saved ✓" state shows
+    setTimeout(handleClose, 200)
+  }, [handleClose])
 
-  // ── Sheet portal ─────────────────────────────────────────────────────────
-  const sheet = open && (
+  if (!mounted) return null
+
+  const sheetContent = (
     <>
       {/* Backdrop */}
       <div
         onClick={handleClose}
         style={{
-          position: 'fixed', inset: 0,
-          background: 'rgba(0,0,0,0.75)',
-          zIndex: 1000,
-          animation: 'fadeIn 0.2s ease',
+          position: 'fixed', inset: 0, zIndex: 200,
+          background: 'rgba(0,0,0,0.72)',
+          opacity: visible ? 1 : 0,
+          transition: 'opacity 0.3s ease',
+          backdropFilter: 'blur(2px)',
         }}
       />
 
       {/* Sheet */}
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Update availability"
         style={{
           position: 'fixed',
           bottom: 0, left: 0, right: 0,
-          maxHeight: '88vh',
-          background: '#0f0f0f',
+          zIndex: 201,
+          background: '#161616',
+          borderTop: '1px solid #2a2a2a',
           borderRadius: '20px 20px 0 0',
-          border: '1px solid #1e1e1e',
-          borderBottom: 'none',
-          zIndex: 1001,
-          display: 'flex',
-          flexDirection: 'column',
-          animation: 'slideUp 0.25s ease',
-          boxShadow: '0 -8px 40px rgba(0,0,0,0.5)',
+          maxHeight: '88vh',
+          overflowY: 'auto',
+          transform: visible ? 'translateY(0)' : 'translateY(100%)',
+          transition: 'transform 0.35s cubic-bezier(0.32, 0.72, 0, 1)',
+          paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 16px)',
+          // Widen on desktop so it doesn't span the full viewport width
+          maxWidth: '600px',
+          margin: '0 auto',
         }}
       >
-        <style>{`
-          @keyframes fadeIn  { from { opacity: 0 } to { opacity: 1 } }
-          @keyframes slideUp { from { transform: translateY(100%) } to { transform: translateY(0) } }
-        `}</style>
-
         {/* Drag handle */}
         <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 4px' }}>
-          <div style={{ width: '36px', height: '4px', borderRadius: '2px', background: '#2a2a2a' }} />
+          <div style={{ width: '36px', height: '4px', borderRadius: '9999px', background: '#2a2a2a' }} />
         </div>
 
         {/* Header */}
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '8px 20px 16px',
-          borderBottom: '1px solid #1e1e1e',
-        }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 20px 16px' }}>
           <div>
-            <h2 style={{ fontSize: '17px', fontWeight: 700, color: '#fff', margin: 0 }}>
-              Availability
+            <h2 style={{ fontSize: '17px', fontWeight: 800, color: '#e0e0e0', margin: '0 0 2px', letterSpacing: '-.2px' }}>
+              Your availability
             </h2>
-            <p style={{ fontSize: '12px', color: '#555', margin: '2px 0 0' }}>
-              When are you usually free?
+            <p style={{ fontSize: '12px', color: '#555', margin: 0 }}>
+              When are you typically free?
             </p>
           </div>
           <button
             onClick={handleClose}
-            style={{
-              width: '30px', height: '30px', borderRadius: '50%',
-              background: '#1e1e1e', border: '1px solid #2a2a2a',
-              cursor: 'pointer', color: '#666',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              transition: 'background 0.15s, color 0.15s',
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#2a2a2a'; e.currentTarget.style.color = '#fff' }}
-            onMouseLeave={e => { e.currentTarget.style.background = '#1e1e1e'; e.currentTarget.style.color = '#666' }}
+            style={{ background: '#222', border: 'none', cursor: 'pointer', color: '#666', fontSize: '16px', lineHeight: 1, padding: '6px', borderRadius: '50%', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'inherit', transition: 'background 0.15s', flexShrink: 0 }}
+            onMouseEnter={e => (e.currentTarget.style.background = '#2a2a2a')}
+            onMouseLeave={e => (e.currentTarget.style.background = '#222')}
           >
-            <X size={14} />
+            ×
           </button>
         </div>
 
-        {/* Scrollable content */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 20px 32px' }}>
-          {loading ? (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '200px' }}>
-              <p style={{ color: '#444', fontSize: '14px' }}>Loading…</p>
+        {/* Body */}
+        <div style={{ padding: '0 20px 8px' }}>
+          {!loaded ? (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 0' }}>
+              <div style={{ fontSize: '13px', color: '#444' }}>Loading…</div>
             </div>
-          ) : data ? (
+          ) : (
             <AvailabilityPickerBody
-              initial={data}
-              onSaved={() => {
-                // Brief delay so user sees the "Saved ✓" state before sheet closes
-                setTimeout(() => setOpen(false), 900)
-              }}
+              initial={avail ?? defaultWeekly()}
+              accentColor={accentColor}
+              onSaved={handleSaved}
             />
-          ) : null}
+          )}
+        </div>
+
+        {/* Full page link */}
+        <div style={{ textAlign: 'center', padding: '8px 20px 4px' }}>
+          <a
+            href="/availability"
+            style={{ fontSize: '12px', color: '#333', textDecoration: 'none' }}
+            onClick={handleClose}
+          >
+            Open full availability page →
+          </a>
         </div>
       </div>
     </>
   )
 
-  return (
-    <>
-      {trigger}
-      {mounted && sheet ? createPortal(sheet, document.body) : null}
-    </>
-  )
+  // Only render when open or animating out
+  if (!isOpen && !visible) return null
+
+  return createPortal(sheetContent, document.body)
 }

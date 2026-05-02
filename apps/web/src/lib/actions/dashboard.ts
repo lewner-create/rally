@@ -28,6 +28,69 @@ export type GroupWithWindows = {
   } | null
 }
 
+export type UpcomingEvent = {
+  id: string
+  title: string
+  event_type: string
+  starts_at: string
+  ends_at: string | null
+  location: string | null
+  banner_url: string | null
+  group_id: string
+  group_name: string
+  group_theme_color: string | null
+  going_count: number
+  total_count: number
+  user_rsvp: string | null  // 'yes' | 'maybe' | 'no' | null
+}
+
+// ─── Upcoming events across all groups ──────────────────────────────────────
+
+export async function getUpcomingEventsForUser(userId: string, groupIds: string[]): Promise<UpcomingEvent[]> {
+  if (groupIds.length === 0) return []
+
+  const supabase = await createClient()
+
+  const { data: events } = await supabase
+    .from('events')
+    .select(`
+      id, title, event_type, starts_at, ends_at, location, banner_url, group_id,
+      groups ( id, name, theme_color ),
+      event_attendees ( user_id, rsvp_status )
+    `)
+    .in('group_id', groupIds)
+    .in('status', ['published'])
+    .gte('starts_at', new Date().toISOString())
+    .order('starts_at', { ascending: true })
+    .limit(6)
+
+  if (!events) return []
+
+  return events.map((e: any) => {
+    const attendees: { user_id: string; rsvp_status: string }[] = e.event_attendees ?? []
+    const goingCount = attendees.filter(a => a.rsvp_status === 'yes').length
+    const userRsvp   = attendees.find(a => a.user_id === userId)?.rsvp_status ?? null
+
+    return {
+      id:                e.id,
+      title:             e.title,
+      event_type:        e.event_type,
+      starts_at:         e.starts_at,
+      ends_at:           e.ends_at,
+      location:          e.location ?? null,
+      banner_url:        e.banner_url ?? null,
+      group_id:          e.group_id,
+      group_name:        e.groups?.name ?? '',
+      group_theme_color: e.groups?.theme_color ?? null,
+      going_count:       goingCount,
+      total_count:       attendees.length,
+      user_rsvp:         userRsvp,
+    }
+  })
+}
+
+// ─── Groups with windows ─────────────────────────────────────────────────────
+
 export async function getGroupsWithWindows(userId: string): Promise<GroupWithWindows[]> {
   const supabase = await createClient()
 
@@ -68,15 +131,14 @@ export async function getGroupsWithWindows(userId: string): Promise<GroupWithWin
       const windows = await getOpenWindows(group.id)
       if (windows && windows.length > 0) {
         const w = windows[0] as any
-        // Handle both snake_case and camelCase field names
         const startHour = w.start_hour ?? w.startHour ?? w.start ?? 0
         const endHour   = w.end_hour   ?? w.endHour   ?? w.end   ?? 0
         nextWindow = {
-          label: w.label ?? '',
-          day: w.day ?? '',
+          label:      w.label ?? '',
+          day:        w.day ?? '',
           start_hour: Number(startHour),
-          end_hour: Number(endHour),
-          members: (w.members ?? []) as MemberPreview[],
+          end_hour:   Number(endHour),
+          members:    (w.members ?? []) as MemberPreview[],
         }
       }
     } catch {
@@ -84,15 +146,15 @@ export async function getGroupsWithWindows(userId: string): Promise<GroupWithWin
     }
 
     results.push({
-      id: group.id,
-      name: group.name,
-      slug: group.slug,
-      theme_color: group.theme_color,
-      banner_url: group.banner_url,
-      description: group.description,
+      id:           group.id,
+      name:         group.name,
+      slug:         group.slug,
+      theme_color:  group.theme_color,
+      banner_url:   group.banner_url,
+      description:  group.description,
       member_count: memberProfiles.length,
-      members: memberProfiles,
-      next_window: nextWindow,
+      members:      memberProfiles,
+      next_window:  nextWindow,
     })
   }
 

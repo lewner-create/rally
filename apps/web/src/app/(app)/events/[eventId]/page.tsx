@@ -1,42 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
-import EventTabs from '@/components/events/event-tabs'
-import { ChatPanel } from '@/components/chat/chat-panel'
-import RsvpSection from '@/components/events/rsvp-section'
-import { markEventCompleted } from '@/lib/actions/events'
+import { EventPageClient } from '@/components/events/event-page-client'
 
 type Props = {
   params: Promise<{ eventId: string }>
-}
-
-// Literal emoji — no surrogate pairs, no unicode escapes
-const EVENT_TYPE_META: Record<string, { emoji: string; label: string }> = {
-  vacation:   { emoji: '✈️',  label: 'Vacation'   },
-  day_trip:   { emoji: '🚗',  label: 'Day trip'   },
-  road_trip:  { emoji: '🛣️',  label: 'Road trip'  },
-  game_night: { emoji: '🎮',  label: 'Game night' },
-  hangout:    { emoji: '🛋️',  label: 'Hangout'    },
-  meetup:     { emoji: '👋',  label: 'Meetup'     },
-  moto_trip:  { emoji: '🏍️',  label: 'Moto trip'  },
-}
-
-function formatDate(iso: string | null) {
-  if (!iso) return null
-  return new Date(iso).toLocaleDateString('en-US', {
-    weekday: 'long', month: 'long', day: 'numeric',
-  })
-}
-
-function formatTime(iso: string | null) {
-  if (!iso) return null
-  const d      = new Date(iso)
-  const h      = d.getHours()
-  const m      = d.getMinutes()
-  const suffix = h >= 12 ? 'pm' : 'am'
-  const hour   = h > 12 ? h - 12 : h === 0 ? 12 : h
-  return m === 0
-    ? `${hour}${suffix}`
-    : `${hour}:${String(m).padStart(2, '0')}${suffix}`
 }
 
 export default async function EventPage({ params }: Props) {
@@ -50,7 +17,8 @@ export default async function EventPage({ params }: Props) {
     .from('events')
     .select(`
       id, title, description, event_type, starts_at, ends_at,
-      created_by, group_id, status, banner_url,
+      created_by, group_id, banner_url, location, status,
+      games,
       groups ( id, name, slug, theme_color )
     `)
     .eq('id', eventId)
@@ -58,14 +26,17 @@ export default async function EventPage({ params }: Props) {
 
   if (error || !event) notFound()
 
-  // Derive completed state
-  const now        = new Date()
-  const hasEnded   = event.ends_at ? new Date(event.ends_at) < now : false
-  const isCompleted = event.status === 'completed' || hasEnded
-
-  // Auto-mark in DB the first time we detect it's over
-  if (hasEnded && event.status !== 'completed' && event.status !== 'cancelled') {
-    await markEventCompleted(eventId)
+  // Auto-complete if past end time
+  if (
+    event.status === 'published' &&
+    event.ends_at &&
+    new Date(event.ends_at) < new Date()
+  ) {
+    await supabase
+      .from('events')
+      .update({ status: 'completed' })
+      .eq('id', eventId)
+    event.status = 'completed'
   }
 
   const { data: rsvps } = await supabase
@@ -79,159 +50,20 @@ export default async function EventPage({ params }: Props) {
     .eq('group_id', event.group_id)
 
   const members = (groupMembers ?? [])
-    .map((m) => m.profiles)
-    .filter(Boolean) as {
-      id: string
-      display_name: string | null
-      username: string
-      avatar_url: string | null
-    }[]
+    .map((m: any) => m.profiles)
+    .filter(Boolean) as { id: string; display_name: string | null; username: string; avatar_url: string | null }[]
 
-  const userRsvp    = (rsvps ?? []).find((r) => r.user_id === user.id)
-  const isCreator   = event.created_by === user.id
-  const typeMeta    = EVENT_TYPE_META[event.event_type] ?? { emoji: '📅', label: event.event_type }
-  const goingCount  = (rsvps ?? []).filter((r) => r.rsvp_status === 'yes').length
-  const accentColor = (event.groups as any)?.theme_color ?? '#6366f1'
-  const groupName   = (event.groups as any)?.name ?? ''
-  const groupId     = event.group_id
-
-  const aboutSlot = (
-    <div className="space-y-4">
-      {event.description && (
-        <p className="text-[#aaa] text-sm leading-relaxed">{event.description}</p>
-      )}
-      {(rsvps ?? []).length > 0 && (
-        <div>
-          <p className="text-[10px] uppercase tracking-widest text-[#555] font-semibold mb-2">
-            {isCompleted ? 'Who came' : "Who's in"} &middot; {goingCount} going
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {(rsvps ?? [])
-              .filter((r) => r.rsvp_status === 'yes')
-              .map((r) => {
-                const p = r.profiles as any
-                return (
-                  <div
-                    key={r.user_id}
-                    className="flex items-center gap-1.5 bg-[#1a1a1a] rounded-lg px-2.5 py-1.5"
-                  >
-                    <div className="w-5 h-5 rounded-full bg-[#333] overflow-hidden flex items-center justify-center text-[10px] text-white">
-                      {p?.avatar_url
-                        ? <img src={p.avatar_url} alt="" className="w-full h-full object-cover" />
-                        : (p?.display_name ?? p?.username ?? '?').charAt(0).toUpperCase()
-                      }
-                    </div>
-                    <span className="text-xs text-[#aaa]">{p?.display_name ?? p?.username}</span>
-                  </div>
-                )
-              })}
-          </div>
-        </div>
-      )}
-    </div>
-  )
+  const userRsvp   = (rsvps ?? []).find(r => r.user_id === user.id)?.rsvp_status ?? null
+  const isCreator  = event.created_by === user.id
 
   return (
-    <div className="min-h-screen bg-[#0f0f0f] text-white">
-      <div className="max-w-5xl mx-auto">
-        <div className="flex flex-col lg:flex-row min-h-screen">
-
-          {/* Left column */}
-          <div className="flex-1 px-4 py-6 lg:px-8 lg:py-8 lg:max-w-[560px]">
-
-            <a
-              href={`/groups/${groupId}`}
-              className="inline-flex items-center gap-1.5 text-[#555] text-sm hover:text-white transition-colors mb-6"
-            >
-              &larr; {groupName}
-            </a>
-
-            {/* Hero card */}
-            <div
-              className="rounded-2xl p-5 mb-5"
-              style={{ background: `${accentColor}18`, border: `1px solid ${accentColor}30` }}
-            >
-              <div className="flex items-start gap-3">
-                <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
-                  style={{ background: `${accentColor}30` }}
-                >
-                  {typeMeta.emoji}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <p
-                      className="text-[11px] uppercase tracking-widest font-semibold"
-                      style={{ color: accentColor }}
-                    >
-                      {typeMeta.label}
-                    </p>
-                    {isCompleted && (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#2a2a2a] text-[#666] uppercase tracking-widest">
-                        Completed
-                      </span>
-                    )}
-                  </div>
-                  <h1 className="text-xl font-bold text-white leading-tight mb-2">
-                    {event.title}
-                  </h1>
-                  <div className="flex flex-wrap gap-x-4 gap-y-1">
-                    {event.starts_at && (
-                      <span className="text-sm text-[#aaa]">{formatDate(event.starts_at)}</span>
-                    )}
-                    {event.starts_at && (
-                      <span className="text-sm text-[#aaa]">
-                        {formatTime(event.starts_at)}
-                        {event.ends_at && ` – ${formatTime(event.ends_at)}`}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* RSVP — hidden for completed events */}
-            {!isCompleted && (
-              <div className="mb-5">
-                <RsvpSection
-                  eventId={eventId}
-                  currentRsvp={userRsvp?.rsvp_status ?? null}
-                />
-              </div>
-            )}
-
-            <EventTabs
-              eventId={eventId}
-              eventType={event.event_type}
-              members={members}
-              isCreator={isCreator}
-              isCompleted={isCompleted}
-              aboutSlot={aboutSlot}
-            />
-          </div>
-
-          {/* Right column — chat */}
-          <div
-            className="lg:w-[340px] lg:border-l lg:sticky lg:top-0 lg:h-screen flex flex-col"
-            style={{ borderColor: '#1e1e1e' }}
-          >
-            <div className="px-4 py-4 border-b" style={{ borderColor: '#1e1e1e' }}>
-              <p className="text-xs uppercase tracking-widest text-[#555] font-semibold">
-                {isCompleted ? 'Group chat' : 'Plan chat'}
-              </p>
-            </div>
-            <div className="flex-1 overflow-hidden">
-              <ChatPanel
-                groupId={groupId}
-                currentUserId={user.id}
-                eventId={eventId}
-                initialMessages={[]}
-              />
-            </div>
-          </div>
-
-        </div>
-      </div>
-    </div>
+    <EventPageClient
+      event={event as any}
+      rsvps={rsvps as any ?? []}
+      members={members}
+      userRsvp={userRsvp}
+      isCreator={isCreator}
+      currentUserId={user.id}
+    />
   )
 }

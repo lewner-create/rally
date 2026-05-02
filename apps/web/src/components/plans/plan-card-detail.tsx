@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { respondToPlanCard, lockInPlanCard } from '@/lib/actions/plan-cards'
 
@@ -44,14 +44,14 @@ type Props = {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const EVENT_TYPE_META: Record<string, { emoji: string; label: string }> = {
-  vacation:   { emoji: '✈️',  label: 'Vacation' },
-  day_trip:   { emoji: '🚗',  label: 'Day trip' },
-  road_trip:  { emoji: '🛣️',  label: 'Road trip' },
-  game_night: { emoji: '🎮',  label: 'Game night' },
-  hangout:    { emoji: '🛋️',  label: 'Hangout' },
-  meetup:     { emoji: '👋',  label: 'Meetup' },
-  moto_trip:  { emoji: '🏍️',  label: 'Moto trip' },
+const EVENT_TYPE_META: Record<string, { emoji: string; label: string; gradient: string }> = {
+  vacation:   { emoji: '✈️',  label: 'Vacation',   gradient: 'linear-gradient(135deg, #001a2d, #003a5c)' },
+  day_trip:   { emoji: '🗺️',  label: 'Day trip',   gradient: 'linear-gradient(135deg, #0d2010, #1a4020)' },
+  road_trip:  { emoji: '🚗',  label: 'Road trip',  gradient: 'linear-gradient(135deg, #1a1a1a, #2d2d2d)' },
+  game_night: { emoji: '🎮',  label: 'Game night', gradient: 'linear-gradient(135deg, #1a1040, #2d1f6e)' },
+  hangout:    { emoji: '☕',  label: 'Hangout',    gradient: 'linear-gradient(135deg, #1a1208, #3d2b10)' },
+  meetup:     { emoji: '🤝',  label: 'Meetup',     gradient: 'linear-gradient(135deg, #0d1f2d, #1a3a4a)' },
+  moto_trip:  { emoji: '🏍️',  label: 'Moto trip',  gradient: 'linear-gradient(135deg, #2d0f00, #4a1a00)' },
 }
 
 function formatDate(d: string | null) {
@@ -81,6 +81,347 @@ function Avatar({ member, size = 8 }: { member: Member; size?: number }) {
         : initials
       }
     </div>
+  )
+}
+
+// ─── Confetti canvas ─────────────────────────────────────────────────────────
+
+type Particle = {
+  x: number; y: number
+  vx: number; vy: number
+  color: string
+  size: number
+  rotation: number
+  rotationSpeed: number
+  opacity: number
+  shape: 'rect' | 'circle'
+}
+
+function ConfettiCanvas() {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    const resize = () => {
+      canvas.width  = window.innerWidth
+      canvas.height = window.innerHeight
+    }
+    resize()
+    window.addEventListener('resize', resize)
+
+    const COLORS = ['#7F77DD', '#22c55e', '#eab308', '#ec4899', '#3b82f6', '#f97316', '#06b6d4', '#a855f7']
+
+    const particles: Particle[] = Array.from({ length: 120 }, () => ({
+      x: Math.random() * canvas.width,
+      y: -40 - Math.random() * 200,
+      vx: (Math.random() - 0.5) * 4,
+      vy: 2.5 + Math.random() * 3.5,
+      color: COLORS[Math.floor(Math.random() * COLORS.length)],
+      size: 6 + Math.random() * 7,
+      rotation: Math.random() * 360,
+      rotationSpeed: (Math.random() - 0.5) * 12,
+      opacity: 0.85 + Math.random() * 0.15,
+      shape: Math.random() > 0.5 ? 'rect' : 'circle',
+    }))
+
+    let frame: number
+    let running = true
+    const startTime = Date.now()
+
+    const animate = () => {
+      if (!running) return
+      const elapsed = Date.now() - startTime
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+      // Fade out after 3s
+      const globalOpacity = elapsed > 3000
+        ? Math.max(0, 1 - (elapsed - 3000) / 1200)
+        : 1
+
+      if (globalOpacity <= 0) { running = false; return }
+
+      particles.forEach(p => {
+        p.x += p.vx
+        p.y += p.vy
+        p.rotation += p.rotationSpeed
+        p.vy += 0.05 // gravity
+
+        // Reset when off screen
+        if (p.y > canvas.height + 20) {
+          p.y = -20
+          p.x = Math.random() * canvas.width
+          p.vy = 2.5 + Math.random() * 3.5
+        }
+
+        ctx.save()
+        ctx.globalAlpha = p.opacity * globalOpacity
+        ctx.translate(p.x, p.y)
+        ctx.rotate((p.rotation * Math.PI) / 180)
+        ctx.fillStyle = p.color
+
+        if (p.shape === 'circle') {
+          ctx.beginPath()
+          ctx.arc(0, 0, p.size * 0.5, 0, Math.PI * 2)
+          ctx.fill()
+        } else {
+          ctx.fillRect(-p.size / 2, -p.size * 0.3, p.size, p.size * 0.6)
+        }
+        ctx.restore()
+      })
+
+      frame = requestAnimationFrame(animate)
+    }
+
+    animate()
+
+    return () => {
+      running = false
+      cancelAnimationFrame(frame)
+      window.removeEventListener('resize', resize)
+    }
+  }, [])
+
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        pointerEvents: 'none',
+        zIndex: 50,
+      }}
+    />
+  )
+}
+
+// ─── Locked screen ────────────────────────────────────────────────────────────
+
+function LockedScreen({ card, responses, accent }: {
+  card: Card
+  responses: Response[]
+  accent: string
+}) {
+  const [visible, setVisible] = useState(false)
+  const typeMeta = EVENT_TYPE_META[card.event_type] ?? { emoji: '📅', label: card.event_type, gradient: 'linear-gradient(135deg, #1a1a1a, #2d2d2d)' }
+
+  const inResponses = responses.filter(r => r.response === 'in')
+
+  useEffect(() => {
+    // Stagger in after a tick so CSS transition fires
+    const t = requestAnimationFrame(() => setVisible(true))
+    return () => cancelAnimationFrame(t)
+  }, [])
+
+  return (
+    <>
+      <ConfettiCanvas />
+
+      <div
+        className="min-h-screen flex items-center justify-center px-4"
+        style={{ background: '#0a0a0a' }}
+      >
+        <div
+          style={{
+            width: '100%',
+            maxWidth: '420px',
+            transform: visible ? 'translateY(0) scale(1)' : 'translateY(32px) scale(0.95)',
+            opacity: visible ? 1 : 0,
+            transition: 'transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.4s ease',
+          }}
+        >
+          {/* Celebration header */}
+          <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+            <div
+              style={{
+                fontSize: '64px',
+                lineHeight: 1,
+                marginBottom: '12px',
+                display: 'inline-block',
+                transform: visible ? 'rotate(0deg) scale(1)' : 'rotate(-20deg) scale(0.5)',
+                transition: 'transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s',
+              }}
+            >
+              🎉
+            </div>
+            <h1
+              style={{
+                fontSize: '28px',
+                fontWeight: 800,
+                color: 'white',
+                margin: '0 0 6px',
+                letterSpacing: '-0.5px',
+              }}
+            >
+              It's happening!
+            </h1>
+            <p style={{ fontSize: '15px', color: '#555', margin: 0 }}>
+              Plan locked in — time to get excited
+            </p>
+          </div>
+
+          {/* Event summary card */}
+          <div
+            style={{
+              borderRadius: '20px',
+              overflow: 'hidden',
+              marginBottom: '16px',
+              position: 'relative',
+            }}
+          >
+            {/* Type gradient bg */}
+            <div style={{ position: 'absolute', inset: 0, background: typeMeta.gradient }} />
+            {/* Accent glow */}
+            <div style={{
+              position: 'absolute', top: '-40px', right: '-40px',
+              width: '180px', height: '180px', borderRadius: '50%',
+              background: accent, opacity: 0.15, filter: 'blur(40px)',
+              pointerEvents: 'none',
+            }} />
+            <div style={{ position: 'relative', padding: '24px' }}>
+              {/* Type pill */}
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: '5px',
+                padding: '4px 11px', borderRadius: '9999px',
+                background: 'rgba(255,255,255,0.12)',
+                fontSize: '11px', fontWeight: 700,
+                color: 'rgba(255,255,255,0.75)',
+                textTransform: 'uppercase', letterSpacing: '0.06em',
+                marginBottom: '14px',
+              }}>
+                {typeMeta.emoji} {typeMeta.label}
+              </div>
+
+              {/* Title */}
+              <h2 style={{
+                fontSize: '22px', fontWeight: 800, color: 'white',
+                margin: '0 0 14px', letterSpacing: '-0.3px', lineHeight: 1.2,
+              }}>
+                {card.title}
+              </h2>
+
+              {/* Date / time */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', marginBottom: '20px' }}>
+                {card.proposed_date && (
+                  <p style={{
+                    fontSize: '14px', color: 'rgba(255,255,255,0.8)',
+                    margin: 0, display: 'flex', alignItems: 'center', gap: '7px',
+                  }}>
+                    <span style={{ opacity: 0.6 }}>📅</span>
+                    {formatDate(card.proposed_date)}
+                  </p>
+                )}
+                {card.proposed_start && (
+                  <p style={{
+                    fontSize: '13px', color: 'rgba(255,255,255,0.55)',
+                    margin: 0, display: 'flex', alignItems: 'center', gap: '7px',
+                  }}>
+                    <span style={{ opacity: 0.5 }}>🕐</span>
+                    {formatTime(card.proposed_start)}
+                    {card.proposed_end && ` – ${formatTime(card.proposed_end)}`}
+                  </p>
+                )}
+              </div>
+
+              {/* Who's in */}
+              {inResponses.length > 0 && (
+                <div>
+                  <p style={{
+                    fontSize: '10px', fontWeight: 700, color: 'rgba(255,255,255,0.35)',
+                    textTransform: 'uppercase', letterSpacing: '0.07em', margin: '0 0 8px',
+                  }}>
+                    Who's in · {inResponses.length}
+                  </p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                    {/* Avatar stack */}
+                    <div style={{ display: 'flex', marginRight: '2px' }}>
+                      {inResponses.slice(0, 6).map((r, i) => {
+                        const p = r.profiles
+                        const initials = ((p?.display_name ?? p?.username ?? '?')).charAt(0).toUpperCase()
+                        return (
+                          <div
+                            key={r.user_id}
+                            title={p?.display_name ?? p?.username ?? ''}
+                            style={{
+                              width: 32, height: 32,
+                              borderRadius: '50%',
+                              border: '2px solid rgba(0,0,0,0.3)',
+                              marginLeft: i === 0 ? 0 : -10,
+                              overflow: 'hidden',
+                              background: '#2a2a2a',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              fontSize: '12px', fontWeight: 700, color: 'white',
+                              flexShrink: 0,
+                              zIndex: inResponses.length - i,
+                            }}
+                          >
+                            {p?.avatar_url
+                              ? <img src={p.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              : initials
+                            }
+                          </div>
+                        )
+                      })}
+                    </div>
+                    {/* Names */}
+                    <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.65)', margin: 0 }}>
+                      {inResponses
+                        .slice(0, 3)
+                        .map(r => r.profiles?.display_name ?? r.profiles?.username ?? 'Someone')
+                        .join(', ')}
+                      {inResponses.length > 3 && ` +${inResponses.length - 3} more`}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* CTA */}
+          {card.event_id && (
+            <Link
+              href={`/events/${card.event_id}`}
+              style={{
+                display: 'block', width: '100%',
+                padding: '16px',
+                borderRadius: '14px',
+                background: accent,
+                border: 'none',
+                color: 'white',
+                fontSize: '15px', fontWeight: 700,
+                textAlign: 'center',
+                textDecoration: 'none',
+                boxShadow: `0 6px 28px ${accent}50`,
+                transition: 'transform 0.15s, box-shadow 0.15s',
+              }}
+              onMouseEnter={e => {
+                (e.currentTarget as HTMLAnchorElement).style.transform = 'translateY(-1px)'
+                ;(e.currentTarget as HTMLAnchorElement).style.boxShadow = `0 8px 36px ${accent}70`
+              }}
+              onMouseLeave={e => {
+                (e.currentTarget as HTMLAnchorElement).style.transform = 'translateY(0)'
+                ;(e.currentTarget as HTMLAnchorElement).style.boxShadow = `0 6px 28px ${accent}50`
+              }}
+            >
+              See the plan →
+            </Link>
+          )}
+
+          {/* Back link */}
+          <div style={{ textAlign: 'center', marginTop: '14px' }}>
+            <Link
+              href={`/groups/${card.group_id}`}
+              style={{ fontSize: '13px', color: '#444', textDecoration: 'none' }}
+            >
+              ← Back to group
+            </Link>
+          </div>
+        </div>
+      </div>
+    </>
   )
 }
 
@@ -132,7 +473,7 @@ export default function PlanCardDetail({
   const [responding, startRespond]      = useTransition()
 
   const accent = (card.groups as any)?.theme_color ?? '#6366f1'
-  const typeMeta = EVENT_TYPE_META[card.event_type] ?? { emoji: '📅', label: card.event_type }
+  const typeMeta = EVENT_TYPE_META[card.event_type] ?? { emoji: '📅', label: card.event_type, gradient: '' }
 
   const inCount    = responses.filter((r) => r.response === 'in').length
   const maybeCount = responses.filter((r) => r.response === 'maybe').length
@@ -164,25 +505,18 @@ export default function PlanCardDetail({
     })
   }
 
+  // ── Locked state: celebratory screen ─────────────────────────────────────
   if (card.status === 'locked' && card.event_id) {
     return (
-      <div className="min-h-screen bg-[#0f0f0f] flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-4xl mb-4">🎉</p>
-          <p className="text-white font-semibold text-lg mb-2">Plan locked in!</p>
-          <p className="text-[#555] text-sm mb-6">This one's happening.</p>
-          <Link
-            href={`/events/${card.event_id}`}
-            className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white"
-            style={{ background: accent }}
-          >
-            View the plan →
-          </Link>
-        </div>
-      </div>
+      <LockedScreen
+        card={card}
+        responses={responses}
+        accent={accent}
+      />
     )
   }
 
+  // ── Active / open state ───────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-[#0f0f0f] text-white">
       <div className="max-w-lg mx-auto px-4 py-8 pb-24">

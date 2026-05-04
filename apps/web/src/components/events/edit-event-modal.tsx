@@ -1,245 +1,335 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useTransition, useRef } from 'react'
 import { updateEvent } from '@/lib/actions/events'
+import { createClient } from '@/lib/supabase/client'
 
 interface Props {
+  open: boolean
+  onClose: () => void
   event: {
     id: string
     title: string
     starts_at: string | null
     ends_at: string | null
-    description: string | null
     location: string | null
+    description: string | null
     banner_url: string | null
-    event_type: string
   }
-  accentColor: string
-  onClose: () => void
-  onSaved?: (updated: any) => void
+  onSaved: (updated: Partial<Props['event']>) => void
 }
 
-function timeFromIso(iso: string | null): string {
-  if (!iso) return '18:00'
-  const d = new Date(iso)
-  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
-}
-
-function dateFromIso(iso: string | null): string {
+function toDateInput(iso: string | null) {
   if (!iso) return ''
   return iso.split('T')[0]
 }
 
-function fmt12(val: string): string {
-  const [h, m] = val.split(':').map(Number)
-  const suffix = h >= 12 ? 'PM' : 'AM'
-  const hour = h % 12 || 12
-  return m === 0 ? `${hour} ${suffix}` : `${hour}:${String(m).padStart(2,'0')} ${suffix}`
+function toTimeInput(iso: string | null) {
+  if (!iso) return ''
+  const t = iso.split('T')[1] ?? ''
+  return t.slice(0, 5)
 }
 
-function TimePicker({ value, onChange, accent }: { value: string; onChange: (v: string) => void; accent: string }) {
-  const [h, m] = value.split(':').map(Number)
-  const hour12 = h % 12 || 12
-  const ampm   = h >= 12 ? 'PM' : 'AM'
-
-  const setH = (newH12: number, newAmpm: string) => {
-    let h24 = newH12 % 12
-    if (newAmpm === 'PM') h24 += 12
-    onChange(`${String(h24).padStart(2,'0')}:${String(m).padStart(2,'0')}`)
-  }
-  const setM = (newM: number) => onChange(`${String(h).padStart(2,'0')}:${String(newM).padStart(2,'0')}`)
-  const setA = (a: string) => setH(hour12, a)
-
-  const sel: React.CSSProperties = {
-    flex: 1, padding: '10px 6px', borderRadius: '10px',
-    border: '1.5px solid #2a2a2a', fontSize: '14px',
-    fontFamily: 'inherit', color: '#e0e0e0', background: '#1a1a1a',
-    outline: 'none', cursor: 'pointer',
-    appearance: 'none' as any, WebkitAppearance: 'none' as any,
-    textAlign: 'center',
-  }
-
-  return (
-    <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-      <select value={hour12} onChange={e => setH(Number(e.target.value), ampm)} style={sel}
-        onFocus={e => (e.target.style.borderColor = accent)} onBlur={e => (e.target.style.borderColor = '#2a2a2a')}>
-        {Array.from({length:12},(_,i)=>i+1).map(v => <option key={v} value={v}>{v}</option>)}
-      </select>
-      <span style={{ color: '#333', fontWeight: 700 }}>:</span>
-      <select value={m} onChange={e => setM(Number(e.target.value))} style={sel}
-        onFocus={e => (e.target.style.borderColor = accent)} onBlur={e => (e.target.style.borderColor = '#2a2a2a')}>
-        {[0,5,10,15,20,25,30,35,40,45,50,55].map(v => <option key={v} value={v}>{String(v).padStart(2,'0')}</option>)}
-      </select>
-      <select value={ampm} onChange={e => setA(e.target.value)} style={{...sel, flex: 'none', width: '62px'}}
-        onFocus={e => (e.target.style.borderColor = accent)} onBlur={e => (e.target.style.borderColor = '#2a2a2a')}>
-        <option>AM</option><option>PM</option>
-      </select>
-    </div>
-  )
+function toIso(date: string, time: string) {
+  if (!date || !time) return null
+  return `${date}T${time}:00`
 }
 
-export function EditEventModal({ event, accentColor, onClose, onSaved }: Props) {
-  const [visible,  setVisible]  = useState(false)
-  const [title,    setTitle]    = useState(event.title)
-  const [date,     setDate]     = useState(dateFromIso(event.starts_at))
-  const [startT,   setStartT]   = useState(timeFromIso(event.starts_at))
-  const [endT,     setEndT]     = useState(timeFromIso(event.ends_at))
-  const [location, setLocation] = useState(event.location ?? '')
-  const [desc,     setDesc]     = useState(event.description ?? '')
-  const [saving,   setSaving]   = useState(false)
-  const [error,    setError]    = useState('')
-  const backdropRef = useRef<HTMLDivElement>(null)
+export function EditEventModal({ open, onClose, event, onSaved }: Props) {
+  const [title,       setTitle]       = useState(event.title)
+  const [date,        setDate]        = useState(toDateInput(event.starts_at))
+  const [startTime,   setStartTime]   = useState(toTimeInput(event.starts_at))
+  const [endTime,     setEndTime]     = useState(toTimeInput(event.ends_at))
+  const [location,    setLocation]    = useState(event.location ?? '')
+  const [description, setDescription] = useState(event.description ?? '')
 
+  // Banner state
+  const [bannerUrl,     setBannerUrl]     = useState(event.banner_url ?? '')
+  const [bannerPreview, setBannerPreview] = useState(event.banner_url ?? '')
+  const [bannerFile,    setBannerFile]    = useState<File | null>(null)
+  const [uploading,     setUploading]     = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  const [saving, startSave] = useTransition()
+  const [error,  setError]  = useState<string | null>(null)
+
+  // Re-init when event prop changes
   useEffect(() => {
-    // Animate in
-    requestAnimationFrame(() => setVisible(true))
-    // Lock body scroll
-    document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = '' }
-  }, [])
+    setTitle(event.title)
+    setDate(toDateInput(event.starts_at))
+    setStartTime(toTimeInput(event.starts_at))
+    setEndTime(toTimeInput(event.ends_at))
+    setLocation(event.location ?? '')
+    setDescription(event.description ?? '')
+    setBannerUrl(event.banner_url ?? '')
+    setBannerPreview(event.banner_url ?? '')
+    setBannerFile(null)
+    setError(null)
+  }, [event.id])
 
-  const handleClose = () => {
-    setVisible(false)
-    setTimeout(onClose, 300)
+  // Escape to close
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    if (open) window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [open, onClose])
+
+  // Body scroll lock
+  useEffect(() => {
+    document.body.style.overflow = open ? 'hidden' : ''
+    return () => { document.body.style.overflow = '' }
+  }, [open])
+
+  function handleBannerPick(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setBannerFile(file)
+    setBannerPreview(URL.createObjectURL(file))
   }
 
-  const handleSave = async () => {
-    if (!title.trim() || !date) { setError('Title and date are required.'); return }
-    setSaving(true)
-    setError('')
+  function removeBanner() {
+    setBannerFile(null)
+    setBannerPreview('')
+    setBannerUrl('')
+    if (fileRef.current) fileRef.current.value = ''
+  }
+
+  async function uploadBannerIfNeeded(): Promise<string | null> {
+    if (!bannerFile) return bannerUrl || null
+    setUploading(true)
     try {
-      const updated = await updateEvent(event.id, {
-        title:       title.trim(),
-        startsAt:    `${date}T${startT}:00`,
-        endsAt:      `${date}T${endT}:00`,
-        description: desc.trim() || null,
-        location:    location.trim() || null,
-      })
-      onSaved?.(updated)
-      handleClose()
-    } catch (e: any) {
-      setError(e.message ?? 'Something went wrong.')
-      setSaving(false)
+      const supabase = createClient()
+      const ext  = bannerFile.name.split('.').pop() ?? 'jpg'
+      const path = `event-banners/${event.id}-${Date.now()}.${ext}`
+      const { error: upErr } = await supabase.storage
+        .from('event-banners')
+        .upload(path, bannerFile, { upsert: true })
+      if (upErr) throw upErr
+      const { data: { publicUrl } } = supabase.storage.from('event-banners').getPublicUrl(path)
+      return publicUrl
+    } finally {
+      setUploading(false)
     }
   }
 
-  const inp: React.CSSProperties = {
-    width: '100%', padding: '11px 13px', borderRadius: '10px',
-    border: '1.5px solid #2a2a2a', fontSize: '14px',
-    outline: 'none', boxSizing: 'border-box',
-    fontFamily: 'inherit', background: '#1a1a1a',
-    color: '#e0e0e0', transition: 'border-color 0.15s',
+  function handleSave() {
+    if (!title.trim()) { setError('Title is required'); return }
+    setError(null)
+
+    startSave(async () => {
+      const finalBannerUrl = await uploadBannerIfNeeded()
+
+      const result = await updateEvent(event.id, {
+        title:       title.trim(),
+        starts_at:   toIso(date, startTime),
+        ends_at:     toIso(date, endTime),
+        location:    location.trim() || null,
+        description: description.trim() || null,
+        banner_url:  finalBannerUrl,
+      })
+
+      if (result?.error) {
+        setError(result.error)
+        return
+      }
+
+      onSaved({
+        title:       title.trim(),
+        starts_at:   toIso(date, startTime),
+        ends_at:     toIso(date, endTime),
+        location:    location.trim() || null,
+        description: description.trim() || null,
+        banner_url:  finalBannerUrl,
+      })
+      onClose()
+    })
   }
 
-  const lbl: React.CSSProperties = {
-    fontSize: '11px', fontWeight: 700, color: '#555',
-    textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: '7px',
-    display: 'block',
+  const inputStyle: React.CSSProperties = {
+    width: '100%', padding: '10px 12px', borderRadius: '10px',
+    background: '#1a1a1a', border: '1px solid #2a2a2a', color: '#fff',
+    fontSize: '14px', fontFamily: 'inherit', outline: 'none',
+    transition: 'border-color .15s', colorScheme: 'dark',
+  }
+
+  const labelStyle: React.CSSProperties = {
+    fontSize: '11px', fontWeight: 600, color: '#555',
+    textTransform: 'uppercase', letterSpacing: '.07em', display: 'block', marginBottom: '6px',
   }
 
   return (
     <>
       {/* Backdrop */}
       <div
-        ref={backdropRef}
-        onClick={handleClose}
+        onClick={onClose}
         style={{
-          position: 'fixed', inset: 0, zIndex: 100,
-          background: 'rgba(0,0,0,0.7)',
-          opacity: visible ? 1 : 0,
-          transition: 'opacity 0.3s ease',
+          position: 'fixed', inset: 0, zIndex: 50,
+          background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)',
+          opacity: open ? 1 : 0, pointerEvents: open ? 'auto' : 'none',
+          transition: 'opacity .25s',
         }}
       />
 
       {/* Sheet */}
-      <div
-        style={{
-          position: 'fixed', bottom: 0, left: 0, right: 0,
-          zIndex: 101,
-          background: '#161616',
-          borderTop: '1px solid #2a2a2a',
-          borderRadius: '20px 20px 0 0',
-          maxHeight: '90vh',
-          overflowY: 'auto',
-          transform: visible ? 'translateY(0)' : 'translateY(100%)',
-          transition: 'transform 0.35s cubic-bezier(0.32, 0.72, 0, 1)',
-          paddingBottom: 'env(safe-area-inset-bottom, 16px)',
-        }}
-      >
+      <div style={{
+        position: 'fixed', bottom: 0, left: '50%', zIndex: 51,
+        transform: open ? 'translate(-50%, 0)' : 'translate(-50%, 100%)',
+        transition: 'transform .35s cubic-bezier(0.32,0.72,0,1)',
+        width: '100%', maxWidth: '560px',
+        background: '#141414', borderRadius: '20px 20px 0 0',
+        border: '1px solid #1e1e1e', borderBottom: 'none',
+        maxHeight: '92vh', display: 'flex', flexDirection: 'column',
+      }}>
         {/* Handle */}
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 4px' }}>
-          <div style={{ width: '36px', height: '4px', borderRadius: '9999px', background: '#2a2a2a' }} />
+        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '12px', paddingBottom: '4px', flexShrink: 0 }}>
+          <div style={{ width: '36px', height: '4px', borderRadius: '2px', background: '#2a2a2a' }} />
         </div>
 
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 20px 16px' }}>
-          <h2 style={{ fontSize: '17px', fontWeight: 800, color: '#e0e0e0', margin: 0 }}>Edit plan</h2>
-          <button onClick={handleClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#555', fontSize: '20px', lineHeight: 1, padding: '4px', fontFamily: 'inherit' }}>×</button>
+        <div style={{ padding: '12px 24px 16px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <h2 style={{ fontSize: '17px', fontWeight: 700, color: '#fff', margin: 0, letterSpacing: '-0.2px' }}>
+            ✏️ Edit event
+          </h2>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#444', fontSize: '18px', lineHeight: 1 }}>✕</button>
         </div>
 
-        {/* Fields */}
-        <div style={{ padding: '0 20px 24px', display: 'flex', flexDirection: 'column', gap: '18px', maxWidth: '560px', margin: '0 auto' }}>
+        {/* Body */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '0 24px 32px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
-          {/* Title */}
-          <div>
-            <label style={lbl}>Plan name</label>
-            <input value={title} onChange={e => setTitle(e.target.value)} style={inp}
-              onFocus={e => (e.target.style.borderColor = accentColor)}
-              onBlur={e => (e.target.style.borderColor = '#2a2a2a')} />
-          </div>
-
-          {/* Date */}
-          <div>
-            <label style={lbl}>Date</label>
-            <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{
-              ...inp,
-              colorScheme: 'dark',
-            }}
-              onFocus={e => (e.target.style.borderColor = accentColor)}
-              onBlur={e => (e.target.style.borderColor = '#2a2a2a')} />
-          </div>
-
-          {/* Times */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            {/* Banner */}
             <div>
-              <label style={lbl}>Start time</label>
-              <TimePicker value={startT} onChange={setStartT} accent={accentColor} />
+              <label style={labelStyle}>Banner image</label>
+              {bannerPreview ? (
+                <div style={{ position: 'relative', borderRadius: '12px', overflow: 'hidden', height: '120px' }}>
+                  <img src={bannerPreview} alt="Banner" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+                    <button
+                      onClick={() => fileRef.current?.click()}
+                      style={{ padding: '7px 14px', borderRadius: '8px', background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+                    >
+                      Change
+                    </button>
+                    <button
+                      onClick={removeBanner}
+                      style={{ padding: '7px 14px', borderRadius: '8px', background: 'rgba(255,0,0,0.15)', border: '1px solid rgba(255,0,0,0.25)', color: '#ff6b6b', fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => fileRef.current?.click()}
+                  style={{
+                    width: '100%', height: '80px', borderRadius: '12px',
+                    background: '#1a1a1a', border: '1px dashed #2a2a2a',
+                    color: '#555', fontSize: '13px', cursor: 'pointer',
+                    fontFamily: 'inherit', display: 'flex', alignItems: 'center',
+                    justifyContent: 'center', gap: '8px', transition: 'border-color .15s',
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.borderColor = '#444')}
+                  onMouseLeave={e => (e.currentTarget.style.borderColor = '#2a2a2a')}
+                >
+                  🖼 Add a banner image
+                </button>
+              )}
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                onChange={handleBannerPick}
+                style={{ display: 'none' }}
+              />
             </div>
+
+            {/* Title */}
             <div>
-              <label style={lbl}>End time</label>
-              <TimePicker value={endT} onChange={setEndT} accent={accentColor} />
+              <label style={labelStyle}>Title</label>
+              <input
+                value={title}
+                onChange={e => setTitle(e.target.value)}
+                style={inputStyle}
+                placeholder="Event title"
+                onFocus={e => (e.target.style.borderColor = '#444')}
+                onBlur={e => (e.target.style.borderColor = '#2a2a2a')}
+              />
             </div>
-          </div>
 
-          {/* Location */}
-          <div>
-            <label style={lbl}>📍 Location</label>
-            <input value={location} onChange={e => setLocation(e.target.value)}
-              placeholder="Address, venue, destination…" style={inp}
-              onFocus={e => (e.target.style.borderColor = accentColor)}
-              onBlur={e => (e.target.style.borderColor = '#2a2a2a')} />
-          </div>
+            {/* Date + times row */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+              <div>
+                <label style={labelStyle}>Date</label>
+                <input type="date" value={date} onChange={e => setDate(e.target.value)}
+                  style={inputStyle}
+                  onFocus={e => (e.target.style.borderColor = '#444')}
+                  onBlur={e => (e.target.style.borderColor = '#2a2a2a')}
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>Start</label>
+                <input type="time" value={startTime} onChange={e => setStartTime(e.target.value)}
+                  style={inputStyle}
+                  onFocus={e => (e.target.style.borderColor = '#444')}
+                  onBlur={e => (e.target.style.borderColor = '#2a2a2a')}
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>End</label>
+                <input type="time" value={endTime} onChange={e => setEndTime(e.target.value)}
+                  style={inputStyle}
+                  onFocus={e => (e.target.style.borderColor = '#444')}
+                  onBlur={e => (e.target.style.borderColor = '#2a2a2a')}
+                />
+              </div>
+            </div>
 
-          {/* Description */}
-          <div>
-            <label style={lbl}>Details <span style={{ fontWeight: 400, textTransform: 'none', fontSize: '11px' }}>(optional)</span></label>
-            <textarea value={desc} onChange={e => setDesc(e.target.value)}
-              placeholder="Notes, what to bring…" rows={3}
-              style={{ ...inp, resize: 'vertical', lineHeight: 1.6 } as React.CSSProperties}
-              onFocus={e => (e.target.style.borderColor = accentColor)}
-              onBlur={e => (e.target.style.borderColor = '#2a2a2a')} />
-          </div>
+            {/* Location */}
+            <div>
+              <label style={labelStyle}>Location</label>
+              <input
+                value={location}
+                onChange={e => setLocation(e.target.value)}
+                style={inputStyle}
+                placeholder="Where is it?"
+                onFocus={e => (e.target.style.borderColor = '#444')}
+                onBlur={e => (e.target.style.borderColor = '#2a2a2a')}
+              />
+            </div>
 
-          {error && <p style={{ fontSize: '13px', color: '#ef4444', margin: 0 }}>{error}</p>}
+            {/* Description */}
+            <div>
+              <label style={labelStyle}>Description</label>
+              <textarea
+                value={description}
+                onChange={e => setDescription(e.target.value)}
+                rows={3}
+                style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.5 }}
+                placeholder="Any notes for the group…"
+                onFocus={e => (e.target.style.borderColor = '#444')}
+                onBlur={e => (e.target.style.borderColor = '#2a2a2a')}
+              />
+            </div>
 
-          {/* Actions */}
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <button onClick={handleClose} style={{ flex: 1, padding: '13px', borderRadius: '12px', border: '1.5px solid #2a2a2a', background: '#1a1a1a', color: '#aaa', fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-              Cancel
+            {error && (
+              <p style={{ fontSize: '13px', color: '#f87171', margin: 0 }}>{error}</p>
+            )}
+
+            <button
+              onClick={handleSave}
+              disabled={saving || uploading}
+              style={{
+                width: '100%', padding: '13px', borderRadius: '12px', border: 'none',
+                background: saving || uploading ? '#2a2a2a' : '#6366f1',
+                color: saving || uploading ? '#555' : '#fff',
+                fontSize: '14px', fontWeight: 700,
+                cursor: saving || uploading ? 'default' : 'pointer',
+                fontFamily: 'inherit', transition: 'background .2s',
+              }}
+            >
+              {uploading ? 'Uploading…' : saving ? 'Saving…' : 'Save changes'}
             </button>
-            <button onClick={handleSave} disabled={saving} style={{ flex: 2, padding: '13px', borderRadius: '12px', background: accentColor, border: 'none', color: 'white', fontSize: '14px', fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1, fontFamily: 'inherit', boxShadow: `0 4px 16px ${accentColor}40` }}>
-              {saving ? 'Saving…' : 'Save changes'}
-            </button>
+
           </div>
         </div>
       </div>

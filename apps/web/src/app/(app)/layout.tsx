@@ -1,8 +1,6 @@
 import { redirect } from 'next/navigation'
-import { ChatBubble } from '@/components/chat/chat-bubble'
 import { createClient } from '@/lib/supabase/server'
 import { Sidebar } from '@/components/layout/sidebar'
-import { getUnreadMessageCount } from '@/lib/actions/availability'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -25,19 +23,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     userGroups.push(...(groupRows ?? []))
   }
 
-  // DB-backed initial unread count (Session 21)
-  const initialUnread = await getUnreadMessageCount()
-
   return (
     <div className="flex h-screen overflow-hidden">
-      <Sidebar
-        groups={userGroups}
-        currentUserId={user.id}
-        initialUnread={initialUnread}
-      />
+      <Sidebar groups={userGroups} />
       <main className="flex-1 overflow-y-auto" style={{ background: '#0f0f0f' }}>
         {children}
-        <ChatBubble />
       </main>
     </div>
   )

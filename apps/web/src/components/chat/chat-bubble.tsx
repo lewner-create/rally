@@ -18,7 +18,8 @@ export function ChatBubble() {
   const hidden =
     pathname.startsWith('/messages') ||
     pathname.startsWith('/login') ||
-    pathname.startsWith('/signup')
+    pathname.startsWith('/signup') ||
+    pathname.startsWith('/groups/')
 
   useEffect(() => {
     const m = pathname.match(/\/groups\/([0-9a-f-]{36})/)

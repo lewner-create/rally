@@ -4,7 +4,7 @@ interface Member {
   id: string
   user_id: string
   role: 'admin' | 'member'
-  boost_active: boolean
+  is_backing: boolean
   profiles: {
     id: string
     username: string | null
@@ -84,7 +84,7 @@ export function MemberList({ members, currentUserId }: MemberListProps) {
               {member.role === 'admin' && (
                 <Crown style={{ width: '14px', height: '14px', color: '#EF9F27' }} />
               )}
-              {member.boost_active && (
+              {member.is_backing && (
                 <span style={{
                   fontSize: '10px', fontWeight: 600,
                   padding: '2px 6px', borderRadius: '4px',

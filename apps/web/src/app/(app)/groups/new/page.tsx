@@ -8,14 +8,14 @@ export default async function NewGroupPage() {
   const { data: { user } } = await supabase.auth.getUser()
   const { data: profile } = await supabase
     .from('profiles')
-    .select('is_podium, boost_count')
+    .select('is_rally_plus, back_count')
     .eq('id', user?.id ?? '')
     .single()
 
   return (
     <CreateGroupForm
-      isPodium={profile?.is_podium ?? false}
-      boostCount={profile?.boost_count ?? 0}
+      isPodium={profile?.is_rally_plus ?? false}
+      boostCount={profile?.back_count ?? 0}
     />
   )
 }

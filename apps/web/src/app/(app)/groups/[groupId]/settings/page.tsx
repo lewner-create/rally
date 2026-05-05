@@ -25,11 +25,11 @@ export default async function GroupSettingsPage({ params }: { params: Promise<{ 
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('is_podium')
+    .select('is_rally_plus')
     .eq('id', user.id)
     .single()
 
-  const isPodium = !!(profile as any)?.is_podium
+  const isPodium = !!(profile as any)?.is_rally_plus
 
   return (
     <GroupSettingsForm

@@ -8,7 +8,7 @@ interface GroupCardProps {
     id: string
     name: string
     tier: number
-    boost_count: number
+    back_count: number
   }
   role: 'admin' | 'member'
   memberCount?: number

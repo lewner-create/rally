@@ -22,7 +22,7 @@ export interface Group {
   id: string
   name: string
   tier: 0 | 1 | 2 | 3
-  boost_count: number
+  back_count: number
   created_at: string
 }
 

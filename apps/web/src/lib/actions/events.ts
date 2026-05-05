@@ -224,7 +224,7 @@ export async function joinGroupViaEventInvite(groupSlug: string, inviteSlug: str
     group_id:     groupId,
     user_id:      user.id,
     role:         'member',
-    boost_active: false,
+    is_backing: false,
   })
 
   if (error) return { error: error.message }

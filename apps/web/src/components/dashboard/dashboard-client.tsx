@@ -1,42 +1,74 @@
 'use client'
 
 import Link from 'next/link'
-import { useState, useTransition, useEffect } from 'react'
+import { useState, useEffect, useTransition } from 'react'
 import { upsertRsvp } from '@/lib/actions/events'
 import { DashboardTour } from '@/components/dashboard/dashboard-tour'
-import type { GroupWithWindows, MemberPreview, UpcomingPlan, NeedsYouItem, GroupActivity } from '@/lib/actions/dashboard'
+import type { GroupWithWindows, MemberPreview } from '@/lib/actions/dashboard'
 
+// ── Local types (not yet in DB actions) ─────────────────────────
+type GroupActivity = {
+  id: string
+  name: string
+  theme_color: string | null
+  member_count: number
+  last_activity: string | null
+  unread: number
+}
+
+type UpcomingPlan = {
+  id: string
+  title: string
+  starts_at: string
+  group_name: string
+  group_color: string | null
+  group_banner: string | null
+  going_count: number
+  maybe_count: number
+  my_rsvp: string | null
+  attendees: MemberPreview[]
+}
+
+type NeedsYouItem = {
+  id: string
+  title: string
+  sub: string
+  group_name: string
+  group_color: string | null
+}
+
+// ── Design tokens ────────────────────────────────────────────────
 const T = {
-  bg:          '#0f0f0f',
-  bgElev:      '#17171a',
-  bgElev2:     '#1c1c20',
-  border:      'rgba(255,255,255,0.08)',
-  text:        '#f5f4f8',
-  textDim:     '#a8a4b8',
-  textMute:    '#6b6878',
-  textFaint:   '#4a4757',
-  violet:      '#7F77DD',
-  violetSoft:  'rgba(127,119,221,0.15)',
-  violetMid:   'rgba(127,119,221,0.28)',
-  green:       '#5fcf8a',
-  greenSoft:   'rgba(95,207,138,0.14)',
-  amber:       '#e8b65a',
-  amberSoft:   'rgba(232,182,90,0.14)',
+  bg:         '#0f0f0f',
+  bgElev:     '#17171a',
+  bgElev2:    '#1c1c20',
+  border:     'rgba(255,255,255,0.08)',
+  text:       '#f5f4f8',
+  textDim:    '#a8a4b8',
+  textMute:   '#6b6878',
+  textFaint:  '#4a4757',
+  violet:     '#7F77DD',
+  violetSoft: 'rgba(127,119,221,0.15)',
+  green:      '#5fcf8a',
+  greenSoft:  'rgba(95,207,138,0.14)',
+  amber:      '#e8b65a',
+  amberSoft:  'rgba(232,182,90,0.14)',
 }
 
 type Props = {
   profile: { id: string; display_name: string | null; username: string; avatar_url: string | null } | null
   groupsWithWindows: GroupWithWindows[]
+  groupsActivity?: GroupActivity[]
   upcomingPlans?: UpcomingPlan[]
   needsYouItems?: NeedsYouItem[]
-  groupsActivity?: GroupActivity[]
   tourCompleted?: boolean
 }
 
+// ── Helpers ──────────────────────────────────────────────────────
 function initials(name: string) {
   return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
 }
-function relativeTime(iso: string): string {
+function relativeTime(iso: string) {
   const dt    = new Date(iso)
   const today = new Date(); today.setHours(0,0,0,0)
   const diff  = Math.floor((dt.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
@@ -45,17 +77,16 @@ function relativeTime(iso: string): string {
   if (diff < 7)   return dt.toLocaleDateString('en-US', { weekday: 'long' })
   return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
-function formatTime(iso: string): string {
+function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
 }
-function greeting(name: string): string {
+function greeting(name: string) {
   const h = new Date().getHours()
   if (h < 12) return `Good morning, ${name} ☀️`
   if (h < 17) return `Hey, ${name} 👋`
   if (h < 21) return `Evening, ${name} 🌙`
   return `Hey, ${name} 🌙`
 }
-
 function useIsMobile(bp = 768) {
   const [v, setV] = useState(false)
   useEffect(() => {
@@ -68,6 +99,7 @@ function useIsMobile(bp = 768) {
   return v
 }
 
+// ── Avatar stack ─────────────────────────────────────────────────
 function AvatarStack({ people, size = 24, max = 5 }: { people: MemberPreview[]; size?: number; max?: number }) {
   const shown   = people.slice(0, max)
   const extra   = people.length - shown.length
@@ -76,13 +108,7 @@ function AvatarStack({ people, size = 24, max = 5 }: { people: MemberPreview[]; 
     <div style={{ display: 'flex', alignItems: 'center' }}>
       {shown.map((p, i) => (
         <div key={p.id} style={{ marginLeft: i === 0 ? 0 : -overlap, zIndex: shown.length - i }}>
-          <div style={{
-            width: size, height: size, borderRadius: '50%',
-            background: '#2a252e', border: `1.5px solid ${T.bg}`,
-            overflow: 'hidden', display: 'flex', alignItems: 'center',
-            justifyContent: 'center', fontSize: Math.round(size * 0.38),
-            fontWeight: 600, color: '#fff', flexShrink: 0,
-          }}>
+          <div style={{ width: size, height: size, borderRadius: '50%', background: '#2a252e', border: `1.5px solid ${T.bg}`, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: Math.round(size * 0.38), fontWeight: 600, color: '#fff', flexShrink: 0 }}>
             {p.avatar_url
               ? <img src={p.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               : (p.display_name ?? p.username).charAt(0).toUpperCase()
@@ -91,26 +117,18 @@ function AvatarStack({ people, size = 24, max = 5 }: { people: MemberPreview[]; 
         </div>
       ))}
       {extra > 0 && (
-        <div style={{
-          marginLeft: -overlap, width: size, height: size, borderRadius: '50%',
-          background: '#2a252e', border: `1.5px solid ${T.bg}`,
-          color: T.textDim, fontSize: Math.round(size * 0.34), fontWeight: 600,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>+{extra}</div>
+        <div style={{ marginLeft: -overlap, width: size, height: size, borderRadius: '50%', background: '#2a252e', border: `1.5px solid ${T.bg}`, color: T.textDim, fontSize: Math.round(size * 0.34), fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+{extra}</div>
       )}
     </div>
   )
 }
 
+// ── Hero plan (upcoming locked event) ────────────────────────────
 function HeroPlan({ plan, isMobile }: { plan: UpcomingPlan; isMobile: boolean }) {
   const color = plan.group_color ?? T.violet
   return (
     <Link href={`/events/${plan.id}`} style={{ textDecoration: 'none' }}>
-      <div style={{
-        position: 'relative', overflow: 'hidden', borderRadius: 18,
-        background: `radial-gradient(120% 120% at 0% 0%, rgba(127,119,221,0.32) 0%, rgba(127,119,221,0.08) 40%, transparent 70%), linear-gradient(135deg, #1d1640 0%, #2a1f4d 60%, #3a1e3e 100%)`,
-        border: `1px solid rgba(127,119,221,0.28)`, padding: isMobile ? '18px 16px' : '22px 24px', color: T.text,
-      }}>
+      <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 18, background: `radial-gradient(120% 120% at 0% 0%, rgba(127,119,221,0.32) 0%, rgba(127,119,221,0.08) 40%, transparent 70%), linear-gradient(135deg, #1d1640 0%, #2a1f4d 60%, #3a1e3e 100%)`, border: `1px solid rgba(127,119,221,0.28)`, padding: isMobile ? '18px 16px' : '22px 24px', color: T.text }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
           <div style={{ width: 7, height: 7, borderRadius: '50%', background: color, flexShrink: 0 }} />
           <span style={{ fontSize: 12.5, color: T.textDim, fontWeight: 500 }}>{plan.group_name}</span>
@@ -127,23 +145,17 @@ function HeroPlan({ plan, isMobile }: { plan: UpcomingPlan; isMobile: boolean })
               {plan.maybe_count > 0 && <span style={{ color: T.textMute }}> · {plan.maybe_count} maybe</span>}
             </div>
           </div>
-          <span style={{ background: T.violet, color: '#fff', padding: '10px 18px', borderRadius: 10, fontSize: 13.5, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0 }}>
-            View plan →
-          </span>
+          <span style={{ background: T.violet, color: '#fff', padding: '10px 18px', borderRadius: 10, fontSize: 13.5, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0 }}>View plan →</span>
         </div>
       </div>
     </Link>
   )
 }
 
+// ── Empty hero ───────────────────────────────────────────────────
 function EmptyHero({ hasGroups, isMobile }: { hasGroups: boolean; isMobile: boolean }) {
   return (
-    <div style={{
-      position: 'relative', overflow: 'hidden', borderRadius: 18,
-      padding: isMobile ? '22px 18px' : '28px 24px',
-      background: `radial-gradient(120% 100% at 0% 0%, rgba(127,119,221,0.32), transparent 60%), linear-gradient(160deg, #1a1430 0%, #2a1a3e 100%)`,
-      border: `1px solid rgba(127,119,221,0.25)`,
-    }}>
+    <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 18, padding: isMobile ? '22px 18px' : '28px 24px', background: `radial-gradient(120% 100% at 0% 0%, rgba(127,119,221,0.32), transparent 60%), linear-gradient(160deg, #1a1430 0%, #2a1a3e 100%)`, border: `1px solid rgba(127,119,221,0.25)` }}>
       <div style={{ display: 'flex', marginBottom: 14 }}>
         {['👋','🍻','🎲','🏔️'].map((e, i) => (
           <div key={i} style={{ width: 40, height: 40, borderRadius: '50%', background: `hsl(${260 + i * 22} 40% 22%)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, marginLeft: i === 0 ? 0 : -10, border: `2px solid ${T.bg}` }}>{e}</div>
@@ -153,10 +165,13 @@ function EmptyHero({ hasGroups, isMobile }: { hasGroups: boolean; isMobile: bool
         {hasGroups ? 'Nothing locked in yet' : "Let's get the crew together"}
       </h2>
       <p style={{ margin: '8px 0 18px', fontSize: 14, color: T.textDim, lineHeight: 1.45 }}>
-        {hasGroups ? 'Check the suggested times for your groups and start something.' : "Make a group, invite your friends, and Volta finds when you're all free."}
+        {hasGroups
+          ? 'Check the suggested times for your groups and start something.'
+          : "Make a group, invite your friends, and Volta finds when you're all free."
+        }
       </p>
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-        <Link href="/groups/new" style={{ background: T.violet, color: '#fff', padding: '11px 18px', borderRadius: 10, fontSize: 14, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
+        <Link href={hasGroups ? '/groups' : '/groups/new'} style={{ background: T.violet, color: '#fff', padding: '11px 18px', borderRadius: 10, fontSize: 14, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
           + {hasGroups ? 'Start a plan' : 'Start your first group'}
         </Link>
       </div>
@@ -164,13 +179,13 @@ function EmptyHero({ hasGroups, isMobile }: { hasGroups: boolean; isMobile: bool
   )
 }
 
+// ── Needs you ────────────────────────────────────────────────────
 function NeedsYouSection({ items }: { items: NeedsYouItem[] }) {
   const [rsvping, setRsvping] = useState<string | null>(null)
   const [done, setDone]       = useState<Set<string>>(new Set())
   const [, startTransition]   = useTransition()
   const visible = items.filter(i => !done.has(i.id))
   if (visible.length === 0) return null
-
   function handleRsvp(eventId: string, status: 'yes' | 'no') {
     setRsvping(eventId)
     startTransition(async () => {
@@ -179,7 +194,6 @@ function NeedsYouSection({ items }: { items: NeedsYouItem[] }) {
       setRsvping(null)
     })
   }
-
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 10 }}>
@@ -191,16 +205,13 @@ function NeedsYouSection({ items }: { items: NeedsYouItem[] }) {
           <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 12, background: T.bgElev, border: `1px solid ${T.border}` }}>
             <div style={{ width: 32, height: 32, borderRadius: 8, flexShrink: 0, background: T.amberSoft, color: T.amber, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🕐</div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                {item.group_color && <div style={{ width: 6, height: 6, borderRadius: '50%', background: item.group_color }} />}
-                <span style={{ fontSize: 11, color: T.textMute, fontWeight: 500 }}>{item.group_name}</span>
-              </div>
+              {item.group_color && <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}><div style={{ width: 6, height: 6, borderRadius: '50%', background: item.group_color }} /><span style={{ fontSize: 11, color: T.textMute, fontWeight: 500 }}>{item.group_name}</span></div>}
               <div style={{ fontSize: 14, color: T.text, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.title}</div>
               <div style={{ fontSize: 12.5, color: T.textDim }}>{item.sub}</div>
             </div>
             <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
               <button onClick={() => handleRsvp(item.id, 'yes')} disabled={rsvping === item.id} style={{ background: T.greenSoft, color: T.green, border: 'none', padding: '6px 12px', borderRadius: 8, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', opacity: rsvping === item.id ? 0.6 : 1 }}>I'm in</button>
-              <button onClick={() => handleRsvp(item.id, 'no')} disabled={rsvping === item.id} style={{ background: 'transparent', color: T.textDim, border: `1px solid ${T.border}`, padding: '6px 12px', borderRadius: 8, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Can't</button>
+              <button onClick={() => handleRsvp(item.id, 'no')}  disabled={rsvping === item.id} style={{ background: 'transparent', color: T.textDim, border: `1px solid ${T.border}`, padding: '6px 12px', borderRadius: 8, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Can't</button>
             </div>
           </div>
         ))}
@@ -209,14 +220,20 @@ function NeedsYouSection({ items }: { items: NeedsYouItem[] }) {
   )
 }
 
+// ── What's brewing ───────────────────────────────────────────────
 function BrewingSection({ groups }: { groups: GroupWithWindows[] }) {
-  const items = groups.filter(g => g.next_window || g.member_count > 1).slice(0, 4).map(g => ({
-    icon: g.next_window ? '⚡' : '👥',
-    group: g.name, groupId: g.id, groupColor: g.theme_color,
-    text: g.next_window ? `${g.next_window.members.length} people free ${g.next_window.label.toLowerCase()}` : `${g.member_count} member${g.member_count !== 1 ? 's' : ''} · no plans yet`,
-    action: g.next_window ? 'Start a plan' : 'Open',
-    href: `/groups/${g.id}`,
-  }))
+  const items = groups
+    .filter(g => g.next_window || g.member_count > 1)
+    .slice(0, 4)
+    .map(g => ({
+      icon: g.next_window ? '⚡' : '👥',
+      group: g.name, groupId: g.id, groupColor: g.theme_color,
+      text: g.next_window
+        ? `${g.next_window.members.length} ${g.next_window.members.length === 1 ? 'person' : 'people'} free ${g.next_window.label.toLowerCase()}`
+        : `${g.member_count} ${g.member_count === 1 ? 'member' : 'members'} · no plans yet`,
+      action: g.next_window ? 'Start a plan' : 'Open',
+      href: `/groups/${g.id}`,
+    }))
   if (items.length === 0) return null
   return (
     <div>
@@ -242,6 +259,7 @@ function BrewingSection({ groups }: { groups: GroupWithWindows[] }) {
   )
 }
 
+// ── Compact groups list (right column) ───────────────────────────
 function CompactGroupsList({ groups }: { groups: GroupActivity[] }) {
   if (groups.length === 0) return null
   return (
@@ -260,7 +278,7 @@ function CompactGroupsList({ groups }: { groups: GroupActivity[] }) {
               <div style={{ width: 28, height: 28, borderRadius: 7, flexShrink: 0, background: g.theme_color ? `linear-gradient(135deg, ${g.theme_color}, ${g.theme_color}88)` : 'linear-gradient(135deg, #3a2e5e, #2a1f4d)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 10.5, fontWeight: 700 }}>{initials(g.name)}</div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 13, fontWeight: 600, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.name}</div>
-                <div style={{ fontSize: 11.5, color: T.textMute, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.last_activity ?? `${g.member_count} member${g.member_count !== 1 ? 's' : ''}`}</div>
+                <div style={{ fontSize: 11.5, color: T.textMute, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.last_activity ?? `${g.member_count} ${g.member_count === 1 ? 'member' : 'members'}`}</div>
               </div>
               {g.unread > 0 && <span style={{ background: T.violet, color: '#fff', fontSize: 10.5, fontWeight: 700, padding: '2px 7px', borderRadius: 10 }}>{g.unread}</span>}
             </div>
@@ -271,20 +289,21 @@ function CompactGroupsList({ groups }: { groups: GroupActivity[] }) {
   )
 }
 
+// ── Start plan CTA ───────────────────────────────────────────────
 function StartPlanCTA({ hasGroups, groups }: { hasGroups: boolean; groups: GroupActivity[] }) {
   const [open, setOpen] = useState(false)
   if (!hasGroups) {
     return (
       <Link href="/groups/new" style={{ textDecoration: 'none' }}>
         <div style={{ width: '100%', background: `linear-gradient(135deg, ${T.violet} 0%, #b66adb 100%)`, color: '#fff', padding: '14px 18px', borderRadius: 12, fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
-          <span>+ Create your first group</span>
+          + Create your first group
         </div>
       </Link>
     )
   }
   return (
     <div style={{ position: 'relative' }}>
-      <button onClick={() => setOpen(v => !v)} style={{ width: '100%', background: `linear-gradient(135deg, ${T.violet} 0%, #b66adb 100%)`, color: '#fff', border: 'none', padding: '14px 18px', borderRadius: 12, fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, cursor: 'pointer', fontFamily: 'inherit' }}>
+      <button onClick={() => setOpen(v => !v)} style={{ width: '100%', background: `linear-gradient(135deg, ${T.violet} 0%, #b66adb 100%)`, color: '#fff', border: 'none', padding: '14px 18px', borderRadius: 12, fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 6px 20px rgba(127,119,221,0.25)' }}>
         <span>+ Round up the crew</span>
         <span style={{ fontSize: 11.5, opacity: 0.7 }}>{open ? '▲' : '▼'}</span>
       </button>
@@ -310,13 +329,14 @@ function StartPlanCTA({ hasGroups, groups }: { hasGroups: boolean; groups: Group
   )
 }
 
+// ── Main export ──────────────────────────────────────────────────
 export default function DashboardClient({
   profile,
   groupsWithWindows,
-  upcomingPlans = [],
-  needsYouItems = [],
   groupsActivity = [],
-  tourCompleted = true,
+  upcomingPlans  = [],
+  needsYouItems  = [],
+  tourCompleted  = true,
 }: Props) {
   const isMobile  = useIsMobile()
   const [showTour, setShowTour] = useState(!tourCompleted)
@@ -329,15 +349,12 @@ export default function DashboardClient({
   return (
     <div style={{ minHeight: '100vh', background: T.bg, color: T.text, fontFamily: 'inherit' }}>
 
-      {/* Dashboard tour — shown to new users */}
       {showTour && <DashboardTour onDismiss={() => setShowTour(false)} />}
 
       {/* Top bar */}
       <div style={{ padding: isMobile ? '14px 16px' : '18px 36px', borderBottom: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
         <div style={{ minWidth: 0 }}>
-          <h1 style={{ margin: 0, fontSize: isMobile ? 17 : 20, fontWeight: 700, letterSpacing: '-0.02em', color: T.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {greeting(firstName)}
-          </h1>
+          <h1 style={{ margin: 0, fontSize: isMobile ? 17 : 20, fontWeight: 700, letterSpacing: '-0.02em', color: T.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{greeting(firstName)}</h1>
           <div style={{ fontSize: 13, color: T.textMute, marginTop: 2 }}>{today}</div>
         </div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexShrink: 0 }}>
@@ -347,13 +364,14 @@ export default function DashboardClient({
               <span style={{ flex: 1 }}>Search…</span>
             </div>
           )}
-          <Link href="/groups/new" style={{ width: 34, height: 34, borderRadius: 9, background: T.bgElev, border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.textDim, textDecoration: 'none', fontSize: 18 }}>+</Link>
+          <Link href="/groups/new" style={{ width: 34, height: 34, borderRadius: 9, background: T.bgElev, border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.textMute, textDecoration: 'none', fontSize: 18 }}>+</Link>
         </div>
       </div>
 
-      {/* Main content */}
+      {/* Grid */}
       <div style={{ padding: isMobile ? '16px 16px 80px' : '28px 36px 80px', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'minmax(0,1fr) 300px', gap: isMobile ? 20 : 28, alignItems: 'start', maxWidth: 1200, margin: '0 auto' }}>
 
+        {/* Mobile: CTA at top */}
         {isMobile && <StartPlanCTA hasGroups={hasGroups} groups={groupsActivity} />}
 
         {/* Left column */}
@@ -368,14 +386,11 @@ export default function DashboardClient({
                 {[
                   { n: 1, title: 'Make a group',        sub: 'Name it, theme it' },
                   { n: 2, title: 'Invite your friends',  sub: 'Share a link, no app needed' },
-                  { n: 3, title: 'Drop your free times', sub: 'Volta finds when you all overlap' },
+                  { n: 3, title: 'Set your free time',   sub: 'Volta finds when you all overlap' },
                 ].map(s => (
                   <div key={s.n} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 14px', borderRadius: 12, background: T.bgElev, border: `1px solid ${T.border}` }}>
                     <div style={{ width: 28, height: 28, borderRadius: '50%', flexShrink: 0, background: T.violetSoft, color: T.violet, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700 }}>{s.n}</div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: T.text }}>{s.title}</div>
-                      <div style={{ fontSize: 12.5, color: T.textMute, marginTop: 1 }}>{s.sub}</div>
-                    </div>
+                    <div><div style={{ fontSize: 14, fontWeight: 600, color: T.text }}>{s.title}</div><div style={{ fontSize: 12.5, color: T.textMute, marginTop: 1 }}>{s.sub}</div></div>
                   </div>
                 ))}
               </div>

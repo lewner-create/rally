@@ -18,15 +18,26 @@ export default async function DashboardPage() {
 
   const groupsWithWindows = await getGroupsWithWindows(user.id)
 
+  // Derive the groups activity list from the data we already have —
+  // no extra query needed for the sidebar groups list.
+  const groupsActivity = groupsWithWindows.map(g => ({
+    id:           g.id,
+    name:         g.name,
+    theme_color:  g.theme_color,
+    member_count: g.member_count,
+    last_activity: g.next_window
+      ? `Free ${g.next_window.label.toLowerCase()}`
+      : null,
+    unread: 0,
+  }))
+
   const tourCompleted = profile?.preferences?.tour_completed === true
 
   return (
     <DashboardClient
       profile={profile}
       groupsWithWindows={groupsWithWindows}
-      upcomingPlans={[]}
-      needsYouItems={[]}
-      groupsActivity={[]}
+      groupsActivity={groupsActivity}
       tourCompleted={tourCompleted}
     />
   )

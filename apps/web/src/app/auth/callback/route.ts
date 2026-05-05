@@ -17,7 +17,6 @@ export async function GET(request: Request) {
     const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
 
     if (!exchangeError && data.session) {
-      // Store provider token for Calendar API access
       const providerToken        = data.session.provider_token
       const providerRefreshToken = data.session.provider_refresh_token
 
@@ -31,10 +30,8 @@ export async function GET(request: Request) {
             updated_at:    new Date().toISOString(),
           }, { onConflict: 'user_id,provider' })
         } catch (_) {}
-      }, { onConflict: 'user_id,provider' })
       }
 
-      // Check if new user needs onboarding
       const { data: profile } = await supabase
         .from('profiles')
         .select('display_name, preferences')
@@ -50,4 +47,3 @@ export async function GET(request: Request) {
 
   return NextResponse.redirect(`${origin}/login?error=auth_failed`)
 }
-

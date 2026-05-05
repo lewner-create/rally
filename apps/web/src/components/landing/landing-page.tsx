@@ -371,7 +371,7 @@ export default function LandingPage({ stats }: { stats?: Stats }) {
           {!isMobile && (
             <Link href="/login" style={{ fontSize: 14, color: T.textDim, textDecoration: 'none', fontWeight: 500 }}>Log in</Link>
           )}
-          <Link href="/signup" style={{
+          <Link href="/request-access" style={{
             background: T.violet, color: '#fff', textDecoration: 'none',
             padding: isMobile ? '8px 14px' : '9px 16px',
             borderRadius: 9, fontSize: isMobile ? 13 : 13.5, fontWeight: 600,
@@ -424,7 +424,7 @@ export default function LandingPage({ stats }: { stats?: Stats }) {
               Volta is a low-effort home base for your friend group. Drop your free times, see when everyone overlaps, lock in a hang. No more "any of yall down for…" group chats.
             </p>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              <Link href="/signup" style={{
+              <Link href="/request-access" style={{
                 background: T.violet, color: '#fff', textDecoration: 'none',
                 padding: isMobile ? '12px 18px' : '14px 22px', borderRadius: 11,
                 fontSize: isMobile ? 14 : 15, fontWeight: 600,
@@ -658,13 +658,13 @@ export default function LandingPage({ stats }: { stats?: Stats }) {
             Find out for sure. Make a group, share a link, see when everyone overlaps.
           </p>
           <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <Link href="/signup" style={{
+            <Link href="/request-access" style={{
               background: T.violet, color: '#fff', textDecoration: 'none',
               padding: isMobile ? '13px 22px' : '15px 26px', borderRadius: 11,
               fontSize: isMobile ? 14 : 15.5, fontWeight: 600,
               display: 'inline-flex', alignItems: 'center', gap: 8,
               boxShadow: '0 8px 24px rgba(127,119,221,0.4)',
-            }}>Sign up free →</Link>
+            }}>Request access →</Link>
             <Link href="/login" style={{
               background: 'rgba(255,255,255,0.08)', color: T.text,
               border: `1px solid ${T.border}`, textDecoration: 'none',

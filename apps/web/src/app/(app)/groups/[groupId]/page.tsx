@@ -125,7 +125,7 @@ export default async function GroupPage({ params }: { params: Promise<{ groupId:
         themeColor={themeColor}
         events={events}
         activeCards={activeCards}
-        prompt={prompt}
+        prompt={prompt as any}
         currentUserId={user.id}
         tier={group.tier}
         openWindowsSlot={<OpenWindows groupId={group.id} tier={group.tier} />}

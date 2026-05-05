@@ -4,38 +4,13 @@ import Link from 'next/link'
 import { useState, useEffect, useTransition } from 'react'
 import { upsertRsvp } from '@/lib/actions/events'
 import { DashboardTour } from '@/components/dashboard/dashboard-tour'
-import type { GroupWithWindows, MemberPreview } from '@/lib/actions/dashboard'
-
-// ── Local types (not yet in DB actions) ─────────────────────────
-type GroupActivity = {
-  id: string
-  name: string
-  theme_color: string | null
-  member_count: number
-  last_activity: string | null
-  unread: number
-}
-
-type UpcomingPlan = {
-  id: string
-  title: string
-  starts_at: string
-  group_name: string
-  group_color: string | null
-  group_banner: string | null
-  going_count: number
-  maybe_count: number
-  my_rsvp: string | null
-  attendees: MemberPreview[]
-}
-
-type NeedsYouItem = {
-  id: string
-  title: string
-  sub: string
-  group_name: string
-  group_color: string | null
-}
+import type {
+  GroupWithWindows,
+  MemberPreview,
+  UpcomingPlan,
+  NeedsYouItem,
+  GroupActivity,
+} from '@/lib/actions/dashboard'
 
 // ── Design tokens ────────────────────────────────────────────────
 const T = {
@@ -123,36 +98,43 @@ function AvatarStack({ people, size = 24, max = 5 }: { people: MemberPreview[]; 
   )
 }
 
-// ── Hero plan (upcoming locked event) ────────────────────────────
+// ── Hero plan card ────────────────────────────────────────────────
 function HeroPlan({ plan, isMobile }: { plan: UpcomingPlan; isMobile: boolean }) {
   const color = plan.group_color ?? T.violet
   return (
     <Link href={`/events/${plan.id}`} style={{ textDecoration: 'none' }}>
       <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 18, background: `radial-gradient(120% 120% at 0% 0%, rgba(127,119,221,0.32) 0%, rgba(127,119,221,0.08) 40%, transparent 70%), linear-gradient(135deg, #1d1640 0%, #2a1f4d 60%, #3a1e3e 100%)`, border: `1px solid rgba(127,119,221,0.28)`, padding: isMobile ? '18px 16px' : '22px 24px', color: T.text }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
-          <div style={{ width: 7, height: 7, borderRadius: '50%', background: color, flexShrink: 0 }} />
-          <span style={{ fontSize: 12.5, color: T.textDim, fontWeight: 500 }}>{plan.group_name}</span>
-          <span style={{ color: T.textFaint }}>·</span>
-          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', color: T.green, textTransform: 'uppercase' }}>✓ Locked in</span>
-        </div>
-        <div style={{ fontSize: isMobile ? 22 : 26, fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 4, lineHeight: 1.15 }}>{plan.title}</div>
-        <div style={{ fontSize: 14.5, color: T.textDim, marginBottom: 18 }}>{relativeTime(plan.starts_at)} · {formatTime(plan.starts_at)}</div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <AvatarStack people={plan.attendees} size={28} max={5} />
-            <div style={{ fontSize: 13, color: T.textDim }}>
-              <span style={{ color: T.text, fontWeight: 600 }}>{plan.going_count} going</span>
-              {plan.maybe_count > 0 && <span style={{ color: T.textMute }}> · {plan.maybe_count} maybe</span>}
-            </div>
+        {plan.group_banner && (
+          <div style={{ position: 'absolute', inset: 0, opacity: 0.12, backgroundImage: `url(${plan.group_banner})`, backgroundSize: 'cover', backgroundPosition: 'center', mixBlendMode: 'screen' }} />
+        )}
+        <div style={{ position: 'relative' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
+            <div style={{ width: 7, height: 7, borderRadius: '50%', background: color, flexShrink: 0 }} />
+            <span style={{ fontSize: 12.5, color: T.textDim, fontWeight: 500 }}>{plan.group_name}</span>
+            <span style={{ color: T.textFaint }}>·</span>
+            <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', color: T.green, textTransform: 'uppercase' }}>
+              {plan.my_rsvp === 'yes' ? '✓ You\'re in' : '📅 Coming up'}
+            </span>
           </div>
-          <span style={{ background: T.violet, color: '#fff', padding: '10px 18px', borderRadius: 10, fontSize: 13.5, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0 }}>View plan →</span>
+          <div style={{ fontSize: isMobile ? 22 : 26, fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 4, lineHeight: 1.15 }}>{plan.title}</div>
+          <div style={{ fontSize: 14.5, color: T.textDim, marginBottom: 18 }}>{relativeTime(plan.starts_at)} · {formatTime(plan.starts_at)}</div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <AvatarStack people={plan.attendees} size={28} max={5} />
+              <div style={{ fontSize: 13, color: T.textDim }}>
+                <span style={{ color: T.text, fontWeight: 600 }}>{plan.going_count} going</span>
+                {plan.maybe_count > 0 && <span style={{ color: T.textMute }}> · {plan.maybe_count} maybe</span>}
+              </div>
+            </div>
+            <span style={{ background: T.violet, color: '#fff', padding: '10px 18px', borderRadius: 10, fontSize: 13.5, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0 }}>View plan →</span>
+          </div>
         </div>
       </div>
     </Link>
   )
 }
 
-// ── Empty hero ───────────────────────────────────────────────────
+// ── Empty hero ────────────────────────────────────────────────────
 function EmptyHero({ hasGroups, isMobile }: { hasGroups: boolean; isMobile: boolean }) {
   return (
     <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 18, padding: isMobile ? '22px 18px' : '28px 24px', background: `radial-gradient(120% 100% at 0% 0%, rgba(127,119,221,0.32), transparent 60%), linear-gradient(160deg, #1a1430 0%, #2a1a3e 100%)`, border: `1px solid rgba(127,119,221,0.25)` }}>
@@ -165,27 +147,23 @@ function EmptyHero({ hasGroups, isMobile }: { hasGroups: boolean; isMobile: bool
         {hasGroups ? 'Nothing locked in yet' : "Let's get the crew together"}
       </h2>
       <p style={{ margin: '8px 0 18px', fontSize: 14, color: T.textDim, lineHeight: 1.45 }}>
-        {hasGroups
-          ? 'Check the suggested times for your groups and start something.'
-          : "Make a group, invite your friends, and Volta finds when you're all free."
-        }
+        {hasGroups ? 'Check the suggested times for your groups and start something.' : "Make a group, invite your friends, and Volta finds when you're all free."}
       </p>
-      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-        <Link href={hasGroups ? '/groups' : '/groups/new'} style={{ background: T.violet, color: '#fff', padding: '11px 18px', borderRadius: 10, fontSize: 14, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
-          + {hasGroups ? 'Start a plan' : 'Start your first group'}
-        </Link>
-      </div>
+      <Link href={hasGroups ? '/dashboard' : '/groups/new'} style={{ background: T.violet, color: '#fff', padding: '11px 18px', borderRadius: 10, fontSize: 14, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
+        + {hasGroups ? 'Start a plan' : 'Start your first group'}
+      </Link>
     </div>
   )
 }
 
-// ── Needs you ────────────────────────────────────────────────────
+// ── Needs you ─────────────────────────────────────────────────────
 function NeedsYouSection({ items }: { items: NeedsYouItem[] }) {
   const [rsvping, setRsvping] = useState<string | null>(null)
   const [done, setDone]       = useState<Set<string>>(new Set())
   const [, startTransition]   = useTransition()
   const visible = items.filter(i => !done.has(i.id))
   if (visible.length === 0) return null
+
   function handleRsvp(eventId: string, status: 'yes' | 'no') {
     setRsvping(eventId)
     startTransition(async () => {
@@ -194,6 +172,7 @@ function NeedsYouSection({ items }: { items: NeedsYouItem[] }) {
       setRsvping(null)
     })
   }
+
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 10 }}>
@@ -205,13 +184,18 @@ function NeedsYouSection({ items }: { items: NeedsYouItem[] }) {
           <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 12, background: T.bgElev, border: `1px solid ${T.border}` }}>
             <div style={{ width: 32, height: 32, borderRadius: 8, flexShrink: 0, background: T.amberSoft, color: T.amber, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🕐</div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              {item.group_color && <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}><div style={{ width: 6, height: 6, borderRadius: '50%', background: item.group_color }} /><span style={{ fontSize: 11, color: T.textMute, fontWeight: 500 }}>{item.group_name}</span></div>}
+              {item.group_color && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: item.group_color }} />
+                  <span style={{ fontSize: 11, color: T.textMute, fontWeight: 500 }}>{item.group_name}</span>
+                </div>
+              )}
               <div style={{ fontSize: 14, color: T.text, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.title}</div>
               <div style={{ fontSize: 12.5, color: T.textDim }}>{item.sub}</div>
             </div>
             <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
               <button onClick={() => handleRsvp(item.id, 'yes')} disabled={rsvping === item.id} style={{ background: T.greenSoft, color: T.green, border: 'none', padding: '6px 12px', borderRadius: 8, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', opacity: rsvping === item.id ? 0.6 : 1 }}>I'm in</button>
-              <button onClick={() => handleRsvp(item.id, 'no')}  disabled={rsvping === item.id} style={{ background: 'transparent', color: T.textDim, border: `1px solid ${T.border}`, padding: '6px 12px', borderRadius: 8, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Can't</button>
+              <button onClick={() => handleRsvp(item.id, 'no')} disabled={rsvping === item.id} style={{ background: 'transparent', color: T.textDim, border: `1px solid ${T.border}`, padding: '6px 12px', borderRadius: 8, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Can't</button>
             </div>
           </div>
         ))}
@@ -220,26 +204,21 @@ function NeedsYouSection({ items }: { items: NeedsYouItem[] }) {
   )
 }
 
-// ── What's brewing ───────────────────────────────────────────────
+// ── What's brewing ────────────────────────────────────────────────
 function BrewingSection({ groups }: { groups: GroupWithWindows[] }) {
-  const items = groups
-    .filter(g => g.next_window || g.member_count > 1)
-    .slice(0, 4)
-    .map(g => ({
-      icon: g.next_window ? '⚡' : '👥',
-      group: g.name, groupId: g.id, groupColor: g.theme_color,
-      text: g.next_window
-        ? `${g.next_window.members.length} ${g.next_window.members.length === 1 ? 'person' : 'people'} free ${g.next_window.label.toLowerCase()}`
-        : `${g.member_count} ${g.member_count === 1 ? 'member' : 'members'} · no plans yet`,
-      action: g.next_window ? 'Start a plan' : 'Open',
-      href: `/groups/${g.id}`,
-    }))
+  const items = groups.filter(g => g.next_window || g.member_count > 1).slice(0, 4).map(g => ({
+    icon: g.next_window ? '⚡' : '👥',
+    group: g.name, groupId: g.id, groupColor: g.theme_color,
+    text: g.next_window
+      ? `${g.next_window.members.length} ${g.next_window.members.length === 1 ? 'person' : 'people'} free ${g.next_window.label.toLowerCase()}`
+      : `${g.member_count} ${g.member_count === 1 ? 'member' : 'members'} · no plans yet`,
+    action: g.next_window ? 'Start a plan' : 'Open',
+    href: `/groups/${g.id}`,
+  }))
   if (items.length === 0) return null
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 10 }}>
-        <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: T.text }}>What's brewing</h3>
-      </div>
+      <h3 style={{ margin: '0 0 10px', fontSize: 15, fontWeight: 600, color: T.text }}>What's brewing</h3>
       <div style={{ display: 'flex', flexDirection: 'column', borderRadius: 14, border: `1px solid ${T.border}`, background: T.bgElev, overflow: 'hidden' }}>
         {items.map((it, i) => (
           <div key={it.groupId} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderTop: i === 0 ? 'none' : `1px solid ${T.border}` }}>
@@ -259,7 +238,7 @@ function BrewingSection({ groups }: { groups: GroupWithWindows[] }) {
   )
 }
 
-// ── Compact groups list (right column) ───────────────────────────
+// ── Compact groups list ───────────────────────────────────────────
 function CompactGroupsList({ groups }: { groups: GroupActivity[] }) {
   if (groups.length === 0) return null
   return (
@@ -289,7 +268,7 @@ function CompactGroupsList({ groups }: { groups: GroupActivity[] }) {
   )
 }
 
-// ── Start plan CTA ───────────────────────────────────────────────
+// ── Start plan CTA ────────────────────────────────────────────────
 function StartPlanCTA({ hasGroups, groups }: { hasGroups: boolean; groups: GroupActivity[] }) {
   const [open, setOpen] = useState(false)
   if (!hasGroups) {
@@ -329,14 +308,14 @@ function StartPlanCTA({ hasGroups, groups }: { hasGroups: boolean; groups: Group
   )
 }
 
-// ── Main export ──────────────────────────────────────────────────
+// ── Main export ───────────────────────────────────────────────────
 export default function DashboardClient({
   profile,
   groupsWithWindows,
-  groupsActivity = [],
-  upcomingPlans  = [],
-  needsYouItems  = [],
-  tourCompleted  = true,
+  groupsActivity  = [],
+  upcomingPlans   = [],
+  needsYouItems   = [],
+  tourCompleted   = true,
 }: Props) {
   const isMobile  = useIsMobile()
   const [showTour, setShowTour] = useState(!tourCompleted)
@@ -344,7 +323,7 @@ export default function DashboardClient({
   const firstName = profile?.display_name?.split(' ')[0] ?? profile?.username ?? 'there'
   const hasGroups = groupsWithWindows.length > 0
   const today     = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
-  const heroPlan  = upcomingPlans.find(p => p.my_rsvp === 'yes') ?? upcomingPlans[0] ?? null
+  const heroPlan  = upcomingPlans[0] ?? null
 
   return (
     <div style={{ minHeight: '100vh', background: T.bg, color: T.text, fontFamily: 'inherit' }}>
@@ -371,7 +350,6 @@ export default function DashboardClient({
       {/* Grid */}
       <div style={{ padding: isMobile ? '16px 16px 80px' : '28px 36px 80px', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'minmax(0,1fr) 300px', gap: isMobile ? 20 : 28, alignItems: 'start', maxWidth: 1200, margin: '0 auto' }}>
 
-        {/* Mobile: CTA at top */}
         {isMobile && <StartPlanCTA hasGroups={hasGroups} groups={groupsActivity} />}
 
         {/* Left column */}

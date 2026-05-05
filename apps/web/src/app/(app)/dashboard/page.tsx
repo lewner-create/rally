@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { getGroupsWithWindows } from '@/lib/actions/dashboard'
+import { getGroupsWithWindows, getUpcomingPlans, getNeedsYouItems } from '@/lib/actions/dashboard'
 import DashboardClient from '@/components/dashboard/dashboard-client'
 
 export default async function DashboardPage() {
@@ -16,19 +16,19 @@ export default async function DashboardPage() {
 
   if (!profile?.display_name || !profile?.preferences?.onboarded) redirect('/onboarding')
 
-  const groupsWithWindows = await getGroupsWithWindows(user.id)
+  const [groupsWithWindows, upcomingPlans, needsYouItems] = await Promise.all([
+    getGroupsWithWindows(user.id),
+    getUpcomingPlans(user.id),
+    getNeedsYouItems(user.id),
+  ])
 
-  // Derive the groups activity list from the data we already have —
-  // no extra query needed for the sidebar groups list.
   const groupsActivity = groupsWithWindows.map(g => ({
-    id:           g.id,
-    name:         g.name,
-    theme_color:  g.theme_color,
-    member_count: g.member_count,
-    last_activity: g.next_window
-      ? `Free ${g.next_window.label.toLowerCase()}`
-      : null,
-    unread: 0,
+    id:            g.id,
+    name:          g.name,
+    theme_color:   g.theme_color,
+    member_count:  g.member_count,
+    last_activity: g.next_window ? `Free ${g.next_window.label.toLowerCase()}` : null,
+    unread:        0,
   }))
 
   const tourCompleted = profile?.preferences?.tour_completed === true
@@ -38,6 +38,8 @@ export default async function DashboardPage() {
       profile={profile}
       groupsWithWindows={groupsWithWindows}
       groupsActivity={groupsActivity}
+      upcomingPlans={upcomingPlans}
+      needsYouItems={needsYouItems}
       tourCompleted={tourCompleted}
     />
   )

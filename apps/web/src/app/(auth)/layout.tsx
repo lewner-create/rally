@@ -17,7 +17,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       {/* Wordmark */}
       <div className="mb-8 relative">
         <span className="text-[28px] font-medium tracking-[-0.03em]" style={{ color: '#7F77DD' }}>
-          rally
+          volta
         </span>
       </div>
 

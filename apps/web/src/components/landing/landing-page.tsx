@@ -328,7 +328,7 @@ export default function LandingPage({ stats }: { stats?: Stats }) {
             background: `linear-gradient(135deg, ${T.violet}, #b66adb)`,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontWeight: 800, fontSize: 16, color: '#fff',
-          }}>R</div>
+          }}>V</div>
           <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.025em', color: T.text }}>volta</div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 28, fontSize: 14, color: T.textDim, fontWeight: 500 }}>
@@ -645,7 +645,7 @@ export default function LandingPage({ stats }: { stats?: Stats }) {
                 background: `linear-gradient(135deg, ${T.violet}, #b66adb)`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontWeight: 800, fontSize: 16, color: '#fff',
-              }}>R</div>
+              }}>V</div>
               <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.025em', color: T.text }}>volta</div>
             </div>
             <p style={{ margin: '0 0 18px', fontSize: 13, color: T.textDim, lineHeight: 1.5, maxWidth: 280 }}>

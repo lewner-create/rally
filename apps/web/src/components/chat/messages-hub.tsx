@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChatPanel } from './chat-panel'
 import { createClient } from '@/lib/supabase/client'
@@ -13,22 +13,19 @@ const EVENT_ICON: Record<string, string> = {
   game_night: '🎮', hangout: '☕', day_trip: '🗺️', road_trip: '🚗', moto_trip: '🏍️', vacation: '✈️',
 }
 
-// ── Design tokens (aligned with mockup) ───────────────────────
 const BG        = '#0f0f0f'
-const SIDEBAR   = '#17171a'
-const BORDER    = 'rgba(255,255,255,0.08)'
-const ACTIVE_BG = 'rgba(127,119,221,0.12)'
-const HOVER_BG  = '#1c1c20'
+const SIDEBAR   = '#111'
+const BORDER    = '#1e1e1e'
+const ACTIVE_BG = '#1a1a1a'
+const HOVER_BG  = '#161616'
 const ACCENT    = '#7F77DD'
-const TEXT      = '#f5f4f8'
-const DIM       = '#a8a4b8'
-const MUTED     = '#6b6878'
-const FAINT     = '#4a4757'
+const TEXT      = '#fff'
+const MUTED     = '#888'
+const LABEL     = '#3a3a3a'
 
 interface GroupThread {
   groupId: string
   groupName: string
-  themeColor?: string | null
   events: Array<{ id: string; title: string; event_type: string }>
 }
 
@@ -45,6 +42,19 @@ interface MessagesHubProps {
 
 type UserResult = { id: string; display_name: string | null; username: string | null; avatar_url: string | null }
 
+// ── useIsMobile ─────────────────────────────────────────────────
+function useIsMobile(bp = 768) {
+  const [v, setV] = useState(false)
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${bp - 1}px)`)
+    setV(mq.matches)
+    const h = (e: MediaQueryListEvent) => setV(e.matches)
+    mq.addEventListener('change', h)
+    return () => mq.removeEventListener('change', h)
+  }, [bp])
+  return v
+}
+
 export function MessagesHub({
   groups,
   activeGroupId: initGroup,
@@ -55,13 +65,22 @@ export function MessagesHub({
   activeDMId: initDM = null,
   dmMessages = [],
 }: MessagesHubProps) {
-  const router = useRouter()
+  const router    = useRouter()
+  const isMobile  = useIsMobile()
+
   const [messages, setMessages]   = useState(initialMessages)
   const [activeGroupId, setGroup] = useState(initGroup)
   const [activeEventId, setEvent] = useState(initEvent)
   const [activeDMId, setDMId]     = useState(initDM)
   const [dmMsgs, setDMMessages]   = useState(dmMessages)
   const [loading, setLoading]     = useState(false)
+
+  // Mobile navigation: 'list' shows thread list, 'chat' shows active thread
+  const [mobileView, setMobileView] = useState<'list' | 'chat'>(
+    // If a thread is already selected (via URL params), open chat directly
+    initGroup || initDM ? 'chat' : 'list'
+  )
+
   const [showNewDM, setShowNewDM] = useState(false)
   const [dmSearch, setDMSearch]   = useState('')
   const [dmResults, setDMResults] = useState<UserResult[]>([])
@@ -81,9 +100,13 @@ export function MessagesHub({
 
   const selectDM = async (otherId: string) => {
     closeNewDM()
-    if (otherId === activeDMId) return
+    if (otherId === activeDMId) {
+      if (isMobile) setMobileView('chat')
+      return
+    }
     setLoading(true)
     setGroup(null); setEvent(null); setDMId(otherId)
+    if (isMobile) setMobileView('chat')
     const { data } = await createClient()
       .from('direct_messages')
       .select('*, sender:sender_id(id, display_name, username, avatar_url)')
@@ -97,8 +120,12 @@ export function MessagesHub({
   }
 
   const selectThread = async (groupId: string, eventId?: string | null) => {
-    if (groupId === activeGroupId && eventId === activeEventId) return
+    if (groupId === activeGroupId && eventId === activeEventId) {
+      if (isMobile) setMobileView('chat')
+      return
+    }
     setDMId(null); setLoading(true); setGroup(groupId); setEvent(eventId ?? null)
+    if (isMobile) setMobileView('chat')
     const q = createClient()
       .from('chat_messages')
       .select('*, profiles(id, display_name, username)')
@@ -113,6 +140,8 @@ export function MessagesHub({
     router.push(`/messages?${p.toString()}`, { scroll: false })
   }
 
+  const backToList = () => setMobileView('list')
+
   const activeGroup  = groups.find(g => g.groupId === activeGroupId)
   const activeEvent  = activeGroup?.events.find(e => e.id === activeEventId)
   const threadLabel  = activeEvent?.title ?? activeGroup?.groupName ?? 'Messages'
@@ -123,207 +152,231 @@ export function MessagesHub({
     return r?.display_name ?? r?.username ?? 'Direct message'
   })()
 
-  function Avatar({ url, name, size = 36 }: { url?: string | null; name: string; size?: number }) {
+  function Avatar({ url, name, size = 38 }: { url?: string | null; name: string; size?: number }) {
     return (
       <div style={{
         width: size, height: size, borderRadius: '50%', flexShrink: 0,
-        background: url ? 'transparent' : `linear-gradient(135deg, ${ACCENT}88, ${ACCENT}44)`,
+        background: url ? 'transparent' : '#1e1e1e',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: size * 0.38, fontWeight: 700, color: '#fff', overflow: 'hidden',
-        border: `1px solid ${BORDER}`,
+        fontSize: size * 0.38, fontWeight: 700, color: ACCENT, overflow: 'hidden',
       }}>
-        {url ? <img src={url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : name[0]?.toUpperCase()}
+        {url ? <img src={url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" /> : name[0]?.toUpperCase()}
       </div>
     )
   }
 
-  function GroupIcon({ name, color }: { name: string; color?: string | null }) {
-    return (
-      <div style={{
-        width: 30, height: 30, borderRadius: 8, flexShrink: 0,
-        background: color ? `linear-gradient(135deg, ${color}, ${color}66)` : `linear-gradient(135deg, #3a2e5e, #2a1f4d)`,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        color: '#fff', fontSize: 11, fontWeight: 700,
-      }}>
-        {name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
+  // ── Thread list panel ──────────────────────────────────────────
+  const threadList = (
+    <div style={{
+      width: isMobile ? '100%' : '264px',
+      flexShrink: 0, background: SIDEBAR,
+      borderRight: isMobile ? 'none' : `1px solid ${BORDER}`,
+      display: isMobile && mobileView === 'chat' ? 'none' : 'flex',
+      flexDirection: 'column', overflow: 'hidden',
+    }}>
+      <div style={{ padding: '20px 16px 14px', borderBottom: `1px solid ${BORDER}` }}>
+        <h2 style={{ fontSize: '17px', fontWeight: 800, color: TEXT, margin: 0 }}>Messages</h2>
       </div>
-    )
-  }
 
-  return (
-    <div style={{ display: 'flex', height: '100vh', background: BG, overflow: 'hidden' }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '8px' }}>
 
-      {/* ── Thread list ── */}
-      <div style={{
-        width: 260, flexShrink: 0, background: SIDEBAR,
-        borderRight: `1px solid ${BORDER}`,
-        display: 'flex', flexDirection: 'column', overflow: 'hidden',
-      }}>
-        <div style={{ padding: '18px 16px 14px', borderBottom: `1px solid ${BORDER}` }}>
-          <h2 style={{ fontSize: 16, fontWeight: 700, color: TEXT, margin: 0, letterSpacing: '-0.01em' }}>Messages</h2>
+        {/* Radio */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '10px', marginBottom: '4px' }}>
+          <div style={{
+            width: '38px', height: '38px', borderRadius: '50%', flexShrink: 0,
+            background: `linear-gradient(135deg, ${ACCENT}, #5B52C8)`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px',
+          }}>⚡</div>
+          <div>
+            <div style={{ fontSize: '14px', fontWeight: 700, color: TEXT }}>Radio</div>
+            <div style={{ fontSize: '12px', color: MUTED }}>Notifications & updates</div>
+          </div>
         </div>
 
-        <div style={{ flex: 1, overflowY: 'auto', padding: '8px 8px 16px' }}>
+        <div style={{ height: '1px', background: BORDER, margin: '4px 0 8px' }} />
 
-          {/* Radio bot */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 10px', borderRadius: 9, marginBottom: 4 }}>
-            <div style={{
-              width: 30, height: 30, borderRadius: 8, flexShrink: 0,
-              background: `linear-gradient(135deg, ${ACCENT}, #b66adb)`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14,
-            }}>⚡</div>
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: TEXT }}>Radio</div>
-              <div style={{ fontSize: 11.5, color: MUTED }}>Notifications & updates</div>
-            </div>
-          </div>
+        {/* DMs header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 12px 4px' }}>
+          <span style={{ fontSize: '10px', fontWeight: 700, color: LABEL, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            Direct messages
+          </span>
+          <button
+            onClick={openNewDM}
+            style={{
+              width: '20px', height: '20px', borderRadius: '50%', border: 'none',
+              background: showNewDM ? ACCENT : '#222', color: showNewDM ? 'white' : MUTED,
+              cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center',
+              justifyContent: 'center', fontWeight: 700, padding: 0,
+            }}
+          >+</button>
+        </div>
 
-          <div style={{ height: 1, background: BORDER, margin: '6px 0' }} />
-
-          {/* DMs */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 10px 6px' }}>
-            <span style={{ fontSize: 10, fontWeight: 700, color: FAINT, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-              Direct messages
-            </span>
-            <button onClick={openNewDM} style={{
-              width: 18, height: 18, borderRadius: '50%', border: 'none',
-              background: showNewDM ? ACCENT : 'rgba(255,255,255,0.06)',
-              color: showNewDM ? '#fff' : MUTED,
-              cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontWeight: 700, padding: 0,
-            }}>+</button>
-          </div>
-
-          {showNewDM && (
-            <div style={{ padding: '4px 6px 6px' }}>
-              <input
-                autoFocus
-                value={dmSearch}
-                onChange={e => handleDMSearch(e.target.value)}
-                onKeyDown={e => e.key === 'Escape' && closeNewDM()}
-                placeholder="Search by username…"
-                style={{
-                  width: '100%', boxSizing: 'border-box', padding: '7px 10px',
-                  borderRadius: 8, border: `1px solid ${ACCENT}44`, outline: 'none',
-                  fontSize: 12.5, background: '#1c1c20', color: TEXT, fontFamily: 'inherit',
-                }}
-              />
-              {searching && <div style={{ padding: '7px 10px', fontSize: 12, color: MUTED }}>Searching…</div>}
-              {!searching && dmResults.length > 0 && (
-                <div style={{ marginTop: 4, borderRadius: 8, border: `1px solid ${BORDER}`, background: '#17171a', overflow: 'hidden' }}>
-                  {dmResults.map(u => (
-                    <button key={u.id} onClick={() => selectDM(u.id)} style={{
-                      width: '100%', padding: '8px 10px', border: 'none', background: 'none',
-                      cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center',
-                      gap: 8, fontFamily: 'inherit',
-                    }}
-                      onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = HOVER_BG)}
-                      onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = 'none')}
-                    >
-                      <Avatar url={u.avatar_url} name={u.display_name ?? u.username ?? '?'} />
-                      <div>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: TEXT }}>{u.display_name ?? u.username}</div>
-                        {u.username && <div style={{ fontSize: 11, color: MUTED }}>@{u.username}</div>}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-              {!searching && dmSearch.trim() && dmResults.length === 0 && (
-                <div style={{ padding: '7px 10px', fontSize: 12, color: MUTED }}>No users found</div>
-              )}
-            </div>
-          )}
-
-          {dmThreads.map(dm => {
-            const isActive = activeDMId === dm.otherId
-            return (
-              <button key={dm.otherId} onClick={() => selectDM(dm.otherId)} style={{
-                width: '100%', padding: '8px 10px', borderRadius: 9, border: 'none',
-                background: isActive ? ACTIVE_BG : 'none', cursor: 'pointer',
-                textAlign: 'left', display: 'flex', alignItems: 'center', gap: 10, fontFamily: 'inherit',
+        {/* New DM search */}
+        {showNewDM && (
+          <div style={{ padding: '6px 8px 4px' }}>
+            <input
+              autoFocus
+              value={dmSearch}
+              onChange={e => handleDMSearch(e.target.value)}
+              onKeyDown={e => e.key === 'Escape' && closeNewDM()}
+              placeholder="Search by username…"
+              style={{
+                width: '100%', boxSizing: 'border-box', padding: '8px 12px',
+                borderRadius: '8px', border: `1px solid ${ACCENT}44`, outline: 'none',
+                fontSize: '13px', background: '#1a1a1a', color: TEXT, fontFamily: 'inherit',
               }}
-                onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = HOVER_BG }}
-                onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'none' }}
-              >
-                <Avatar url={dm.otherAvatar} name={dm.otherName} />
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: isActive ? ACCENT : TEXT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{dm.otherName}</div>
-                  <div style={{ fontSize: 11.5, color: MUTED, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{dm.lastMessage}</div>
-                </div>
-              </button>
-            )
-          })}
-
-          <div style={{ height: 1, background: BORDER, margin: '6px 0' }} />
-
-          {/* Group threads */}
-          <div style={{ padding: '4px 10px 6px' }}>
-            <span style={{ fontSize: 10, fontWeight: 700, color: FAINT, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Groups</span>
+            />
+            {searching && <div style={{ padding: '8px 12px', fontSize: '12px', color: MUTED }}>Searching…</div>}
+            {!searching && dmResults.length > 0 && (
+              <div style={{ marginTop: '4px', borderRadius: '8px', border: `1px solid ${BORDER}`, background: '#161616', overflow: 'hidden' }}>
+                {dmResults.map(u => (
+                  <button
+                    key={u.id}
+                    onClick={() => selectDM(u.id)}
+                    style={{
+                      width: '100%', padding: '9px 12px', border: 'none', background: 'none',
+                      cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center',
+                      gap: '10px', fontFamily: 'inherit',
+                    }}
+                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = HOVER_BG}
+                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'none'}
+                  >
+                    <Avatar url={u.avatar_url} name={u.display_name ?? u.username ?? '?'} />
+                    <div>
+                      <div style={{ fontSize: '13px', fontWeight: 600, color: TEXT }}>{u.display_name ?? u.username}</div>
+                      {u.username && <div style={{ fontSize: '11px', color: MUTED }}>@{u.username}</div>}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+            {!searching && dmSearch.trim() && dmResults.length === 0 && (
+              <div style={{ padding: '8px 12px', fontSize: '12px', color: MUTED }}>No users found</div>
+            )}
           </div>
+        )}
 
-          {groups.map(g => (
-            <div key={g.groupId} style={{ marginBottom: 2 }}>
-              <button onClick={() => selectThread(g.groupId)} style={{
-                width: '100%', padding: '8px 10px', borderRadius: 9, border: 'none',
+        {/* DM threads */}
+        {dmThreads.map(dm => {
+          const isActive = activeDMId === dm.otherId
+          return (
+            <button
+              key={dm.otherId}
+              onClick={() => selectDM(dm.otherId)}
+              style={{
+                width: '100%', padding: '10px 12px', borderRadius: '10px', border: 'none',
+                background: isActive ? ACTIVE_BG : 'none', cursor: 'pointer',
+                textAlign: 'left', display: 'flex', alignItems: 'center', gap: '10px', fontFamily: 'inherit',
+              }}
+              onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = HOVER_BG }}
+              onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'none' }}
+            >
+              <Avatar url={dm.otherAvatar} name={dm.otherName} />
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: '14px', fontWeight: 600, color: isActive ? ACCENT : TEXT, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{dm.otherName}</div>
+                <div style={{ fontSize: '12px', color: MUTED, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{dm.lastMessage}</div>
+              </div>
+            </button>
+          )
+        })}
+
+        <div style={{ height: '1px', background: BORDER, margin: '4px 0 8px' }} />
+
+        {/* Group threads */}
+        {groups.map(g => (
+          <div key={g.groupId} style={{ marginBottom: '2px' }}>
+            <button
+              onClick={() => selectThread(g.groupId)}
+              style={{
+                width: '100%', padding: '10px 12px', borderRadius: '10px', border: 'none',
                 background: activeGroupId === g.groupId && !activeEventId ? ACTIVE_BG : 'none',
                 cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center',
-                gap: 10, fontFamily: 'inherit',
+                gap: '10px', fontFamily: 'inherit',
               }}
-                onMouseEnter={e => { if (!(activeGroupId === g.groupId && !activeEventId)) (e.currentTarget as HTMLElement).style.background = HOVER_BG }}
-                onMouseLeave={e => { if (!(activeGroupId === g.groupId && !activeEventId)) (e.currentTarget as HTMLElement).style.background = 'none' }}
-              >
-                <GroupIcon name={g.groupName} color={g.themeColor} />
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: TEXT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.groupName}</div>
-                  <div style={{ fontSize: 11.5, color: MUTED }}>Group chat</div>
-                </div>
-              </button>
+              onMouseEnter={e => { if (!(activeGroupId === g.groupId && !activeEventId)) (e.currentTarget as HTMLElement).style.background = HOVER_BG }}
+              onMouseLeave={e => { if (!(activeGroupId === g.groupId && !activeEventId)) (e.currentTarget as HTMLElement).style.background = 'none' }}
+            >
+              <div style={{
+                width: '38px', height: '38px', borderRadius: '50%', flexShrink: 0,
+                background: '#1e1e1e', display: 'flex', alignItems: 'center',
+                justifyContent: 'center', fontSize: '15px', fontWeight: 800, color: ACCENT,
+              }}>
+                {(g.groupName?.[0] ?? '?').toUpperCase()}
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: '14px', fontWeight: 600, color: TEXT, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{g.groupName}</div>
+                <div style={{ fontSize: '12px', color: MUTED }}>Group chat</div>
+              </div>
+            </button>
 
-              {g.events.map(ev => {
-                const isActive = activeEventId === ev.id
-                return (
-                  <button key={ev.id} onClick={() => selectThread(g.groupId, ev.id)} style={{
-                    width: '100%', padding: '6px 10px 6px 28px', borderRadius: 9, border: 'none',
+            {g.events.map(ev => {
+              const isActive = activeEventId === ev.id
+              return (
+                <button
+                  key={ev.id}
+                  onClick={() => selectThread(g.groupId, ev.id)}
+                  style={{
+                    width: '100%', padding: '7px 12px 7px 32px', borderRadius: '10px', border: 'none',
                     background: isActive ? ACTIVE_BG : 'none', cursor: 'pointer',
-                    textAlign: 'left', display: 'flex', alignItems: 'center', gap: 7, fontFamily: 'inherit',
+                    textAlign: 'left', display: 'flex', alignItems: 'center', gap: '8px', fontFamily: 'inherit',
                   }}
-                    onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = HOVER_BG }}
-                    onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'none' }}
-                  >
-                    <span style={{ fontSize: 12 }}>{EVENT_ICON[ev.event_type] ?? '📅'}</span>
-                    <span style={{
-                      fontSize: 12.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                      color: isActive ? ACCENT : DIM, fontWeight: isActive ? 600 : 400,
-                    }}>{ev.title}</span>
-                  </button>
-                )
-              })}
-            </div>
-          ))}
-        </div>
+                  onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = HOVER_BG }}
+                  onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'none' }}
+                >
+                  <span style={{ fontSize: '13px' }}>{EVENT_ICON[ev.event_type] ?? '📅'}</span>
+                  <span style={{
+                    fontSize: '13px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                    color: isActive ? ACCENT : MUTED, fontWeight: isActive ? 600 : 400,
+                  }}>{ev.title}</span>
+                </button>
+              )
+            })}
+          </div>
+        ))}
       </div>
+    </div>
+  )
 
-      {/* ── Active thread ── */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: BG }}>
-        {activeDMId ? (
-          <>
-            <div style={{ padding: '14px 22px', background: SIDEBAR, borderBottom: `1px solid ${BORDER}` }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>{activeDMName}</div>
+  // ── Active chat panel ──────────────────────────────────────────
+  const chatPanel = (
+    <div style={{
+      flex: 1, display: isMobile && mobileView === 'list' ? 'none' : 'flex',
+      flexDirection: 'column', overflow: 'hidden', background: '#111',
+    }}>
+      {activeDMId ? (
+        <>
+          <div style={{ padding: '14px 16px', background: SIDEBAR, borderBottom: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', gap: 12 }}>
+            {isMobile && (
+              <button onClick={backToList} style={{ background: 'none', border: 'none', color: MUTED, cursor: 'pointer', padding: '4px 8px 4px 0', fontSize: 18, display: 'flex', alignItems: 'center' }}>
+                ←
+              </button>
+            )}
+            <div style={{ fontSize: '15px', fontWeight: 700, color: TEXT }}>{activeDMName}</div>
+          </div>
+          <div style={{ flex: 1, overflow: 'hidden' }}>
+            {loading
+              ? <LoadingState />
+              : <DMPanel key={activeDMId} otherId={activeDMId} initialMessages={dmMsgs} currentUserId={currentUserId} height="100%" />
+            }
+          </div>
+        </>
+      ) : activeGroupId ? (
+        <>
+          <div style={{ padding: '14px 16px', background: SIDEBAR, borderBottom: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', gap: 12 }}>
+            {isMobile && (
+              <button onClick={backToList} style={{ background: 'none', border: 'none', color: MUTED, cursor: 'pointer', padding: '4px 8px 4px 0', fontSize: 18, display: 'flex', alignItems: 'center' }}>
+                ←
+              </button>
+            )}
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: '15px', fontWeight: 700, color: TEXT }}>{threadLabel}</div>
+              {activeEvent && <div style={{ fontSize: '12px', color: MUTED, marginTop: '1px' }}>{activeGroup?.groupName}</div>}
             </div>
-            <div style={{ flex: 1, overflow: 'hidden' }}>
-              {loading ? <LoadingState /> : <DMPanel key={activeDMId} otherId={activeDMId} initialMessages={dmMsgs} currentUserId={currentUserId} height="100%" />}
-            </div>
-          </>
-        ) : activeGroupId ? (
-          <>
-            <div style={{ padding: '14px 22px', background: SIDEBAR, borderBottom: `1px solid ${BORDER}` }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>{threadLabel}</div>
-              {activeEvent && <div style={{ fontSize: 11.5, color: MUTED, marginTop: 1 }}>{activeGroup?.groupName}</div>}
-            </div>
-            <div style={{ flex: 1, overflow: 'hidden' }}>
-              {loading ? <LoadingState /> : (
-                <ChatPanel
+          </div>
+          <div style={{ flex: 1, overflow: 'hidden' }}>
+            {loading
+              ? <LoadingState />
+              : <ChatPanel
                   key={`${activeGroupId}:${activeEventId}`}
                   groupId={activeGroupId}
                   eventId={activeEventId}
@@ -331,16 +384,23 @@ export function MessagesHub({
                   currentUserId={currentUserId}
                   height="100%"
                 />
-              )}
-            </div>
-          </>
-        ) : (
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12 }}>
-            <div style={{ fontSize: 40 }}>💬</div>
-            <p style={{ fontSize: 14, color: MUTED, margin: 0 }}>Select a conversation</p>
+            }
           </div>
-        )}
-      </div>
+        </>
+      ) : (
+        // Empty state — only visible on desktop (mobile starts on list view)
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '12px' }}>
+          <div style={{ fontSize: '48px' }}>💬</div>
+          <p style={{ fontSize: '15px', color: MUTED, margin: 0 }}>Select a conversation</p>
+        </div>
+      )}
+    </div>
+  )
+
+  return (
+    <div style={{ display: 'flex', height: '100vh', background: BG, overflow: 'hidden' }}>
+      {threadList}
+      {chatPanel}
     </div>
   )
 }
@@ -348,7 +408,7 @@ export function MessagesHub({
 function LoadingState() {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-      <span style={{ color: '#4a4757', fontSize: 13 }}>Loading…</span>
+      <span style={{ color: '#333', fontSize: '14px' }}>Loading…</span>
     </div>
   )
 }

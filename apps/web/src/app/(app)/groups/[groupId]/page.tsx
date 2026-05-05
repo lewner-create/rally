@@ -17,7 +17,7 @@ function initials(name: string) {
 
 const SECTION_LABEL: React.CSSProperties = {
   fontSize: '10px', fontWeight: 700, letterSpacing: '.08em',
-  textTransform: 'uppercase', color: '#555', margin: '0 0 12px',
+  textTransform: 'uppercase', color: '#666', margin: '0 0 12px',
 }
 
 export default async function GroupPage({ params }: { params: Promise<{ groupId: string }> }) {
@@ -37,99 +37,144 @@ export default async function GroupPage({ params }: { params: Promise<{ groupId:
 
   if (!group) redirect('/dashboard')
 
-  const isAdmin    = group.group_members.some(
+  const isAdmin = group.group_members.some(
     (m: { user_id: string; role: string }) => m.user_id === user.id && m.role === 'admin'
   )
   const themeColor = (group as any).theme_color ?? '#7F77DD'
 
   return (
-    <div style={{ display: 'flex', height: '100%' }}>
+    <div style={{ display: 'flex', height: '100%', flexDirection: 'column' }}>
 
-      {/* ── Left sidebar ──────────────────────────────────────────────── */}
-      <div style={{
-        width: '256px', flexShrink: 0,
-        display: 'flex', flexDirection: 'column',
-        overflowY: 'auto', borderRight: '1px solid #1e1e1e',
-        padding: '24px 20px', background: '#12102a',
-      }}>
+      {/* ── Mobile group header — visible on small screens only ────────── */}
+      {/* sticky top-14 because the layout's mobile nav bar is h-14 */}
+      <div
+        className="md:hidden flex items-center gap-3 px-4 py-3 border-b sticky top-14 z-20"
+        style={{ background: '#111', borderColor: '#222' }}
+      >
         <Link
           href="/dashboard"
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: '6px',
-            fontSize: '12px', color: '#6b6480', textDecoration: 'none', marginBottom: '22px',
-            transition: 'color 0.15s',
-          }}
+          className="p-1.5 -ml-1.5 rounded-lg text-[#666] hover:text-white transition-colors"
+          aria-label="Back to dashboard"
         >
-          <ArrowLeft size={13} /> Dashboard
+          <ArrowLeft size={18} />
         </Link>
 
-        {/* Group identity */}
-        <div style={{ marginBottom: '18px' }}>
-          <div style={{
-            width: '42px', height: '42px', borderRadius: '11px',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '14px', fontWeight: 800, marginBottom: '10px',
-            background: `${themeColor}25`, color: themeColor,
-          }}>
-            {initials(group.name)}
-          </div>
-          <h1 style={{ fontSize: '16px', fontWeight: 700, margin: '0 0 3px', color: '#fff', letterSpacing: '-0.1px' }}>
+        {/* Group avatar */}
+        <div
+          className="w-7 h-7 rounded-lg flex items-center justify-center text-[11px] font-bold flex-shrink-0"
+          style={{ background: `${themeColor}25`, color: themeColor }}
+        >
+          {initials(group.name)}
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <h2 className="text-sm font-semibold text-white truncate leading-none mb-0.5">
             {group.name}
-          </h1>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <Users size={11} color="#6b6480" />
-            <span style={{ fontSize: '12px', color: '#6b6480' }}>
-              {group.group_members.length} of 6 members
-            </span>
+          </h2>
+          <p className="text-[11px] text-[#555] leading-none">
+            {group.group_members.length} members
+          </p>
+        </div>
+
+        <Link
+          href={`/groups/${groupId}/settings`}
+          className="p-1.5 rounded-lg text-[#666] hover:text-white transition-colors"
+          aria-label="Group settings"
+        >
+          <Settings size={16} />
+        </Link>
+      </div>
+
+      {/* ── Main row (left panel + content) ───────────────────────────── */}
+      <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+
+        {/* ── Left sidebar — hidden on mobile, visible on md+ ─────────── */}
+        <div
+          className="hidden md:flex"
+          style={{
+            width: '256px', flexShrink: 0,
+            flexDirection: 'column',
+            overflowY: 'auto', borderRight: '0.5px solid #222',
+            padding: '24px 20px', background: '#111',
+          }}
+        >
+          <Link
+            href="/dashboard"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: '6px',
+              fontSize: '12px', color: '#555', textDecoration: 'none', marginBottom: '22px',
+            }}
+          >
+            <ArrowLeft size={13} /> Dashboard
+          </Link>
+
+          {/* Group identity */}
+          <div style={{ marginBottom: '18px' }}>
+            <div style={{
+              width: '42px', height: '42px', borderRadius: '11px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '14px', fontWeight: 800, marginBottom: '10px',
+              background: `${themeColor}20`, color: themeColor,
+            }}>
+              {initials(group.name)}
+            </div>
+            <h1 style={{ fontSize: '16px', fontWeight: 700, margin: '0 0 3px', color: '#fff', letterSpacing: '-0.1px' }}>
+              {group.name}
+            </h1>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <Users size={11} color="#555" />
+              <span style={{ fontSize: '12px', color: '#555' }}>
+                {group.group_members.length} of 6 members
+              </span>
+            </div>
+            {(group as any).description && (
+              <p style={{ fontSize: '12px', color: '#666', marginTop: '5px', lineHeight: 1.5 }}>
+                {(group as any).description}
+              </p>
+            )}
           </div>
-          {(group as any).description && (
-            <p style={{ fontSize: '12px', color: '#6b6480', marginTop: '5px', lineHeight: 1.5 }}>
-              {(group as any).description}
-            </p>
+
+          <div style={{ borderTop: '0.5px solid #222', margin: '0 0 18px' }} />
+
+          <div style={{ flex: 1 }}>
+            <p style={SECTION_LABEL}>Members</p>
+            <MemberList members={group.group_members} currentUserId={user.id} />
+          </div>
+
+          <div style={{ borderTop: '0.5px solid #222', margin: '18px 0 14px' }} />
+          <Link
+            href={`/groups/${groupId}/settings`}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '7px',
+              fontSize: '13px', color: '#666', textDecoration: 'none', padding: '5px 0',
+            }}
+          >
+            <Settings size={13} /> Group settings
+          </Link>
+
+          {isAdmin && (
+            <>
+              <div style={{ borderTop: '0.5px solid #222', margin: '14px 0' }} />
+              <div>
+                <p style={SECTION_LABEL}>Invite people</p>
+                <InvitePanel groupId={group.id} initialInvites={invites} />
+              </div>
+            </>
           )}
         </div>
 
-        <div style={{ borderTop: '1px solid #1e1e1e', margin: '0 0 18px' }} />
-
-        <div style={{ flex: 1 }}>
-          <p style={SECTION_LABEL}>Members</p>
-          <MemberList members={group.group_members} currentUserId={user.id} />
-        </div>
-
-        <div style={{ borderTop: '1px solid #1e1e1e', margin: '18px 0 14px' }} />
-        <Link
-          href={`/groups/${groupId}/settings`}
-          style={{
-            display: 'flex', alignItems: 'center', gap: '7px',
-            fontSize: '13px', color: '#6b6480', textDecoration: 'none', padding: '5px 0',
-            transition: 'color 0.15s',
-          }}
-        >
-          <Settings size={13} /> Group settings
-        </Link>
-
-        {isAdmin && (
-          <>
-            <div style={{ borderTop: '1px solid #1e1e1e', margin: '14px 0' }} />
-            <div>
-              <p style={SECTION_LABEL}>Invite people</p>
-              <InvitePanel groupId={group.id} initialInvites={invites} />
-            </div>
-          </>
-        )}
+        {/* ── Main content (client, handles tabs + chat) ──────────────── */}
+        <GroupPageClient
+          groupId={groupId}
+          themeColor={themeColor}
+          events={events}
+          activeCards={activeCards}
+          prompt={prompt}
+          currentUserId={user.id}
+          tier={group.tier}
+          openWindowsSlot={<OpenWindows groupId={group.id} tier={group.tier} />}
+        />
       </div>
-
-      {/* ── Main content (client, handles tabs + chat) ────────────────── */}
-      <GroupPageClient
-        groupId={groupId}
-        themeColor={themeColor}
-        events={events}
-        activeCards={activeCards}
-        prompt={prompt as any}
-        currentUserId={user.id}
-        tier={group.tier}
-        openWindowsSlot={<OpenWindows groupId={group.id} tier={group.tier} />}
-      />
     </div>
   )
 }

@@ -25,7 +25,7 @@ type ActiveCard = {
   proposed_date: string | null
   proposed_start: string | null
   proposed_end: string | null
-  status: 'open' | 'locked'
+  status: 'open' | 'locked' | 'cancelled'
   response_counts?: { in: number; maybe: number; cant: number }
 }
 

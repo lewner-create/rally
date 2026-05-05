@@ -12,7 +12,6 @@ import type {
   GroupActivity,
 } from '@/lib/actions/dashboard'
 
-// ── Design tokens ────────────────────────────────────────────────
 const T = {
   bg:         '#0f0f0f',
   bgElev:     '#17171a',
@@ -39,7 +38,6 @@ type Props = {
   tourCompleted?: boolean
 }
 
-// ── Helpers ──────────────────────────────────────────────────────
 function initials(name: string) {
   return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
 }
@@ -98,6 +96,90 @@ function AvatarStack({ people, size = 24, max = 5 }: { people: MemberPreview[]; 
   )
 }
 
+// ── Best window CTA ───────────────────────────────────────────────
+// Replaces the old "Round up the crew" dropdown.
+// Finds the group with the most people free and surfaces it as
+// a one-tap shortcut — genuinely different from the groups list below.
+function BestWindowCTA({ groups }: { groups: GroupWithWindows[] }) {
+  const best = groups
+    .filter(g => g.next_window && g.next_window.members.length > 0)
+    .sort((a, b) => (b.next_window?.members.length ?? 0) - (a.next_window?.members.length ?? 0))[0]
+
+  // No windows yet — nudge them to set availability
+  if (!best?.next_window) {
+    return (
+      <Link href="/availability" style={{ textDecoration: 'none' }}>
+        <div style={{
+          padding: '16px 18px', borderRadius: 14,
+          background: T.bgElev, border: `1px solid ${T.border}`,
+          display: 'flex', alignItems: 'center', gap: 14,
+        }}>
+          <span style={{ fontSize: 24, flexShrink: 0 }}>🗓</span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 13.5, fontWeight: 700, color: T.text, marginBottom: 2 }}>
+              Set your free time
+            </div>
+            <div style={{ fontSize: 12, color: T.textMute, lineHeight: 1.4 }}>
+              Volta will find when your groups line up
+            </div>
+          </div>
+          <span style={{ color: T.textFaint, flexShrink: 0 }}>→</span>
+        </div>
+      </Link>
+    )
+  }
+
+  const accent      = best.theme_color ?? T.violet
+  const freeCount   = best.next_window.members.length
+  const windowLabel = best.next_window.label
+
+  return (
+    <Link href={`/groups/${best.id}/plans/new`} style={{ textDecoration: 'none' }}>
+      <div style={{
+        padding: '18px', borderRadius: 14, position: 'relative', overflow: 'hidden',
+        background: `linear-gradient(135deg, ${accent}22 0%, ${T.bgElev} 70%)`,
+        border: `1px solid ${accent}40`,
+        transition: 'border-color 0.15s',
+      }}>
+        {/* Label */}
+        <div style={{
+          fontSize: 11, fontWeight: 700, letterSpacing: '0.06em',
+          textTransform: 'uppercase', color: accent, marginBottom: 6,
+        }}>
+          ⚡ Best window right now
+        </div>
+
+        {/* Window */}
+        <div style={{ fontSize: 18, fontWeight: 800, color: T.text, letterSpacing: '-0.02em', marginBottom: 4 }}>
+          {windowLabel}
+        </div>
+
+        {/* Group + count */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 14 }}>
+          <div style={{ width: 6, height: 6, borderRadius: '50%', background: accent, flexShrink: 0 }} />
+          <span style={{ fontSize: 12.5, color: T.textDim }}>{best.name}</span>
+          <span style={{ fontSize: 12.5, color: T.textMute }}>
+            · {freeCount} {freeCount === 1 ? 'person' : 'people'} free
+          </span>
+        </div>
+
+        {/* Avatars + CTA */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <AvatarStack people={best.next_window.members} size={24} max={4} />
+          <span style={{
+            background: accent, color: '#fff',
+            padding: '8px 14px', borderRadius: 9,
+            fontSize: 12.5, fontWeight: 700, flexShrink: 0,
+            boxShadow: `0 4px 12px ${accent}44`,
+          }}>
+            Start a plan →
+          </span>
+        </div>
+      </div>
+    </Link>
+  )
+}
+
 // ── Hero plan card ────────────────────────────────────────────────
 function HeroPlan({ plan, isMobile }: { plan: UpcomingPlan; isMobile: boolean }) {
   const color = plan.group_color ?? T.violet
@@ -113,7 +195,7 @@ function HeroPlan({ plan, isMobile }: { plan: UpcomingPlan; isMobile: boolean })
             <span style={{ fontSize: 12.5, color: T.textDim, fontWeight: 500 }}>{plan.group_name}</span>
             <span style={{ color: T.textFaint }}>·</span>
             <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', color: T.green, textTransform: 'uppercase' }}>
-              {plan.my_rsvp === 'yes' ? '✓ You\'re in' : '📅 Coming up'}
+              {plan.my_rsvp === 'yes' ? "✓ You're in" : '📅 Coming up'}
             </span>
           </div>
           <div style={{ fontSize: isMobile ? 22 : 26, fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 4, lineHeight: 1.15 }}>{plan.title}</div>
@@ -149,7 +231,7 @@ function EmptyHero({ hasGroups, isMobile }: { hasGroups: boolean; isMobile: bool
       <p style={{ margin: '8px 0 18px', fontSize: 14, color: T.textDim, lineHeight: 1.45 }}>
         {hasGroups ? 'Check the suggested times for your groups and start something.' : "Make a group, invite your friends, and Volta finds when you're all free."}
       </p>
-      <Link href={hasGroups ? '/dashboard' : '/groups/new'} style={{ background: T.violet, color: '#fff', padding: '11px 18px', borderRadius: 10, fontSize: 14, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
+      <Link href={hasGroups ? '/groups' : '/groups/new'} style={{ background: T.violet, color: '#fff', padding: '11px 18px', borderRadius: 10, fontSize: 14, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
         + {hasGroups ? 'Start a plan' : 'Start your first group'}
       </Link>
     </div>
@@ -164,11 +246,11 @@ function NeedsYouSection({ items }: { items: NeedsYouItem[] }) {
   const visible = items.filter(i => !done.has(i.id))
   if (visible.length === 0) return null
 
-  function handleRsvp(eventId: string, status: 'yes' | 'no') {
-    setRsvping(eventId)
+  function handleRsvp(id: string, status: 'yes' | 'no') {
+    setRsvping(id)
     startTransition(async () => {
-      await upsertRsvp(eventId, status)
-      setDone(prev => new Set([...prev, eventId]))
+      await upsertRsvp(id, status)
+      setDone(prev => new Set([...prev, id]))
       setRsvping(null)
     })
   }
@@ -195,7 +277,7 @@ function NeedsYouSection({ items }: { items: NeedsYouItem[] }) {
             </div>
             <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
               <button onClick={() => handleRsvp(item.id, 'yes')} disabled={rsvping === item.id} style={{ background: T.greenSoft, color: T.green, border: 'none', padding: '6px 12px', borderRadius: 8, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', opacity: rsvping === item.id ? 0.6 : 1 }}>I'm in</button>
-              <button onClick={() => handleRsvp(item.id, 'no')} disabled={rsvping === item.id} style={{ background: 'transparent', color: T.textDim, border: `1px solid ${T.border}`, padding: '6px 12px', borderRadius: 8, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Can't</button>
+              <button onClick={() => handleRsvp(item.id, 'no')}  disabled={rsvping === item.id} style={{ background: 'transparent', color: T.textDim, border: `1px solid ${T.border}`, padding: '6px 12px', borderRadius: 8, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Can't</button>
             </div>
           </div>
         ))}
@@ -268,46 +350,6 @@ function CompactGroupsList({ groups }: { groups: GroupActivity[] }) {
   )
 }
 
-// ── Start plan CTA ────────────────────────────────────────────────
-function StartPlanCTA({ hasGroups, groups }: { hasGroups: boolean; groups: GroupActivity[] }) {
-  const [open, setOpen] = useState(false)
-  if (!hasGroups) {
-    return (
-      <Link href="/groups/new" style={{ textDecoration: 'none' }}>
-        <div style={{ width: '100%', background: `linear-gradient(135deg, ${T.violet} 0%, #b66adb 100%)`, color: '#fff', padding: '14px 18px', borderRadius: 12, fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
-          + Create your first group
-        </div>
-      </Link>
-    )
-  }
-  return (
-    <div style={{ position: 'relative' }}>
-      <button onClick={() => setOpen(v => !v)} style={{ width: '100%', background: `linear-gradient(135deg, ${T.violet} 0%, #b66adb 100%)`, color: '#fff', border: 'none', padding: '14px 18px', borderRadius: 12, fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 6px 20px rgba(127,119,221,0.25)' }}>
-        <span>+ Round up the crew</span>
-        <span style={{ fontSize: 11.5, opacity: 0.7 }}>{open ? '▲' : '▼'}</span>
-      </button>
-      {open && (
-        <div style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, background: T.bgElev, border: `1px solid ${T.border}`, borderRadius: 12, overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.4)', zIndex: 20 }}>
-          <div style={{ padding: '10px 12px 6px' }}>
-            <p style={{ fontSize: 11, fontWeight: 700, color: T.textMute, textTransform: 'uppercase', letterSpacing: '0.07em', margin: 0 }}>Pick a group</p>
-          </div>
-          {groups.map(g => (
-            <Link key={g.id} href={`/groups/${g.id}/plans/new`} style={{ textDecoration: 'none' }} onClick={() => setOpen(false)}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderTop: `1px solid ${T.border}` }}
-                onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)')}
-                onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = 'transparent')}
-              >
-                <div style={{ width: 26, height: 26, borderRadius: 7, flexShrink: 0, background: g.theme_color ? `linear-gradient(135deg, ${g.theme_color}, ${g.theme_color}88)` : 'linear-gradient(135deg, #3a2e5e, #2a1f4d)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 9.5, fontWeight: 700 }}>{initials(g.name)}</div>
-                <span style={{ fontSize: 13, fontWeight: 500, color: T.text }}>{g.name}</span>
-              </div>
-            </Link>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
 // ── Main export ───────────────────────────────────────────────────
 export default function DashboardClient({
   profile,
@@ -350,7 +392,8 @@ export default function DashboardClient({
       {/* Grid */}
       <div style={{ padding: isMobile ? '16px 16px 80px' : '28px 36px 80px', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'minmax(0,1fr) 300px', gap: isMobile ? 20 : 28, alignItems: 'start', maxWidth: 1200, margin: '0 auto' }}>
 
-        {isMobile && <StartPlanCTA hasGroups={hasGroups} groups={groupsActivity} />}
+        {/* Mobile: best window at top */}
+        {isMobile && <BestWindowCTA groups={groupsWithWindows} />}
 
         {/* Left column */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 20 : 28, minWidth: 0 }}>
@@ -362,9 +405,9 @@ export default function DashboardClient({
               <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: T.textMute, marginBottom: 12 }}>Three steps to your first hang</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {[
-                  { n: 1, title: 'Make a group',        sub: 'Name it, theme it' },
-                  { n: 2, title: 'Invite your friends',  sub: 'Share a link, no app needed' },
-                  { n: 3, title: 'Set your free time',   sub: 'Volta finds when you all overlap' },
+                  { n: 1, title: 'Make a group',       sub: 'Name it, theme it' },
+                  { n: 2, title: 'Invite your friends', sub: 'Share a link, no app needed' },
+                  { n: 3, title: 'Set your free time',  sub: 'Volta finds when you all overlap' },
                 ].map(s => (
                   <div key={s.n} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 14px', borderRadius: 12, background: T.bgElev, border: `1px solid ${T.border}` }}>
                     <div style={{ width: 28, height: 28, borderRadius: '50%', flexShrink: 0, background: T.violetSoft, color: T.violet, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700 }}>{s.n}</div>
@@ -380,7 +423,7 @@ export default function DashboardClient({
         {/* Right column — desktop only */}
         {!isMobile && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 22, position: 'sticky', top: 24 }}>
-            <StartPlanCTA hasGroups={hasGroups} groups={groupsActivity} />
+            <BestWindowCTA groups={groupsWithWindows} />
             <CompactGroupsList groups={groupsActivity} />
           </div>
         )}

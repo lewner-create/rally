@@ -22,14 +22,16 @@ export async function GET(request: Request) {
       const providerRefreshToken = data.session.provider_refresh_token
 
       if (providerToken) {
-        // Upsert calendar connection with tokens
-        await supabase.from('calendar_connections').upsert({
-          user_id:       data.session.user.id,
-          provider:      'google',
-          access_token:  providerToken,
-          refresh_token: providerRefreshToken ?? null,
-          updated_at:    new Date().toISOString(),
-        }, { onConflict: 'user_id,provider' })
+        try {
+          await supabase.from('calendar_connections').upsert({
+            user_id:       data.session.user.id,
+            provider:      'google',
+            access_token:  providerToken,
+            refresh_token: providerRefreshToken ?? null,
+            updated_at:    new Date().toISOString(),
+          }, { onConflict: 'user_id,provider' })
+        } catch (_) {}
+      }, { onConflict: 'user_id,provider' })
       }
 
       // Check if new user needs onboarding
@@ -48,3 +50,4 @@ export async function GET(request: Request) {
 
   return NextResponse.redirect(`${origin}/login?error=auth_failed`)
 }
+

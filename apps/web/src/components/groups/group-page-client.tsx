@@ -39,9 +39,9 @@ type Event = {
 }
 
 type Prompt = {
-  label: string
-  start_hour: number
-  end_hour: number
+  label?: string
+  start_hour?: number
+  end_hour?: number
   members: { id: string; display_name: string | null; username: string; avatar_url: string | null }[]
 } | null
 

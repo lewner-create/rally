@@ -8,6 +8,8 @@ import { Copy, Check, Link2, Trash2, UserPlus } from 'lucide-react'
 interface Invite {
   id: string
   token: string
+  slug: string | null
+  group_slug: string | null
   use_count: number
   expires_at: string
 }
@@ -19,16 +21,24 @@ interface InvitePanelProps {
 
 export function InvitePanel({ groupId, initialInvites }: InvitePanelProps) {
   const [invites, setInvites] = useState<Invite[]>(initialInvites)
-  const [copied, setCopied] = useState<string | null>(null)
-  const [username, setUsername] = useState('')
+  const [copied, setCopied]   = useState<string | null>(null)
+  const [username, setUsername]   = useState('')
   const [usernameMsg, setUsernameMsg] = useState<{ type: 'error' | 'success'; text: string } | null>(null)
   const [isPending, startTransition] = useTransition()
 
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
 
-  function copyLink(token: string) {
-    navigator.clipboard.writeText(`${baseUrl}/join/${token}`)
-    setCopied(token)
+  // Use the fun slug URL format when available, fall back to token for old links
+  function inviteUrl(invite: Invite): string {
+    if (invite.slug && invite.group_slug) {
+      return `${baseUrl}/join/${invite.group_slug}/${invite.slug}`
+    }
+    return `${baseUrl}/join/${invite.token}`
+  }
+
+  function copyLink(invite: Invite) {
+    navigator.clipboard.writeText(inviteUrl(invite))
+    setCopied(invite.id)
     setTimeout(() => setCopied(null), 2000)
   }
 
@@ -89,17 +99,13 @@ export function InvitePanel({ groupId, initialInvites }: InvitePanelProps) {
           </button>
         </form>
         {usernameMsg && (
-          <p
-            className="mt-1.5 text-xs"
-            style={{ color: usernameMsg.type === 'error' ? '#D85A30' : '#1D9E75' }}
-          >
+          <p className="mt-1.5 text-xs" style={{ color: usernameMsg.type === 'error' ? '#D85A30' : '#1D9E75' }}>
             {usernameMsg.text}
           </p>
         )}
       </div>
 
-      {/* Divider */}
-      <div style={{ borderTop: '0.5px solid #D3D1C7' }} />
+      <div style={{ borderTop: '0.5px solid #2a2a2a' }} />
 
       {/* Invite links */}
       <div>
@@ -111,7 +117,7 @@ export function InvitePanel({ groupId, initialInvites }: InvitePanelProps) {
             onClick={handleCreateLink}
             disabled={isPending}
             className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md text-xs font-medium border disabled:opacity-40"
-            style={{ borderColor: '#AFA9EC', color: '#7F77DD', background: '#EEEDFE' }}
+            style={{ borderColor: '#AFA9EC', color: '#7F77DD', background: 'rgba(127,119,221,0.1)' }}
           >
             <Link2 className="h-3 w-3" />
             New link
@@ -123,28 +129,38 @@ export function InvitePanel({ groupId, initialInvites }: InvitePanelProps) {
         ) : (
           <ul className="space-y-2">
             {invites.map(invite => {
-              const url = `${baseUrl}/join/${invite.token}`
-              const isCopied = copied === invite.token
+              const url      = inviteUrl(invite)
+              const isCopied = copied === invite.id
               return (
                 <li
                   key={invite.id}
                   className="flex items-center gap-2 px-3 py-2 rounded-lg"
-                  style={{ background: '#F1EFE8', border: '0.5px solid #D3D1C7' }}
+                  style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}
                 >
-                  <code className="flex-1 text-xs truncate text-muted-foreground" suppressHydrationWarning>{url}</code>
-                  <span className="text-xs text-muted-foreground whitespace-nowrap">{invite.use_count} uses</span>
+                  <code
+                    className="flex-1 text-xs truncate"
+                    style={{ color: '#666' }}
+                    suppressHydrationWarning
+                  >
+                    {url}
+                  </code>
+                  <span className="text-xs whitespace-nowrap" style={{ color: '#555' }}>
+                    {invite.use_count} uses
+                  </span>
                   <button
-                    onClick={() => copyLink(invite.token)}
-                    className="h-6 w-6 flex items-center justify-center rounded text-muted-foreground hover:text-foreground transition-colors"
+                    onClick={() => copyLink(invite)}
+                    className="h-6 w-6 flex items-center justify-center rounded transition-colors"
+                    style={{ color: '#555' }}
                   >
                     {isCopied
                       ? <Check className="h-3.5 w-3.5" style={{ color: '#1D9E75' }} />
-                      : <Copy className="h-3.5 w-3.5" />}
+                      : <Copy className="h-3.5 w-3.5" />
+                    }
                   </button>
                   <button
                     onClick={() => handleRevoke(invite.id)}
                     disabled={isPending}
-                    className="h-6 w-6 flex items-center justify-center rounded transition-colors hover:opacity-70 disabled:opacity-30"
+                    className="h-6 w-6 flex items-center justify-center rounded transition-colors disabled:opacity-30"
                     style={{ color: '#D85A30' }}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -154,7 +170,7 @@ export function InvitePanel({ groupId, initialInvites }: InvitePanelProps) {
             })}
           </ul>
         )}
-        <p className="text-xs text-muted-foreground mt-2">Links expire 7 days after creation.</p>
+        <p className="text-xs mt-2" style={{ color: '#444' }}>Links expire 7 days after creation.</p>
       </div>
     </div>
   )

@@ -19,7 +19,7 @@ export default async function JoinPage({ params }: Props) {
   const token       = isNewFormat ? slug[1] : slug[0]
 
   const invite = isNewFormat
-    ? await getInvitePreviewBySlug(groupSlug!, token)
+    ? await getInvitePreviewBySlug(groupSlug! as string, token)
     : await getInvitePreview(token)
 
   if (!invite) {

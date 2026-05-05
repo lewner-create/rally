@@ -329,7 +329,7 @@ export default function LandingPage({ stats }: { stats?: Stats }) {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontWeight: 800, fontSize: 16, color: '#fff',
           }}>R</div>
-          <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.025em', color: T.text }}>rally</div>
+          <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.025em', color: T.text }}>volta</div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 28, fontSize: 14, color: T.textDim, fontWeight: 500 }}>
           <span style={{ cursor: 'pointer' }}>How it works</span>
@@ -386,7 +386,7 @@ export default function LandingPage({ stats }: { stats?: Stats }) {
               {' '}is free.
             </h1>
             <p style={{ margin: '22px 0 32px', fontSize: 19, color: T.textDim, lineHeight: 1.45, maxWidth: 520 }}>
-              Rally is a low-effort home base for your friend group. Drop your free times, see when everyone overlaps, lock in a hang. No more "any of yall down for…" group chats.
+              Volta is a low-effort home base for your friend group. Drop your free times, see when everyone overlaps, lock in a hang. No more "any of yall down for…" group chats.
             </p>
             <div style={{ display: 'flex', gap: 10 }}>
               <Link href="/signup" style={{
@@ -395,7 +395,7 @@ export default function LandingPage({ stats }: { stats?: Stats }) {
                 display: 'inline-flex', alignItems: 'center', gap: 8,
                 boxShadow: '0 8px 24px rgba(127,119,221,0.4)',
               }}>
-                Get Rally — free →
+                Get Volta — free →
               </Link>
               <button style={{
                 background: 'rgba(255,255,255,0.06)', color: T.text,
@@ -407,7 +407,7 @@ export default function LandingPage({ stats }: { stats?: Stats }) {
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 28, fontSize: 12.5, color: T.textMute }}>
               <AvatarStack people={PEOPLE} size={22} />
-              <span><b style={{ color: T.text }}>{stats?.users ?? '0'}</b> people already on Rally</span>
+              <span><b style={{ color: T.text }}>{stats?.users ?? '0'}</b> people already on Volta</span>
             </div>
           </div>
           {/* Graphic */}
@@ -431,7 +431,7 @@ export default function LandingPage({ stats }: { stats?: Stats }) {
             { num: stats?.groups ?? '0',     label: 'friend groups',      emoji: '👯' },
             { num: stats?.events ?? '0',     label: 'hangs locked in',    emoji: '🎉' },
             { num: stats?.freeBlocks ?? '0', label: 'busy times synced',  emoji: '📅' },
-            { num: stats?.users ?? '0',      label: 'people on Rally',    emoji: '🙌' },
+            { num: stats?.users ?? '0',      label: 'people on Volta',    emoji: '🙌' },
           ].map((s, i) => (
             <div key={i} style={{
               display: 'flex', flexDirection: 'column', gap: 4,
@@ -466,8 +466,8 @@ export default function LandingPage({ stats }: { stats?: Stats }) {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 22 }}>
             {[
               { n: 1, emoji: '👯', title: 'Make a group',        sub: 'The Crew, soccer guys, brunch club — whatever your friends are.',              visual: <StepGroupViz /> },
-              { n: 2, emoji: '📅', title: 'Drop your free times', sub: "Tap the hours you're around. Rally watches for overlaps with your friends.",   visual: <StepAvailViz /> },
-              { n: 3, emoji: '🎉', title: 'Lock in the hang',    sub: 'Rally suggests when most of you are free. Pick a window, send it to chat, done.', visual: <StepLockViz /> },
+              { n: 2, emoji: '📅', title: 'Drop your free times', sub: "Tap the hours you're around. Volta watches for overlaps with your friends.",   visual: <StepAvailViz /> },
+              { n: 3, emoji: '🎉', title: 'Lock in the hang',    sub: 'Volta suggests when most of you are free. Pick a window, send it to chat, done.', visual: <StepLockViz /> },
             ].map(s => (
               <div key={s.n} style={{
                 borderRadius: 18, padding: 28,
@@ -557,7 +557,7 @@ export default function LandingPage({ stats }: { stats?: Stats }) {
                     margin: 0, fontFamily: '"Bricolage Grotesque", system-ui, sans-serif',
                     fontSize: 20, fontWeight: 700, letterSpacing: '-0.02em', color: T.text, lineHeight: 1.1,
                   }}>Suggested times, ranked.</h3>
-                  <p style={{ margin: '8px 0 0', fontSize: 13, color: T.textDim, lineHeight: 1.5 }}>Rally finds the windows where most of you are free.</p>
+                  <p style={{ margin: '8px 0 0', fontSize: 13, color: T.textDim, lineHeight: 1.5 }}>Volta finds the windows where most of you are free.</p>
                 </div>
                 <div style={{ marginTop: 'auto' }}><GroupThumb /></div>
               </div>
@@ -646,7 +646,7 @@ export default function LandingPage({ stats }: { stats?: Stats }) {
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontWeight: 800, fontSize: 16, color: '#fff',
               }}>R</div>
-              <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.025em', color: T.text }}>rally</div>
+              <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.025em', color: T.text }}>volta</div>
             </div>
             <p style={{ margin: '0 0 18px', fontSize: 13, color: T.textDim, lineHeight: 1.5, maxWidth: 280 }}>
               A low-effort home base for your friend group. Find time, plan things, hang out more.
@@ -676,7 +676,7 @@ export default function LandingPage({ stats }: { stats?: Stats }) {
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           fontSize: 12, color: T.textMute,
         }}>
-          <span>© 2026 Rally Labs, Inc. Made with 💜 for friend groups.</span>
+          <span>© 2026 Volta Labs, Inc. Made with 💜 for friend groups.</span>
           <span>Beta · Web only for now</span>
         </div>
       </footer>

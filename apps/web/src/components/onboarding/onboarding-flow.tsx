@@ -79,7 +79,7 @@ export function OnboardingFlow({ profile }: Props) {
 
         {/* Logo + progress */}
         <div style={{ marginBottom: '40px' }}>
-          <p style={{ fontSize: '17px', fontWeight: 800, color: accent, margin: '0 0 20px' }}>rally</p>
+          <p style={{ fontSize: '17px', fontWeight: 800, color: accent, margin: '0 0 20px' }}>volta</p>
           <div style={{ display: 'flex', gap: '6px' }}>
             {Array.from({ length: totalSteps }).map((_, i) => (
               <div key={i} style={{ flex: 1, height: '3px', borderRadius: '9999px', background: i < currentStep ? accent : '#222', transition: 'background 0.3s' }} />

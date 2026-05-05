@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import LandingPage from '@/components/landing/landing-page'
 
 export const metadata = {
-  title: 'Rally - Find when the whole crew is free',
+  title: 'Volta - Find when the whole crew is free',
   description: 'A low-effort home base for your friend group. Drop your free times, see when everyone overlaps, lock in a hang.',
 }
 

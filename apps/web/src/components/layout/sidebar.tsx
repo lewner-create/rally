@@ -1,13 +1,12 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
-import { useState, useEffect } from 'react'
-import {
-  Settings, LogOut, MessageSquare, Plus, ChevronDown,
-  LayoutDashboard, ChevronLeft, ChevronRight,
-} from 'lucide-react'
+import { usePathname } from 'next/navigation'
+import { useState } from 'react'
+import { Settings, LogOut, MessageSquare, Plus, ChevronDown, LayoutDashboard } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { useRouter } from 'next/navigation'
+import { cn } from '@/lib/utils'
 
 interface Group {
   id: string
@@ -20,51 +19,10 @@ interface SidebarProps {
   groups: Group[]
 }
 
-const LAST_GROUP_KEY    = 'rally_last_group_id'
-const COLLAPSED_KEY     = 'rally_sidebar_collapsed'
-const BG_MAIN           = '#1a1333'
-const BORDER_MAIN       = '#2a1f4a'
-const TEXT_MUTED        = '#7b6fa0'
-const TEXT_ACTIVE       = '#e0d9f7'
-const ACTIVE_BG         = '#2d2250'
-const HOVER_BG          = '#251b42'
-
-function initials(name: string) {
-  return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
-}
-
 export function Sidebar({ groups }: SidebarProps) {
   const pathname = usePathname()
-  const router   = useRouter()
-
-  const [groupsOpen,  setGroupsOpen]  = useState(true)
-  const [collapsed,   setCollapsed]   = useState(false)
-  const [lastGroupId, setLastGroupId] = useState<string | null>(null)
-
-  // Restore collapse state
-  useEffect(() => {
-    const stored = localStorage.getItem(COLLAPSED_KEY)
-    if (stored === 'true') setCollapsed(true)
-    setLastGroupId(localStorage.getItem(LAST_GROUP_KEY))
-  }, [])
-
-  // Track last visited group
-  useEffect(() => {
-    const match = pathname.match(/\/groups\/([0-9a-f-]{36})/)
-    if (match) {
-      localStorage.setItem(LAST_GROUP_KEY, match[1])
-      setLastGroupId(match[1])
-    } else {
-      setLastGroupId(localStorage.getItem(LAST_GROUP_KEY))
-    }
-  }, [pathname])
-
-  function toggleCollapsed() {
-    setCollapsed(prev => {
-      localStorage.setItem(COLLAPSED_KEY, String(!prev))
-      return !prev
-    })
-  }
+  const router = useRouter()
+  const [groupsOpen, setGroupsOpen] = useState(true)
 
   async function handleSignOut() {
     const supabase = createClient()
@@ -72,158 +30,88 @@ export function Sidebar({ groups }: SidebarProps) {
     router.push('/login')
   }
 
-  const isGroupActive = (id: string) => {
-    if (pathname.startsWith(`/groups/${id}`)) return true
-    if (pathname.startsWith('/events/') || pathname.startsWith('/plans/')) {
-      return lastGroupId === id
-    }
-    return false
-  }
-
-  const isSettingsActive =
-    pathname === '/settings' ||
-    pathname.startsWith('/profile') ||
-    pathname.startsWith('/availability')
-
-  const isDashboardActive = pathname === '/dashboard'
-  const isMessagesActive  = pathname.startsWith('/messages')
-
-  const navItemStyle = (active: boolean): React.CSSProperties => ({
-    display: 'flex', alignItems: 'center', gap: collapsed ? 0 : '10px',
-    padding: collapsed ? '10px 0' : '8px 10px',
-    justifyContent: collapsed ? 'center' : 'flex-start',
-    borderRadius: '9px', cursor: 'pointer',
-    background: active ? ACTIVE_BG : 'transparent',
-    color: active ? TEXT_ACTIVE : TEXT_MUTED,
-    fontSize: '13px', fontWeight: active ? 600 : 500,
-    textDecoration: 'none', transition: 'background 0.15s, color 0.15s',
-    width: '100%', border: 'none', fontFamily: 'inherit',
-  })
+  const isGroupActive = (id: string) => pathname.startsWith(`/groups/${id}`)
+  const anyGroupActive = groups.some(g => isGroupActive(g.id))
 
   return (
-    <aside style={{
-      display: 'flex', flexDirection: 'column', height: '100%',
-      width: collapsed ? '64px' : '224px',
-      background: BG_MAIN,
-      borderRight: `1px solid ${BORDER_MAIN}`,
-      transition: 'width 0.22s cubic-bezier(0.4,0,0.2,1)',
-      flexShrink: 0, overflow: 'hidden', position: 'relative',
-    }}>
+    <aside className="flex flex-col h-full w-56 border-r bg-background" style={{ borderColor: '#1e1e1e' }}>
 
-      {/* Wordmark + collapse toggle */}
-      <div style={{
-        display: 'flex', alignItems: 'center',
-        justifyContent: collapsed ? 'center' : 'space-between',
-        padding: collapsed ? '18px 0' : '18px 14px 14px',
-        flexShrink: 0,
-      }}>
-        {!collapsed && (
-          <span style={{
-            fontSize: '22px', fontWeight: 500,
-            letterSpacing: '-0.03em', color: '#9b8fcc', lineHeight: 1,
-          }}>
-            rally
-          </span>
-        )}
-        <button
-          onClick={toggleCollapsed}
-          style={{
-            width: '26px', height: '26px', borderRadius: '8px',
-            background: HOVER_BG, border: 'none', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: TEXT_MUTED, flexShrink: 0, transition: 'color 0.15s',
-          }}
-          onMouseEnter={e => (e.currentTarget.style.color = TEXT_ACTIVE)}
-          onMouseLeave={e => (e.currentTarget.style.color = TEXT_MUTED)}
+      {/* Wordmark */}
+      <div className="px-5 py-5 pb-4">
+        <span
+          className="text-[22px] font-medium tracking-[-0.03em] leading-none"
+          style={{ color: 'var(--rally-primary)' }}
         >
-          {collapsed
-            ? <ChevronRight size={14} />
-            : <ChevronLeft size={14} />
-          }
-        </button>
+          volta
+        </span>
       </div>
 
       {/* Main nav */}
-      <nav style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: collapsed ? '4px 8px' : '4px 10px' }}>
-
-        {/* Dashboard */}
-        <Link href="/dashboard" style={navItemStyle(isDashboardActive)}
-          onMouseEnter={e => { if (!isDashboardActive) (e.currentTarget as HTMLElement).style.background = HOVER_BG }}
-          onMouseLeave={e => { if (!isDashboardActive) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
-          title={collapsed ? 'Dashboard' : undefined}
-        >
-          <LayoutDashboard size={18} style={{ flexShrink: 0 }} />
-          {!collapsed && <span>Dashboard</span>}
-        </Link>
+      <nav className="flex-1 overflow-y-auto px-3 space-y-0.5">
 
         {/* Messages */}
-        <Link href="/messages" style={{ ...navItemStyle(isMessagesActive), marginTop: '2px' }}
-          onMouseEnter={e => { if (!isMessagesActive) (e.currentTarget as HTMLElement).style.background = HOVER_BG }}
-          onMouseLeave={e => { if (!isMessagesActive) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
-          title={collapsed ? 'Messages' : undefined}
+        <Link
+          href="/messages"
+          className={cn(
+            'flex items-center gap-2.5 px-2.5 py-2 rounded-md text-sm font-medium transition-colors',
+            pathname.startsWith('/messages')
+              ? 'bg-[var(--rally-primary-surface)] text-[var(--rally-primary-text)]'
+              : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
+          )}
         >
-          <MessageSquare size={18} style={{ flexShrink: 0 }} />
-          {!collapsed && <span>Messages</span>}
+          <MessageSquare className="h-4 w-4 shrink-0" />
+          Messages
+        </Link>
+
+        {/* Dashboard */}
+        <Link
+          href="/dashboard"
+          className={cn(
+            'flex items-center gap-2.5 px-2.5 py-2 rounded-md text-sm font-medium transition-colors',
+            pathname === '/dashboard'
+              ? 'bg-[var(--rally-primary-surface)] text-[var(--rally-primary-text)]'
+              : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
+          )}
+        >
+          <LayoutDashboard className="h-4 w-4 shrink-0" />
+          Dashboard
         </Link>
 
         {/* Groups section */}
-        <div style={{ marginTop: '16px' }}>
-          {!collapsed && (
-            <button
-              onClick={() => setGroupsOpen(p => !p)}
-              style={{
-                width: '100%', display: 'flex', alignItems: 'center',
-                justifyContent: 'space-between', padding: '4px 10px',
-                background: 'none', border: 'none', cursor: 'pointer',
-                fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em',
-                textTransform: 'uppercase', color: TEXT_MUTED, fontFamily: 'inherit',
-                marginBottom: '4px',
-              }}
-            >
-              <span>Groups</span>
-              <ChevronDown
-                size={12}
-                style={{ transition: 'transform 0.15s', transform: groupsOpen ? 'rotate(0deg)' : 'rotate(-90deg)' }}
-              />
-            </button>
-          )}
+        <div className="pt-2">
+          <button
+            onClick={() => setGroupsOpen(p => !p)}
+            className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
+            style={{ letterSpacing: '0.07em' }}
+          >
+            <span>Groups</span>
+            <ChevronDown
+              className="h-3 w-3 shrink-0 transition-transform"
+              style={{ transform: groupsOpen ? 'rotate(0deg)' : 'rotate(-90deg)' }}
+            />
+          </button>
 
-          {(groupsOpen || collapsed) && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+          {groupsOpen && (
+            <div className="mt-0.5 space-y-0.5">
               {groups.map(g => {
                 const active = isGroupActive(g.id)
-                const color  = g.theme_color ?? '#7F77DD'
+                const color = g.theme_color ?? '#7F77DD'
                 return (
                   <Link
                     key={g.id}
                     href={`/groups/${g.id}`}
-                    title={collapsed ? g.name : undefined}
-                    style={navItemStyle(active)}
-                    onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.background = HOVER_BG }}
-                    onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
-                  >
-                    {collapsed ? (
-                      <div style={{
-                        width: '30px', height: '30px', borderRadius: '8px',
-                        background: `${color}25`, color,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: '11px', fontWeight: 800, flexShrink: 0,
-                      }}>
-                        {initials(g.name)}
-                      </div>
-                    ) : (
-                      <>
-                        <div style={{
-                          width: '8px', height: '8px', borderRadius: '50%',
-                          background: color, flexShrink: 0,
-                        }} />
-                        <span style={{
-                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                        }}>
-                          {g.name}
-                        </span>
-                      </>
+                    className={cn(
+                      'flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors',
+                      active
+                        ? 'bg-secondary text-foreground'
+                        : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
                     )}
+                  >
+                    <div
+                      className="h-2 w-2 rounded-full shrink-0"
+                      style={{ background: color }}
+                    />
+                    <span className="truncate">{g.name}</span>
                   </Link>
                 )
               })}
@@ -231,23 +119,15 @@ export function Sidebar({ groups }: SidebarProps) {
               {/* New group */}
               <Link
                 href="/groups/new"
-                title={collapsed ? 'New group' : undefined}
+                className="flex items-center gap-2 px-2.5 py-2 mt-1 rounded-md text-sm font-semibold transition-colors"
                 style={{
-                  display: 'flex', alignItems: 'center',
-                  gap: collapsed ? 0 : '8px',
-                  justifyContent: collapsed ? 'center' : 'flex-start',
-                  padding: collapsed ? '10px 0' : '8px 10px',
-                  borderRadius: '9px', marginTop: '4px',
                   background: 'rgba(127,119,221,0.12)',
-                  border: '1px solid rgba(127,119,221,0.2)',
-                  color: '#9b8fcc', fontSize: '13px', fontWeight: 600,
-                  textDecoration: 'none', transition: 'background 0.15s',
+                  border: '1px solid rgba(127,119,221,0.25)',
+                  color: '#7F77DD',
                 }}
-                onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = 'rgba(127,119,221,0.2)')}
-                onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = 'rgba(127,119,221,0.12)')}
               >
-                <Plus size={16} style={{ flexShrink: 0 }} />
-                {!collapsed && <span>New group</span>}
+                <Plus className="h-4 w-4 shrink-0" />
+                New group
               </Link>
             </div>
           )}
@@ -255,32 +135,25 @@ export function Sidebar({ groups }: SidebarProps) {
       </nav>
 
       {/* Bottom actions */}
-      <div style={{
-        padding: collapsed ? '8px' : '8px 10px',
-        borderTop: `1px solid ${BORDER_MAIN}`,
-        display: 'flex', flexDirection: 'column', gap: '2px',
-        flexShrink: 0,
-      }}>
+      <div className="px-3 pb-4 pt-2 border-t" style={{ borderColor: '#1e1e1e' }}>
         <Link
           href="/settings"
-          title={collapsed ? 'Settings' : undefined}
-          style={navItemStyle(isSettingsActive)}
-          onMouseEnter={e => { if (!isSettingsActive) (e.currentTarget as HTMLElement).style.background = HOVER_BG }}
-          onMouseLeave={e => { if (!isSettingsActive) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+          className={cn(
+            'flex items-center gap-2.5 px-2.5 py-2 rounded-md text-sm font-medium transition-colors mt-1',
+            pathname === '/settings'
+              ? 'bg-[var(--rally-primary-surface)] text-[var(--rally-primary-text)]'
+              : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
+          )}
         >
-          <Settings size={18} style={{ flexShrink: 0 }} />
-          {!collapsed && <span>Settings</span>}
+          <Settings className="h-4 w-4 shrink-0" />
+          Settings
         </Link>
-
         <button
           onClick={handleSignOut}
-          title={collapsed ? 'Sign out' : undefined}
-          style={navItemStyle(false)}
-          onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = HOVER_BG)}
-          onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = 'transparent')}
+          className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
         >
-          <LogOut size={18} style={{ flexShrink: 0 }} />
-          {!collapsed && <span>Sign out</span>}
+          <LogOut className="h-4 w-4 shrink-0" />
+          Sign out
         </button>
       </div>
     </aside>

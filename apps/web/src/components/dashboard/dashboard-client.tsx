@@ -202,7 +202,7 @@ function EmptyHero({ hasGroups }: { hasGroups: boolean }) {
       <p style={{ margin: '8px 0 18px', fontSize: 14, color: T.textDim, lineHeight: 1.45 }}>
         {hasGroups
           ? 'Check the suggested times for your groups and start something.'
-          : 'Make a group, invite your friends, and Rally finds when you\'re all free.'
+          : 'Make a group, invite your friends, and Volta finds when you\'re all free.'
         }
       </p>
       {hasGroups ? (
@@ -615,7 +615,7 @@ export default function DashboardClient({
                 {[
                   { n: 1, title: 'Make a group',       sub: 'Name it, theme it' },
                   { n: 2, title: 'Invite your friends', sub: 'Share a link, no app needed' },
-                  { n: 3, title: 'Drop your free times',sub: 'Rally finds when you all overlap' },
+                  { n: 3, title: 'Drop your free times',sub: 'Volta finds when you all overlap' },
                 ].map(s => (
                   <div key={s.n} style={{
                     display: 'flex', alignItems: 'center', gap: 12,

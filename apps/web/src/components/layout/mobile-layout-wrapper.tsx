@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { usePathname } from 'next/navigation'
 import { Menu } from 'lucide-react'
 import { Sidebar } from '@/components/layout/sidebar'
 import { ChatBubble } from '@/components/chat/chat-bubble'
@@ -20,10 +21,15 @@ export function MobileLayoutWrapper({
   children: React.ReactNode
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const pathname = usePathname()
+
+  // Auto-close sidebar on route change — more reliable than per-link onClick handlers
+  useEffect(() => {
+    setSidebarOpen(false)
+  }, [pathname])
 
   return (
     <div className="flex h-screen overflow-hidden">
-      {/* Mobile backdrop — sits between sidebar and page content */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-40 bg-black/60 md:hidden"
@@ -31,14 +37,9 @@ export function MobileLayoutWrapper({
         />
       )}
 
-      <Sidebar
-        groups={groups}
-        mobileOpen={sidebarOpen}
-        onMobileClose={() => setSidebarOpen(false)}
-      />
+      <Sidebar groups={groups} mobileOpen={sidebarOpen} onMobileClose={() => setSidebarOpen(false)} />
 
       <main className="flex-1 min-w-0 overflow-y-auto" style={{ background: '#0f0f0f' }}>
-        {/* Mobile top bar — hidden on md+ where sidebar is always visible */}
         <div
           className="md:hidden flex items-center gap-3 px-4 h-14 border-b sticky top-0 z-30"
           style={{ background: '#0f0f0f', borderColor: '#1e1e1e' }}

@@ -37,58 +37,60 @@ export default async function GroupPage({ params }: { params: Promise<{ groupId:
 
   if (!group) redirect('/dashboard')
 
-  const isAdmin = group.group_members.some(
+  const isAdmin    = group.group_members.some(
     (m: { user_id: string; role: string }) => m.user_id === user.id && m.role === 'admin'
   )
   const themeColor = (group as any).theme_color ?? '#7F77DD'
 
   return (
-    <div style={{ display: 'flex', height: '100%', flexDirection: 'column' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
 
-      {/* ── Mobile group header — visible on small screens only ────────── */}
-      {/* sticky top-14 because the layout's mobile nav bar is h-14 */}
+      {/* ── Mobile group header — hidden on md+ ───────────────────────── */}
+      {/*
+        Back button wraps the arrow AND group name as one big touch target.
+        Settings icon is a separate link on the right.
+        sticky top-14 = sits below the layout's mobile nav bar (h-14).
+      */}
       <div
-        className="md:hidden flex items-center gap-3 px-4 py-3 border-b sticky top-14 z-20"
-        style={{ background: '#111', borderColor: '#222' }}
+        className="md:hidden flex items-center gap-2 px-4 border-b sticky top-14 z-20"
+        style={{ background: '#111', borderColor: '#222', minHeight: '52px' }}
       >
+        {/* Large touch target: arrow + group name */}
         <Link
           href="/dashboard"
-          className="p-1.5 -ml-1.5 rounded-lg text-[#666] hover:text-white transition-colors"
-          aria-label="Back to dashboard"
+          className="flex items-center gap-2.5 flex-1 min-w-0 py-3"
+          style={{ textDecoration: 'none' }}
         >
-          <ArrowLeft size={18} />
+          <ArrowLeft size={16} color="#555" className="flex-shrink-0" />
+          <div
+            className="w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-bold flex-shrink-0"
+            style={{ background: `${themeColor}25`, color: themeColor }}
+          >
+            {initials(group.name)}
+          </div>
+          <span
+            className="text-sm font-semibold truncate"
+            style={{ color: '#fff' }}
+          >
+            {group.name}
+          </span>
         </Link>
 
-        {/* Group avatar */}
-        <div
-          className="w-7 h-7 rounded-lg flex items-center justify-center text-[11px] font-bold flex-shrink-0"
-          style={{ background: `${themeColor}25`, color: themeColor }}
-        >
-          {initials(group.name)}
-        </div>
-
-        <div className="flex-1 min-w-0">
-          <h2 className="text-sm font-semibold text-white truncate leading-none mb-0.5">
-            {group.name}
-          </h2>
-          <p className="text-[11px] text-[#555] leading-none">
-            {group.group_members.length} members
-          </p>
-        </div>
-
+        {/* Settings — right side */}
         <Link
           href={`/groups/${groupId}/settings`}
-          className="p-1.5 rounded-lg text-[#666] hover:text-white transition-colors"
+          className="p-2 rounded-lg flex-shrink-0"
+          style={{ color: '#555', textDecoration: 'none' }}
           aria-label="Group settings"
         >
           <Settings size={16} />
         </Link>
       </div>
 
-      {/* ── Main row (left panel + content) ───────────────────────────── */}
-      <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+      {/* ── Main row (left panel + content) ──────────────────────────── */}
+      <div style={{ display: 'flex', flex: 1 }}>
 
-        {/* ── Left sidebar — hidden on mobile, visible on md+ ─────────── */}
+        {/* ── Left panel — hidden on mobile ──────────────────────────── */}
         <div
           className="hidden md:flex"
           style={{
@@ -96,6 +98,7 @@ export default async function GroupPage({ params }: { params: Promise<{ groupId:
             flexDirection: 'column',
             overflowY: 'auto', borderRight: '0.5px solid #222',
             padding: '24px 20px', background: '#111',
+            minHeight: '100vh',
           }}
         >
           <Link
@@ -163,7 +166,7 @@ export default async function GroupPage({ params }: { params: Promise<{ groupId:
           )}
         </div>
 
-        {/* ── Main content (client, handles tabs + chat) ──────────────── */}
+        {/* ── Main content ──────────────────────────────────────────── */}
         <GroupPageClient
           groupId={groupId}
           themeColor={themeColor}

@@ -35,7 +35,7 @@ export async function signup(
   const parsed = signupSchema.safeParse(raw)
 
   if (!parsed.success) {
-    const fieldErrors: SignupState['fieldErrors'] = {}
+    const fieldErrors: Record<string, string> = {}
     for (const issue of parsed.error.issues) {
       const field = issue.path[0] as keyof z.infer<typeof signupSchema>
       fieldErrors[field] = issue.message

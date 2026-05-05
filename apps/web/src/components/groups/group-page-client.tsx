@@ -4,7 +4,19 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { GroupChatDrawer } from '@/components/groups/group-chat-drawer'
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+const T = {
+  bg:     '#0f0f0f',
+  elev:   '#17171a',
+  border: 'rgba(255,255,255,0.08)',
+  text:   '#f5f4f8',
+  dim:    '#a8a4b8',
+  mute:   '#6b6878',
+  faint:  '#4a4757',
+  green:  '#5fcf8a',
+  greenSoft: 'rgba(95,207,138,0.14)',
+  amber:  '#e8b65a',
+  amberSoft: 'rgba(232,182,90,0.14)',
+}
 
 type ActiveCard = {
   id: string
@@ -19,20 +31,28 @@ type ActiveCard = {
 
 type Event = {
   id: string
-  title: string          // ← DB column is `title`, not `name`
+  name: string
   event_type: string
   starts_at: string | null
   ends_at: string | null
   location: string | null
 }
 
+type Prompt = {
+  label: string
+  start_hour: number
+  end_hour: number
+  members: { id: string; display_name: string | null; username: string; avatar_url: string | null }[]
+} | null
+
 type Props = {
   groupId: string
   themeColor: string
   events?: Event[]
   activeCards?: ActiveCard[]
+  prompt?: Prompt
   currentUserId?: string
-  tier?: string | number
+  tier?: string
   openWindowsSlot?: React.ReactNode
   groupName?: string
   bannerUrl?: string | null
@@ -40,272 +60,311 @@ type Props = {
   members?: unknown[]
   isAdmin?: boolean
   proactiveBannerSlot?: React.ReactNode
-  prompt?: unknown
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
 const EVENT_TYPE_EMOJI: Record<string, string> = {
-  vacation: '✈️', day_trip: '🗺️', road_trip: '🛣️',
-  game_night: '🎮', hangout: '☕', meetup: '🤝', moto_trip: '🏍️',
+  vacation: '✈️', day_trip: '🚗', road_trip: '🛣️',
+  game_night: '🎮', hangout: '🛋️', meetup: '👋', moto_trip: '🏍️',
 }
 
 function formatDate(d: string | null) {
   if (!d) return null
-  return new Date(d).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+  const date = new Date(d)
+  const today = new Date(); today.setHours(0,0,0,0)
+  const diff  = Math.floor((date.getTime() - today.getTime()) / 86400000)
+  if (diff === 0) return 'Tonight'
+  if (diff === 1) return 'Tomorrow'
+  return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
 }
 
 function formatTime(t: string | null) {
   if (!t) return null
-  const [h, m] = t.split(':').map(Number)
+  const d = new Date(t)
+  const h = d.getHours(); const m = d.getMinutes()
   const suffix = h >= 12 ? 'pm' : 'am'
   const hour = h > 12 ? h - 12 : h === 0 ? 12 : h
-  return m === 0 ? `${hour}${suffix}` : `${hour}:${String(m).padStart(2, '0')}${suffix}`
+  return m === 0 ? `${hour}${suffix}` : `${hour}:${String(m).padStart(2,'0')}${suffix}`
 }
 
-// ─── Start a plan fork ────────────────────────────────────────────────────────
+function groupEventsBySection(events: Event[], activeCards: ActiveCard[]) {
+  const now = new Date()
+  const weekEnd = new Date(now); weekEnd.setDate(now.getDate() + 7)
 
-function StartPlanFork({ groupId, accent }: { groupId: string; accent: string }) {
-  const [hoverL, setHoverL] = useState(false)
-  const [hoverR, setHoverR] = useState(false)
+  const allItems = [
+    ...activeCards.map(c => ({ kind: 'card' as const, item: c, date: c.proposed_date ? new Date(c.proposed_date) : null })),
+    ...events.map(e => ({ kind: 'event' as const, item: e, date: e.starts_at ? new Date(e.starts_at) : null })),
+  ]
+
+  const thisWeek = allItems.filter(i => i.date && i.date >= now && i.date <= weekEnd)
+  const upcoming = allItems.filter(i => i.date && i.date > weekEnd)
+  const tbd      = allItems.filter(i => !i.date)
+
+  return { thisWeek, upcoming, tbd }
+}
+
+function PlanRow({ kind, item, accent }: { kind: 'card' | 'event'; item: any; accent: string }) {
+  const isCard = kind === 'card'
+  const href   = isCard ? `/plans/${item.id}` : `/events/${item.id}`
+  const title  = isCard ? item.title : item.name
+  const date   = isCard ? item.proposed_date : item.starts_at
+  const time   = isCard ? item.proposed_start : item.starts_at
+  const counts = item.response_counts
+  const isLocked = item.status === 'locked'
 
   return (
-    <>
-      <style>{`
-        @keyframes rally-glow-pulse {
-          0%,100% { box-shadow: 0 0 0 0 transparent; }
-          50%      { box-shadow: 0 0 0 3px ${accent}44, 0 0 32px 0 ${accent}1a; }
-        }
-        .rally-plan-fork { animation: rally-glow-pulse 3s ease-in-out infinite; }
-      `}</style>
-
-      <div
-        className="rally-plan-fork rounded-2xl p-5 mb-5 relative overflow-hidden"
-        style={{
-          background: `linear-gradient(135deg, ${accent}22 0%, #1a1a1a 65%)`,
-          border: `1px solid ${accent}30`,
-        }}
+    <Link href={href} style={{ textDecoration: 'none' }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 14, padding: '13px 16px',
+        transition: 'background 0.1s',
+      }}
+        onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.03)')}
+        onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = 'transparent')}
       >
-        <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full opacity-10 blur-2xl pointer-events-none" style={{ background: accent }} />
-        <div className="relative">
-          <p className="text-xs uppercase tracking-widest font-semibold mb-1" style={{ color: accent }}>✦ ready to plan?</p>
-          <h2 className="text-lg font-bold text-white mb-1">Start something</h2>
-          <p className="text-[#666] text-sm mb-4">Pick how you want to kick it off.</p>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-            <a
-              href={`/groups/${groupId}/events/new`}
-              onMouseEnter={() => setHoverL(true)}
-              onMouseLeave={() => setHoverL(false)}
-              style={{
-                display: 'block', padding: '12px 14px', borderRadius: '12px',
-                background: hoverL ? accent : `${accent}1a`,
-                border: `1px solid ${hoverL ? accent : `${accent}33`}`,
-                textDecoration: 'none',
-                boxShadow: hoverL ? `0 4px 18px ${accent}40` : 'none',
-                transition: 'background 0.18s, border-color 0.18s, box-shadow 0.18s',
-              }}
-            >
-              <div style={{ fontSize: '18px', marginBottom: '5px' }}>📅</div>
-              <div style={{ fontSize: '13px', fontWeight: 700, color: hoverL ? 'white' : accent, marginBottom: '2px', transition: 'color 0.18s' }}>
-                It's happening
-              </div>
-              <div style={{ fontSize: '11px', color: hoverL ? 'rgba(255,255,255,0.65)' : `${accent}99`, lineHeight: 1.4, transition: 'color 0.18s' }}>
-                Create event &amp; invite
-              </div>
-            </a>
-
-            <a
-              href={`/groups/${groupId}/plans/new`}
-              onMouseEnter={() => setHoverR(true)}
-              onMouseLeave={() => setHoverR(false)}
-              style={{
-                display: 'block', padding: '12px 14px', borderRadius: '12px',
-                background: hoverR ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.05)',
-                border: `1px solid ${hoverR ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.09)'}`,
-                textDecoration: 'none',
-                transition: 'background 0.18s, border-color 0.18s',
-              }}
-            >
-              <div style={{ fontSize: '18px', marginBottom: '5px' }}>👋</div>
-              <div style={{ fontSize: '13px', fontWeight: 700, color: '#e0e0e0', marginBottom: '2px' }}>Check who's in</div>
-              <div style={{ fontSize: '11px', color: '#555', lineHeight: 1.4 }}>Poll the group first</div>
-            </a>
-          </div>
+        <div style={{
+          width: 30, height: 30, borderRadius: 8, flexShrink: 0,
+          background: isLocked ? T.greenSoft : T.amberSoft,
+          color: isLocked ? T.green : T.amber,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 13,
+        }}>
+          {isLocked ? '✓' : (EVENT_TYPE_EMOJI[item.event_type] ?? '📅')}
         </div>
-      </div>
-    </>
-  )
-}
-
-// ─── Active plan card ─────────────────────────────────────────────────────────
-
-function ActivePlanCard({ card, accent }: { card: ActiveCard; accent: string }) {
-  const counts = card.response_counts ?? { in: 0, maybe: 0, cant: 0 }
-  const total  = counts.in + counts.maybe + counts.cant
-
-  return (
-    <Link href={`/plans/${card.id}`} className="block">
-      <div className="rounded-xl p-4 transition-colors hover:border-[#333]" style={{ background: '#1a1a1a', border: '1px solid #252525' }}>
-        <div className="flex items-start justify-between gap-3 mb-3">
-          <div className="min-w-0">
-            <div className="flex items-center gap-1.5 mb-0.5">
-              <span className="text-base">{EVENT_TYPE_EMOJI[card.event_type] ?? '📅'}</span>
-              <span className="text-[10px] uppercase tracking-widest font-semibold" style={{ color: accent }}>checking who's in</span>
-            </div>
-            <p className="text-white font-medium text-sm truncate">{card.title}</p>
-            {card.proposed_date && (
-              <p className="text-[#666] text-xs mt-0.5">
-                {formatDate(card.proposed_date)}{card.proposed_start && ` · ${formatTime(card.proposed_start)}`}
-              </p>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+            <span style={{ fontSize: 14, fontWeight: 600, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {title}
+            </span>
+            {isLocked && (
+              <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: T.green }}>
+                LOCKED
+              </span>
             )}
           </div>
-          <span className="text-[10px] font-bold px-2.5 py-1 rounded-full flex-shrink-0" style={{ background: `${accent}22`, color: accent }}>
-            {counts.in} in
-          </span>
+          <div style={{ fontSize: 12, color: T.mute }}>
+            {formatDate(date?.split?.('T')?.[0] ?? date) ?? 'Date TBD'}
+            {time && ` · ${formatTime(time)}`}
+          </div>
         </div>
-        {total > 0 && (
-          <>
-            <div className="flex h-1.5 rounded-full overflow-hidden gap-0.5">
-              {counts.in > 0    && <div className="bg-emerald-500 rounded-full" style={{ width: `${(counts.in / total) * 100}%` }} />}
-              {counts.maybe > 0 && <div className="bg-yellow-500 rounded-full"  style={{ width: `${(counts.maybe / total) * 100}%` }} />}
-              <div className="bg-[#2a2a2a] rounded-full flex-1" />
-            </div>
-            <div className="flex gap-3 mt-1.5 text-xs">
-              <span className="text-emerald-500">{counts.in} in</span>
-              <span className="text-yellow-500">{counts.maybe} maybe</span>
-              <span className="text-[#555]">{counts.cant} can't</span>
-            </div>
-          </>
+        {counts && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: T.mute, flexShrink: 0 }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: T.green }} />{counts.in}
+            </span>
+            {counts.maybe > 0 && (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: T.amber }} />{counts.maybe}
+              </span>
+            )}
+          </div>
+        )}
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.faint} strokeWidth="2"><path d="M9 6l6 6-6 6"/></svg>
+      </div>
+    </Link>
+  )
+}
+
+function PlansSection({ title, count, items, accent, collapsed = false }: {
+  title: string; count: number; items: { kind: 'card' | 'event'; item: any }[];
+  accent: string; collapsed?: boolean
+}) {
+  const [open, setOpen] = useState(!collapsed)
+  if (items.length === 0) return null
+
+  return (
+    <div style={{ marginBottom: 24 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+          <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: T.text }}>{title}</h3>
+          <span style={{ fontSize: 12, color: T.mute }}>{count}</span>
+        </div>
+        {collapsed && (
+          <button
+            onClick={() => setOpen(v => !v)}
+            style={{ background: 'none', border: 'none', color: T.dim, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}
+          >
+            {open ? 'Hide ↑' : 'Show all ↓'}
+          </button>
         )}
       </div>
-    </Link>
-  )
-}
-
-// ─── Upcoming event row ───────────────────────────────────────────────────────
-
-function UpcomingEventRow({ event }: { event: Event }) {
-  return (
-    <Link href={`/events/${event.id}`} className="block">
-      <div className="flex items-center gap-3 py-2.5 border-b last:border-0 hover:bg-[#1e1e1e] -mx-4 px-4 transition-colors" style={{ borderColor: '#222' }}>
-        <span className="text-lg w-7 text-center flex-shrink-0">{EVENT_TYPE_EMOJI[event.event_type] ?? '📅'}</span>
-        <div className="min-w-0 flex-1">
-          <p className="text-white text-sm font-medium truncate">{event.title}</p>
-          <p className="text-[#555] text-xs">
-            {formatDate(event.starts_at?.split('T')[0]) ?? 'Date TBD'}
-            {event.starts_at && ` · ${formatTime(event.starts_at.split('T')[1] ?? '')}`}
-            {event.location && ` · ${event.location}`}
-          </p>
+      {open && (
+        <div style={{ borderRadius: 12, border: `1px solid ${T.border}`, background: T.elev, overflow: 'hidden' }}>
+          {items.map((item, i) => (
+            <div key={item.item.id} style={{ borderTop: i === 0 ? 'none' : `1px solid ${T.border}` }}>
+              <PlanRow kind={item.kind} item={item.item} accent={accent} />
+            </div>
+          ))}
         </div>
-        <span className="text-[#444] flex-shrink-0">→</span>
-      </div>
-    </Link>
+      )}
+    </div>
   )
 }
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
-
-export function GroupPageClient({ groupId, themeColor, events = [], activeCards = [], currentUserId, openWindowsSlot }: Props) {
+export function GroupPageClient({
+  groupId, themeColor, events = [], activeCards = [],
+  prompt, currentUserId, openWindowsSlot,
+}: Props) {
   const [tab, setTab] = useState<'overview' | 'plans'>('overview')
-  const accent     = themeColor ?? '#6366f1'
-  const plansBadge = activeCards.length + events.length
+  const accent = themeColor ?? '#7F77DD'
+  const { thisWeek, upcoming, tbd } = groupEventsBySection(events, activeCards)
+  const totalPlans = events.length + activeCards.length
 
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto" style={{ background: '#111' }}>
-      <div className="max-w-2xl mx-auto px-6 py-6 pb-24">
+    <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', background: '#111' }}>
+      <div style={{ maxWidth: 720, margin: '0 auto', padding: '24px 28px 80px' }}>
 
         {/* Tab strip */}
-        <div className="flex border-b mb-6" style={{ borderColor: '#222' }}>
+        <div style={{ display: 'flex', borderBottom: `1px solid ${T.border}`, marginBottom: 28 }}>
           {([
             { id: 'overview', label: 'Overview' },
-            { id: 'plans',    label: 'Plans', badge: plansBadge },
-          ] as const).map((t) => (
+            { id: 'plans',    label: 'Plans', badge: totalPlans },
+          ] as const).map(t => (
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium relative transition-colors ${tab === t.id ? 'text-white' : 'text-[#555] hover:text-[#999]'}`}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '10px 16px', fontSize: 14, fontWeight: 500,
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: tab === t.id ? T.text : T.mute,
+                fontFamily: 'inherit', position: 'relative',
+                transition: 'color 0.15s',
+              }}
             >
               {t.label}
               {t.badge > 0 && (
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none" style={{ background: accent, color: '#fff' }}>
-                  {t.badge}
-                </span>
+                <span style={{
+                  fontSize: 10.5, fontWeight: 700, padding: '1.5px 6px', borderRadius: 9,
+                  background: tab === t.id ? accent : 'rgba(255,255,255,0.08)',
+                  color: tab === t.id ? '#fff' : T.mute,
+                }}>{t.badge}</span>
               )}
-              {tab === t.id && <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-t-full" style={{ background: accent }} />}
+              {tab === t.id && (
+                <span style={{
+                  position: 'absolute', bottom: 0, left: 0, right: 0, height: 2,
+                  background: accent, borderRadius: '2px 2px 0 0',
+                }} />
+              )}
             </button>
           ))}
         </div>
 
-        {/* Overview */}
+        {/* ── Overview tab ── */}
         {tab === 'overview' && (
-          <div>
-            {activeCards.length === 0 && events.length === 0 ? (
-              <div style={{ paddingTop: '8px' }}>
-                <p style={{ fontSize: '13px', color: '#555', marginBottom: '24px', lineHeight: 1.6 }}>Your group is ready. What do you want to do first?</p>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '32px' }}>
-                  <a href={`/groups/${groupId}/invite`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '24px 16px', borderRadius: '16px', textDecoration: 'none', background: '#161616', border: '1px solid #252525' }}>
-                    <span style={{ fontSize: '28px' }}>👥</span>
-                    <div style={{ textAlign: 'center' }}>
-                      <p style={{ fontSize: '14px', fontWeight: 600, color: '#fff', margin: '0 0 3px' }}>Invite people</p>
-                      <p style={{ fontSize: '12px', color: '#555', margin: 0 }}>Who's in this group?</p>
-                    </div>
-                  </a>
-                  <a href={`/groups/${groupId}/events/new`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '24px 16px', borderRadius: '16px', textDecoration: 'none', background: `${accent}12`, border: `1px solid ${accent}33` }}>
-                    <span style={{ fontSize: '28px' }}>📅</span>
-                    <div style={{ textAlign: 'center' }}>
-                      <p style={{ fontSize: '14px', fontWeight: 600, color: accent, margin: '0 0 3px' }}>Start a plan</p>
-                      <p style={{ fontSize: '12px', color: '#555', margin: 0 }}>Create an event</p>
-                    </div>
-                  </a>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+
+            {/* Suggested times — HERO, at the top */}
+            {openWindowsSlot && (
+              <div>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 12 }}>
+                  <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: T.text }}>Suggested times</h3>
+                  <span style={{ fontSize: 12, color: T.mute }}>based on everyone's availability</span>
                 </div>
-              </div>
-            ) : (
-              <>
-                <StartPlanFork groupId={groupId} accent={accent} />
-                <p className="text-[10px] uppercase tracking-widest font-semibold text-[#555] mb-3">Suggested times</p>
                 {openWindowsSlot}
-              </>
+              </div>
+            )}
+
+            {/* Proactive window hint */}
+            {prompt && (
+              <div style={{ fontSize: 13, color: T.dim, padding: '10px 14px', borderRadius: 10, background: T.elev, border: `1px solid ${T.border}` }}>
+                <span style={{ color: accent }}>✦ {prompt.members?.length ?? 0} people are free</span>
+                {' '}{prompt.label.toLowerCase()} — <Link href={`/groups/${groupId}/plans/new`} style={{ color: accent, textDecoration: 'none', fontWeight: 600 }}>check who's in →</Link>
+              </div>
+            )}
+
+            {/* Start something — DEMOTED to subtle dashed CTA */}
+            <Link href={`/groups/${groupId}/plans/new`} style={{ textDecoration: 'none' }}>
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 12,
+                padding: '13px 16px', borderRadius: 12,
+                background: 'transparent', border: `1px dashed rgba(255,255,255,0.14)`,
+                color: T.dim, fontSize: 14, cursor: 'pointer',
+                transition: 'border-color 0.15s',
+              }}
+                onMouseEnter={e => ((e.currentTarget as HTMLElement).style.borderColor = `${accent}66`)}
+                onMouseLeave={e => ((e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.14)')}
+              >
+                <div style={{
+                  width: 24, height: 24, borderRadius: 7,
+                  background: `rgba(127,119,221,0.15)`, color: accent,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>+</div>
+                <span style={{ flex: 1 }}>Start something specific</span>
+                <span style={{ fontSize: 12, color: T.faint }}>Pick a date →</span>
+              </div>
+            </Link>
+
+            {/* Empty state */}
+            {!openWindowsSlot && events.length === 0 && activeCards.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '40px 24px' }}>
+                <div style={{ fontSize: 40, marginBottom: 12 }}>👥</div>
+                <p style={{ fontSize: 15, fontWeight: 600, color: T.text, margin: '0 0 6px' }}>
+                  Invite the crew to get started
+                </p>
+                <p style={{ fontSize: 13, color: T.mute, margin: '0 0 20px', lineHeight: 1.5 }}>
+                  Once your group has members, Rally will find the best times to hang.
+                </p>
+                <Link href={`/groups/${groupId}/settings`} style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  padding: '10px 18px', borderRadius: 9, textDecoration: 'none',
+                  background: `${accent}20`, border: `1px solid ${accent}40`,
+                  color: accent, fontSize: 13, fontWeight: 600,
+                }}>
+                  Invite people →
+                </Link>
+              </div>
             )}
           </div>
         )}
 
-        {/* Plans */}
+        {/* ── Plans tab ── */}
         {tab === 'plans' && (
           <div>
-            {activeCards.length > 0 && (
-              <div className="mb-6">
-                <p className="text-[10px] uppercase tracking-widest font-semibold text-[#555] mb-3">👋 Checking who's in</p>
-                <div className="space-y-3">
-                  {activeCards.map((card) => <ActivePlanCard key={card.id} card={card} accent={accent} />)}
-                </div>
+            {totalPlans === 0 ? (
+              <div style={{ textAlign: 'center', padding: '48px 24px' }}>
+                <div style={{ fontSize: 40, marginBottom: 12 }}>🗓</div>
+                <p style={{ fontSize: 15, fontWeight: 600, color: T.text, margin: '0 0 6px' }}>Nothing planned yet</p>
+                <p style={{ fontSize: 13, color: T.mute, margin: '0 0 20px' }}>Start a plan to kick things off.</p>
+                <Link href={`/groups/${groupId}/plans/new`} style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  padding: '10px 18px', borderRadius: 9, textDecoration: 'none',
+                  background: accent, color: '#fff', fontSize: 13, fontWeight: 600,
+                }}>
+                  + Start a plan
+                </Link>
               </div>
-            )}
+            ) : (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+                  <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: T.text }}>Plans</h2>
+                  <Link href={`/groups/${groupId}/plans/new`} style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 5,
+                    padding: '8px 14px', borderRadius: 9, textDecoration: 'none',
+                    background: accent, color: '#fff', fontSize: 13, fontWeight: 600,
+                  }}>
+                    + New plan
+                  </Link>
+                </div>
 
-            {events.length > 0 ? (
-              <div>
-                <p className="text-[10px] uppercase tracking-widest font-semibold text-[#555] mb-2">📅 Events</p>
-                <div className="rounded-xl" style={{ background: '#1a1a1a', border: '1px solid #222' }}>
-                  <div className="px-4">
-                    {events.map((event) => <UpcomingEventRow key={event.id} event={event} />)}
-                  </div>
-                </div>
-              </div>
-            ) : activeCards.length === 0 ? (
-              <div className="text-center py-16">
-                <p className="text-4xl mb-4">🗓</p>
-                <p className="text-white font-medium mb-1">Nothing planned yet</p>
-                <p className="text-[#555] text-sm mb-6">Create an event or check who's free first.</p>
-                <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
-                  <Link href={`/groups/${groupId}/events/new`} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white" style={{ background: accent }}>
-                    📅 It's happening
-                  </Link>
-                  <Link href={`/groups/${groupId}/plans/new`} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a', color: '#aaa' }}>
-                    👋 Check who's in
-                  </Link>
-                </div>
-              </div>
-            ) : null}
+                <PlansSection
+                  title="Tonight & this week"
+                  count={thisWeek.length}
+                  items={thisWeek}
+                  accent={accent}
+                />
+                <PlansSection
+                  title="Upcoming"
+                  count={upcoming.length}
+                  items={upcoming}
+                  accent={accent}
+                />
+                <PlansSection
+                  title="Date TBD"
+                  count={tbd.length}
+                  items={tbd}
+                  accent={accent}
+                />
+              </>
+            )}
           </div>
         )}
       </div>

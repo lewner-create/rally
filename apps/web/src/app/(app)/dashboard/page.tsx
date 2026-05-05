@@ -1,39 +1,41 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { getGroupsWithWindows, getUpcomingEventsForUser } from '@/lib/actions/dashboard'
+import { getGroupsWithWindows, getUpcomingPlans, getNeedsYouItems, getGroupsActivity } from '@/lib/actions/dashboard'
 import DashboardClient from '@/components/dashboard/dashboard-client'
+
+export const metadata = { title: 'Dashboard — Rally' }
 
 export default async function DashboardPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
+  // Check onboarding
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id, display_name, username, avatar_url, preferences')
+    .select('display_name, preferences, username')
     .eq('id', user.id)
     .single()
 
-  if (!profile?.display_name || !profile?.preferences?.onboarded) redirect('/onboarding')
+  if (!profile?.preferences?.onboarded) {
+    redirect('/onboarding')
+  }
 
-  // Get group IDs first so we can pass to both fetches
-  const { data: memberRows } = await supabase
-    .from('group_members')
-    .select('group_id')
-    .eq('user_id', user.id)
-
-  const groupIds = (memberRows ?? []).map((r: any) => r.group_id).filter(Boolean)
-
-  const [groupsWithWindows, upcomingEvents] = await Promise.all([
+  // Fetch everything in parallel
+  const [groupsWithWindows, upcomingPlans, needsYouItems, groupsActivity] = await Promise.all([
     getGroupsWithWindows(user.id),
-    getUpcomingEventsForUser(user.id, groupIds),
+    getUpcomingPlans(user.id),
+    getNeedsYouItems(user.id),
+    getGroupsActivity(user.id),
   ])
 
   return (
     <DashboardClient
-      profile={profile}
+      profile={profile as any}
       groupsWithWindows={groupsWithWindows}
-      upcomingEvents={upcomingEvents}
+      upcomingPlans={upcomingPlans}
+      needsYouItems={needsYouItems}
+      groupsActivity={groupsActivity}
     />
   )
 }

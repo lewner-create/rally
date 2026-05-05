@@ -5,6 +5,7 @@ import { ChatPanel } from '@/components/chat/chat-panel'
 import RsvpSection from '@/components/events/rsvp-section'
 import { getEventPhotos } from '@/lib/actions/photos'
 import { getEventQuestions, hasUserAnswered } from '@/lib/actions/questionnaire'
+import type { MessageWithProfile } from '@/lib/actions/messages'
 
 type Props = {
   params: Promise<{ eventId: string }>
@@ -44,7 +45,13 @@ export default async function EventPage({ params }: Props) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [{ data: event, error }, photos, questions, answered] = await Promise.all([
+  // Fetch event + supporting data in parallel
+  const [
+    { data: event, error },
+    photos,
+    questions,
+    answered,
+  ] = await Promise.all([
     supabase
       .from('events')
       .select(`
@@ -61,15 +68,24 @@ export default async function EventPage({ params }: Props) {
 
   if (error || !event) notFound()
 
-  const { data: rsvps } = await supabase
-    .from('event_attendees')
-    .select('user_id, rsvp_status, profiles:user_id(id, display_name, username, avatar_url)')
-    .eq('event_id', eventId)
-
-  const { data: groupMembers } = await supabase
-    .from('group_members')
-    .select('profiles(id, display_name, username, avatar_url)')
-    .eq('group_id', event.group_id)
+  // Fetch RSVPs, group members, and initial event chat messages in parallel
+  const [{ data: rsvps }, { data: groupMembers }, { data: eventMessages }] = await Promise.all([
+    supabase
+      .from('event_attendees')
+      .select('user_id, rsvp_status, profiles:user_id(id, display_name, username, avatar_url)')
+      .eq('event_id', eventId),
+    supabase
+      .from('group_members')
+      .select('profiles(id, display_name, username, avatar_url)')
+      .eq('group_id', event.group_id),
+    supabase
+      .from('chat_messages')
+      .select('*, profiles(id, display_name, username)')
+      .eq('group_id', event.group_id)
+      .eq('event_id', eventId)
+      .order('created_at', { ascending: true })
+      .limit(50),
+  ])
 
   const members = (groupMembers ?? [])
     .map((m) => m.profiles)
@@ -184,7 +200,7 @@ export default async function EventPage({ params }: Props) {
             />
           </div>
 
-          {/* Right column - chat */}
+          {/* Right column — event chat */}
           <div
             className="lg:w-[340px] lg:border-l lg:sticky lg:top-0 lg:h-screen flex flex-col"
             style={{ borderColor: '#1e1e1e' }}
@@ -197,7 +213,7 @@ export default async function EventPage({ params }: Props) {
                 groupId={groupId}
                 currentUserId={user.id}
                 eventId={eventId}
-                initialMessages={[]}
+                initialMessages={(eventMessages ?? []) as MessageWithProfile[]}
               />
             </div>
           </div>

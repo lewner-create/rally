@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { Sidebar } from '@/components/layout/sidebar'
+import { OAuthTokenCapture } from '@/components/auth/oauth-token-capture'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -28,6 +29,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <Sidebar groups={userGroups} />
       <main className="flex-1 overflow-y-auto" style={{ background: '#0f0f0f' }}>
         {children}
+        <OAuthTokenCapture />
       </main>
     </div>
   )

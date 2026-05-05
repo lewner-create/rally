@@ -9,36 +9,15 @@ import { createClient } from '@/lib/supabase/client'
 const accent = '#7F77DD'
 
 const NOTIF_OPTIONS = [
-  {
-    id: 'notif_new_plan',
-    label: 'New plan card',
-    description: 'Someone starts a plan in one of your groups',
-  },
-  {
-    id: 'notif_locked_in',
-    label: 'Plan locked in',
-    description: 'A plan you voted on becomes a confirmed event',
-  },
-  {
-    id: 'notif_group_activity',
-    label: 'Group activity',
-    description: 'New messages in your group chats',
-  },
-  {
-    id: 'notif_rsvp_reminder',
-    label: 'RSVP reminders',
-    description: 'Reminder when you haven\'t responded to a plan',
-  },
+  { id: 'notif_new_plan',       label: 'New plan card',    description: 'Someone starts a plan in one of your groups' },
+  { id: 'notif_locked_in',      label: 'Plan locked in',   description: 'A plan you voted on becomes a confirmed event' },
+  { id: 'notif_group_activity', label: 'Group activity',   description: 'New messages in your group chats' },
+  { id: 'notif_rsvp_reminder',  label: 'RSVP reminders',   description: "Reminder when you haven't responded to a plan" },
 ]
 
-interface SettingsFormProps {
-  profile: Profile
-}
-
-export function SettingsForm({ profile }: SettingsFormProps) {
+export function SettingsForm({ profile }: { profile: Profile }) {
   const router = useRouter()
-  const [isPending, startTransition] = useTransition()
-  const [saved, setSaved] = useState(false)
+  const [, startTransition] = useTransition()
   const [signingOut, setSigningOut] = useState(false)
 
   const initNotifs = (): Record<string, boolean> => {
@@ -51,24 +30,18 @@ export function SettingsForm({ profile }: SettingsFormProps) {
 
   const [notifs, setNotifs] = useState<Record<string, boolean>>(initNotifs)
 
-  const toggle = (id: string) => {
-    setNotifs(prev => ({ ...prev, [id]: !prev[id] }))
-  }
-
-  const handleSave = () => {
+  // Auto-save on toggle — no save button needed
+  function toggle(id: string) {
+    const next = { ...notifs, [id]: !notifs[id] }
+    setNotifs(next)
     startTransition(async () => {
       await updateProfile({
-        preferences: {
-          ...profile.preferences,
-          notifications: notifs,
-        },
+        preferences: { ...profile.preferences, notifications: next },
       })
-      setSaved(true)
-      setTimeout(() => setSaved(false), 2000)
     })
   }
 
-  const handleSignOut = async () => {
+  async function handleSignOut() {
     setSigningOut(true)
     const supabase = createClient()
     await supabase.auth.signOut()
@@ -79,133 +52,114 @@ export function SettingsForm({ profile }: SettingsFormProps) {
     <div style={{ minHeight: '100vh', background: '#0f0f0f', color: '#fff' }}>
       <div style={{ maxWidth: '520px', margin: '0 auto', padding: '40px 20px 80px' }}>
 
-        <h1 style={{ fontSize: '22px', fontWeight: 800, color: '#fff', margin: '0 0 4px' }}>
+        <h1 style={{ fontSize: '22px', fontWeight: 700, letterSpacing: '-0.02em', color: '#fff', margin: '0 0 4px' }}>
           Settings
         </h1>
-        <p style={{ fontSize: '14px', color: '#666', margin: '0 0 32px' }}>
-          Account and preferences
-        </p>
+        <p style={{ fontSize: '14px', color: '#6b6878', margin: '0 0 32px' }}>Account and preferences</p>
 
         {/* Account */}
-        <div style={cardStyle}>
-          <p style={sectionLabelStyle}>Account</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-            <Link href="/profile" style={linkRowStyle}>
-              <div>
-                <div style={{ fontSize: '14px', fontWeight: 600, color: '#fff' }}>Profile</div>
-                <div style={{ fontSize: '12px', color: '#555', marginTop: '1px' }}>
-                  {profile.display_name ?? profile.username} · @{profile.username}
-                </div>
+        <div style={CARD}>
+          <p style={LABEL}>Account</p>
+          <Link href="/profile" style={ROW_LINK}>
+            <div>
+              <div style={{ fontSize: '14px', fontWeight: 600, color: '#f5f4f8' }}>Profile</div>
+              <div style={{ fontSize: '12px', color: '#6b6878', marginTop: 1 }}>
+                {profile.display_name ?? profile.username} · @{profile.username}
               </div>
-              <span style={{ color: '#444', fontSize: '16px' }}>›</span>
-            </Link>
-            <div style={{ height: '1px', background: '#1e1e1e' }} />
-            <Link href="/availability" style={linkRowStyle}>
-              <div>
-                <div style={{ fontSize: '14px', fontWeight: 600, color: '#fff' }}>Availability</div>
-                <div style={{ fontSize: '12px', color: '#555', marginTop: '1px' }}>
-                  Manage your default free windows
-                </div>
-              </div>
-              <span style={{ color: '#444', fontSize: '16px' }}>›</span>
-            </Link>
-          </div>
+            </div>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4a4757" strokeWidth="2"><path d="M9 6l6 6-6 6"/></svg>
+          </Link>
+          <div style={DIVIDER} />
+          <Link href="/availability" style={ROW_LINK}>
+            <div>
+              <div style={{ fontSize: '14px', fontWeight: 600, color: '#f5f4f8' }}>Availability</div>
+              <div style={{ fontSize: '12px', color: '#6b6878', marginTop: 1 }}>Manage your free windows and calendar sync</div>
+            </div>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4a4757" strokeWidth="2"><path d="M9 6l6 6-6 6"/></svg>
+          </Link>
         </div>
 
-        {/* Notifications */}
-        <div style={{ ...cardStyle, marginTop: '16px' }}>
-          <p style={sectionLabelStyle}>Notifications</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0px' }}>
+        {/* Notifications — auto-save */}
+        <div style={{ ...CARD, marginTop: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 16 }}>
+            <p style={{ ...LABEL, margin: 0 }}>Notifications</p>
+            <span style={{ fontSize: 11, color: '#4a4757' }}>Auto-saved</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
             {NOTIF_OPTIONS.map((opt, i) => (
               <div key={opt.id}>
-                {i > 0 && <div style={{ height: '1px', background: '#1e1e1e' }} />}
-                <div style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  gap: '16px', padding: '14px 0',
-                }}>
+                {i > 0 && <div style={DIVIDER} />}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, padding: '13px 0' }}>
                   <div>
-                    <div style={{ fontSize: '14px', fontWeight: 500, color: '#e0e0e0' }}>
-                      {opt.label}
-                    </div>
-                    <div style={{ fontSize: '12px', color: '#555', marginTop: '2px' }}>
-                      {opt.description}
-                    </div>
+                    <div style={{ fontSize: '14px', fontWeight: 500, color: '#e0ddf0' }}>{opt.label}</div>
+                    <div style={{ fontSize: '12px', color: '#6b6878', marginTop: 2 }}>{opt.description}</div>
                   </div>
                   <button
                     onClick={() => toggle(opt.id)}
                     style={{
-                      width: '44px', height: '26px', borderRadius: '9999px',
+                      width: 44, height: 26, borderRadius: 9999,
                       border: 'none', cursor: 'pointer', flexShrink: 0,
-                      background: notifs[opt.id] ? accent : '#2a2a2a',
-                      position: 'relative', transition: 'background 0.2s',
-                      padding: 0,
+                      background: notifs[opt.id] ? accent : '#2a2a35',
+                      position: 'relative', transition: 'background 0.2s', padding: 0,
                     }}
                   >
                     <div style={{
-                      width: '20px', height: '20px', borderRadius: '50%',
-                      background: 'white',
-                      position: 'absolute', top: '3px',
-                      left: notifs[opt.id] ? '21px' : '3px',
+                      width: 20, height: 20, borderRadius: '50%', background: 'white',
+                      position: 'absolute', top: 3,
+                      left: notifs[opt.id] ? 21 : 3,
                       transition: 'left 0.2s',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
                     }} />
                   </button>
                 </div>
               </div>
             ))}
           </div>
-
-          <button
-            onClick={handleSave}
-            disabled={isPending}
-            style={{
-              marginTop: '8px', width: '100%', padding: '11px',
-              borderRadius: '9999px', border: 'none',
-              cursor: isPending ? 'default' : 'pointer',
-              background: saved ? '#1D9E75' : accent, color: 'white',
-              fontSize: '14px', fontWeight: 700, fontFamily: 'inherit',
-              transition: 'background 0.2s',
-              opacity: isPending ? 0.7 : 1,
-            }}
-          >
-            {saved ? 'Saved!' : isPending ? 'Saving...' : 'Save notifications'}
-          </button>
         </div>
 
-        {/* Danger zone */}
-        <div style={{ ...cardStyle, marginTop: '16px', borderColor: '#2a1a1a' }}>
-          <p style={{ ...sectionLabelStyle, color: '#6b3333' }}>Account</p>
+        {/* Sign out — not destructive */}
+        <div style={{ ...CARD, marginTop: 16 }}>
+          <p style={LABEL}>Session</p>
           <button
             onClick={handleSignOut}
             disabled={signingOut}
             style={{
-              width: '100%', padding: '11px', borderRadius: '9999px',
-              border: '1px solid #3a1f1f', background: '#1a1010',
-              color: '#cc5555', fontSize: '14px', fontWeight: 600,
+              width: '100%', padding: '11px', borderRadius: 10,
+              border: `1px solid rgba(255,255,255,0.08)`,
+              background: 'rgba(255,255,255,0.04)',
+              color: '#a8a4b8', fontSize: '14px', fontWeight: 500,
               cursor: signingOut ? 'default' : 'pointer', fontFamily: 'inherit',
-              opacity: signingOut ? 0.6 : 1,
+              opacity: signingOut ? 0.6 : 1, transition: 'all 0.15s',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             }}
+            onMouseEnter={e => { if (!signingOut) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.07)' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)' }}
           >
-            {signingOut ? 'Signing out...' : 'Sign out'}
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            {signingOut ? 'Signing out…' : 'Sign out'}
           </button>
         </div>
+
+        {/* App version */}
+        <p style={{ textAlign: 'center', fontSize: 11, color: '#4a4757', marginTop: 32 }}>
+          Rally · Beta
+        </p>
 
       </div>
     </div>
   )
 }
 
-const cardStyle: React.CSSProperties = {
-  background: '#161616', borderRadius: '18px', padding: '24px',
-  border: '1px solid #222',
+const CARD: React.CSSProperties = {
+  background: '#17171a', borderRadius: 16, padding: '20px 22px',
+  border: '1px solid rgba(255,255,255,0.08)',
 }
-
-const sectionLabelStyle: React.CSSProperties = {
-  fontSize: '11px', fontWeight: 700, color: '#444',
-  textTransform: 'uppercase', letterSpacing: '0.06em',
-  margin: '0 0 16px',
+const LABEL: React.CSSProperties = {
+  fontSize: 11, fontWeight: 700, color: '#4a4757',
+  textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 14px',
 }
-
-const linkRowStyle: React.CSSProperties = {
+const DIVIDER: React.CSSProperties = { height: 1, background: 'rgba(255,255,255,0.06)' }
+const ROW_LINK: React.CSSProperties = {
   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
   padding: '12px 0', textDecoration: 'none', cursor: 'pointer',
 }

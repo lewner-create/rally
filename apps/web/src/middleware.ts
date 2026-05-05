@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-const PUBLIC_PATHS = ['/login', '/signup', '/auth/callback', '/join', '/invite']
+const PUBLIC_PATHS = ['/', '/login', '/signup', '/auth/callback', '/join', '/invite']
 const ONBOARDING_PATH = '/onboarding'
 
 export async function middleware(request: NextRequest) {
@@ -12,13 +12,9 @@ export async function middleware(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
+        getAll() { return request.cookies.getAll() },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
-          )
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
           supabaseResponse = NextResponse.next({ request })
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
@@ -31,7 +27,7 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
 
   const isPublicPath = PUBLIC_PATHS.some(p =>
-    request.nextUrl.pathname.startsWith(p)
+    p === '/' ? request.nextUrl.pathname === '/' : request.nextUrl.pathname.startsWith(p)
   )
   const isOnboarding = request.nextUrl.pathname.startsWith(ONBOARDING_PATH)
 

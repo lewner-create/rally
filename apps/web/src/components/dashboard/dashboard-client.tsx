@@ -1,428 +1,651 @@
 'use client'
 
 import Link from 'next/link'
-import type { GroupWithWindows, MemberPreview, UpcomingEvent } from '@/lib/actions/dashboard'
+import { useState, useTransition } from 'react'
+import { upsertRsvp } from '@/lib/actions/events'
+import type { GroupWithWindows, MemberPreview, UpcomingPlan, NeedsYouItem, GroupActivity } from '@/lib/actions/dashboard'
+
+// ── Design tokens (from mockup) ────────────────────────────────
+const T = {
+  bg:          '#0f0f0f',
+  bgElev:      '#17171a',
+  bgElev2:     '#1c1c20',
+  border:      'rgba(255,255,255,0.08)',
+  borderStrong:'rgba(255,255,255,0.14)',
+  text:        '#f5f4f8',
+  textDim:     '#a8a4b8',
+  textMute:    '#6b6878',
+  textFaint:   '#4a4757',
+  violet:      '#7F77DD',
+  violetSoft:  'rgba(127,119,221,0.15)',
+  violetMid:   'rgba(127,119,221,0.28)',
+  green:       '#5fcf8a',
+  greenSoft:   'rgba(95,207,138,0.14)',
+  amber:       '#e8b65a',
+  amberSoft:   'rgba(232,182,90,0.14)',
+  bgElev:      '#17171a',
+  textMute:    '#6b6878',
+}
 
 type Props = {
   profile: { id: string; display_name: string | null; username: string; avatar_url: string | null } | null
   groupsWithWindows: GroupWithWindows[]
-  upcomingEvents?: UpcomingEvent[]
+  upcomingPlans: UpcomingPlan[]
+  needsYouItems: NeedsYouItem[]
+  groupsActivity: GroupActivity[]
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-const EVENT_TYPE_META: Record<string, { emoji: string; gradient: string }> = {
-  vacation:   { emoji: '✈️',  gradient: 'linear-gradient(135deg, #001a2d, #003a5c)' },
-  day_trip:   { emoji: '🗺️',  gradient: 'linear-gradient(135deg, #0d2010, #1a4020)' },
-  road_trip:  { emoji: '🛣️',  gradient: 'linear-gradient(135deg, #1a1a1a, #2d2d2d)' },
-  game_night: { emoji: '🎮',  gradient: 'linear-gradient(135deg, #1a1040, #2d1f6e)' },
-  hangout:    { emoji: '☕',  gradient: 'linear-gradient(135deg, #1a1208, #3d2b10)' },
-  meetup:     { emoji: '🤝',  gradient: 'linear-gradient(135deg, #0d1f2d, #1a3a4a)' },
-  moto_trip:  { emoji: '🏍️',  gradient: 'linear-gradient(135deg, #2d0f00, #4a1a00)' },
+// ── Helpers ────────────────────────────────────────────────────
+function initials(name: string) {
+  return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
 }
 
-function formatEventDate(iso: string): string {
-  const d = new Date(iso)
-  const now = new Date()
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1)
-  const eventDay = new Date(d.getFullYear(), d.getMonth(), d.getDate())
-
-  const diffDays = Math.round((eventDay.getTime() - today.getTime()) / 86_400_000)
-
-  const timeStr = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
-
-  if (diffDays === 0) return `Today · ${timeStr}`
-  if (diffDays === 1) return `Tomorrow · ${timeStr}`
-  if (diffDays < 7)  return d.toLocaleDateString('en-US', { weekday: 'long' }) + ` · ${timeStr}`
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ` · ${timeStr}`
+function relativeTime(iso: string): string {
+  const dt   = new Date(iso)
+  const today = new Date(); today.setHours(0,0,0,0)
+  const diff  = Math.floor((dt.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+  if (diff === 0) return 'Tonight'
+  if (diff === 1) return 'Tomorrow'
+  if (diff < 7)   return dt.toLocaleDateString('en-US', { weekday: 'long' })
+  return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
-const RSVP_BADGE: Record<string, { label: string; bg: string; color: string }> = {
-  yes:   { label: "I'm going", bg: '#166534', color: '#4ade80' },
-  maybe: { label: 'Maybe',     bg: '#713f12', color: '#fbbf24' },
-  no:    { label: "Can't go",  bg: '#1a1a1a', color: '#555'    },
+function formatTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
 }
 
-function MemberAvatars({ members, max = 4 }: { members: MemberPreview[]; max?: number }) {
-  const shown = members.slice(0, max)
-  const extra = members.length - max
+function greeting(name: string): string {
+  const h = new Date().getHours()
+  if (h < 12) return `Good morning, ${name} ☀️`
+  if (h < 17) return `Hey, ${name} 👋`
+  if (h < 21) return `Evening, ${name} 🌙`
+  return `Hey, ${name} 🌙`
+}
+
+// ── Avatar stack ──────────────────────────────────────────────
+function AvatarStack({ people, size = 24, max = 5 }: { people: MemberPreview[]; size?: number; max?: number }) {
+  const shown = people.slice(0, max)
+  const extra = people.length - shown.length
+  const overlap = Math.round(size * 0.3)
   return (
-    <div className="flex -space-x-2">
-      {shown.map((m) => (
-        <div
-          key={m.id}
-          className="w-6 h-6 rounded-full border-2 border-[#161616] overflow-hidden bg-[#2a2a2a] flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0"
-          title={m.display_name ?? m.username}
-        >
-          {m.avatar_url
-            ? <img src={m.avatar_url} alt="" className="w-full h-full object-cover" />
-            : (m.display_name ?? m.username).charAt(0).toUpperCase()
-          }
+    <div style={{ display: 'flex', alignItems: 'center' }}>
+      {shown.map((p, i) => (
+        <div key={p.id} style={{ marginLeft: i === 0 ? 0 : -overlap, zIndex: shown.length - i }}>
+          <div style={{
+            width: size, height: size, borderRadius: '50%',
+            background: '#2a252e', border: `1.5px solid ${T.bg}`,
+            overflow: 'hidden', display: 'flex', alignItems: 'center',
+            justifyContent: 'center', fontSize: Math.round(size * 0.38),
+            fontWeight: 600, color: '#fff', flexShrink: 0,
+          }}>
+            {p.avatar_url
+              ? <img src={p.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              : (p.display_name ?? p.username).charAt(0).toUpperCase()
+            }
+          </div>
         </div>
       ))}
       {extra > 0 && (
-        <div className="w-6 h-6 rounded-full border-2 border-[#161616] bg-[#2a2a2a] flex items-center justify-center text-[10px] text-[#888] flex-shrink-0">
-          +{extra}
+        <div style={{
+          marginLeft: -overlap,
+          width: size, height: size, borderRadius: '50%',
+          background: '#2a252e', border: `1.5px solid ${T.bg}`,
+          color: T.textDim, fontSize: Math.round(size * 0.34), fontWeight: 600,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>+{extra}</div>
+      )}
+    </div>
+  )
+}
+
+// ── Hero plan card ────────────────────────────────────────────
+function HeroPlan({ plan }: { plan: UpcomingPlan }) {
+  const when = relativeTime(plan.starts_at)
+  const time = formatTime(plan.starts_at)
+  const color = plan.group_color ?? T.violet
+
+  return (
+    <Link href={`/events/${plan.id}`} style={{ textDecoration: 'none' }}>
+      <div style={{
+        position: 'relative', overflow: 'hidden',
+        borderRadius: 18,
+        background: `
+          radial-gradient(120% 120% at 0% 0%, rgba(127,119,221,0.32) 0%, rgba(127,119,221,0.08) 40%, transparent 70%),
+          linear-gradient(135deg, #1d1640 0%, #2a1f4d 60%, #3a1e3e 100%)
+        `,
+        border: `1px solid rgba(127,119,221,0.28)`,
+        padding: '22px 24px',
+        color: T.text,
+      }}>
+        {plan.group_banner && (
+          <div style={{
+            position: 'absolute', inset: 0, opacity: 0.15,
+            backgroundImage: `url(${plan.group_banner})`,
+            backgroundSize: 'cover', backgroundPosition: 'center',
+            mixBlendMode: 'screen',
+            maskImage: 'linear-gradient(to right, transparent 0%, transparent 30%, black 100%)',
+            WebkitMaskImage: 'linear-gradient(to right, transparent 0%, transparent 30%, black 100%)',
+          }} />
+        )}
+        <div style={{ position: 'relative' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+            <div style={{ width: 7, height: 7, borderRadius: '50%', background: color, flexShrink: 0 }} />
+            <span style={{ fontSize: 12.5, color: T.textDim, fontWeight: 500 }}>{plan.group_name}</span>
+            <span style={{ color: T.textFaint }}>·</span>
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+              fontSize: 11, fontWeight: 700, letterSpacing: '0.06em',
+              color: T.green, textTransform: 'uppercase',
+            }}>
+              ✓ Locked in
+            </span>
+          </div>
+
+          <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 4, lineHeight: 1.15 }}>
+            {plan.title}
+          </div>
+
+          <div style={{ fontSize: 14.5, color: T.textDim, marginBottom: 18 }}>
+            {when} · {time}
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <AvatarStack people={plan.attendees} size={28} max={5} />
+              <div style={{ fontSize: 13, color: T.textDim }}>
+                <span style={{ color: T.text, fontWeight: 600 }}>{plan.going_count} going</span>
+                {plan.maybe_count > 0 && <span style={{ color: T.textMute }}> · {plan.maybe_count} maybe</span>}
+              </div>
+            </div>
+            <span style={{
+              background: T.violet, color: '#fff', border: 'none',
+              padding: '10px 18px', borderRadius: 10, fontSize: 13.5, fontWeight: 600,
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              boxShadow: '0 4px 16px rgba(127,119,221,0.3)',
+              whiteSpace: 'nowrap', flexShrink: 0,
+            }}>
+              View plan →
+            </span>
+          </div>
+        </div>
+      </div>
+    </Link>
+  )
+}
+
+// ── Empty hero ────────────────────────────────────────────────
+function EmptyHero({ hasGroups }: { hasGroups: boolean }) {
+  return (
+    <div style={{
+      position: 'relative', overflow: 'hidden',
+      borderRadius: 18, padding: '28px 24px',
+      background: `
+        radial-gradient(120% 100% at 0% 0%, rgba(127,119,221,0.32), transparent 60%),
+        linear-gradient(160deg, #1a1430 0%, #2a1a3e 100%)
+      `,
+      border: `1px solid rgba(127,119,221,0.25)`,
+    }}>
+      <div style={{ display: 'flex', marginBottom: 14 }}>
+        {['👋', '🍻', '🎲', '🏔️'].map((e, i) => (
+          <div key={i} style={{
+            width: 40, height: 40, borderRadius: '50%',
+            background: `hsl(${260 + i * 22} 40% 22%)`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 20, marginLeft: i === 0 ? 0 : -10,
+            border: `2px solid ${T.bg}`,
+          }}>{e}</div>
+        ))}
+      </div>
+      <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', color: T.text }}>
+        {hasGroups ? 'Nothing locked in yet' : "Let's get the crew together"}
+      </h2>
+      <p style={{ margin: '8px 0 18px', fontSize: 14, color: T.textDim, lineHeight: 1.45 }}>
+        {hasGroups
+          ? 'Check the suggested times for your groups and start something.'
+          : 'Make a group, invite your friends, and Rally finds when you\'re all free.'
+        }
+      </p>
+      {hasGroups ? (
+        <Link href="/groups/new" style={{
+          background: T.violet, color: '#fff',
+          padding: '11px 18px', borderRadius: 10, fontSize: 14, fontWeight: 600,
+          display: 'inline-flex', alignItems: 'center', gap: 8, textDecoration: 'none',
+          boxShadow: '0 4px 16px rgba(127,119,221,0.3)',
+        }}>
+          + Start a plan
+        </Link>
+      ) : (
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <Link href="/groups/new" style={{
+            background: T.violet, color: '#fff',
+            padding: '11px 18px', borderRadius: 10, fontSize: 14, fontWeight: 600,
+            display: 'inline-flex', alignItems: 'center', gap: 8, textDecoration: 'none',
+          }}>
+            + Start your first group
+          </Link>
+          <Link href="/join" style={{
+            background: 'rgba(255,255,255,0.06)', color: T.text,
+            border: `1px solid ${T.border}`,
+            padding: '11px 18px', borderRadius: 10, fontSize: 14, fontWeight: 500,
+            display: 'inline-flex', alignItems: 'center', gap: 8, textDecoration: 'none',
+          }}>
+            I have an invite link
+          </Link>
         </div>
       )}
     </div>
   )
 }
 
-// ─── Upcoming event card (horizontal scroll) ──────────────────────────────────
+// ── Needs you row ─────────────────────────────────────────────
+function NeedsYouSection({ items }: { items: NeedsYouItem[] }) {
+  const [rsvping, setRsvping] = useState<string | null>(null)
+  const [done, setDone] = useState<Set<string>>(new Set())
+  const [, startTransition] = useTransition()
 
-function UpcomingEventCard({ event }: { event: UpcomingEvent }) {
-  const meta   = EVENT_TYPE_META[event.event_type] ?? { emoji: '📅', gradient: 'linear-gradient(135deg, #1a1a1a, #2a2a2a)' }
-  const accent = event.group_theme_color ?? '#7F77DD'
-  const rsvp   = event.user_rsvp ? RSVP_BADGE[event.user_rsvp] : null
+  const visible = items.filter(i => !done.has(i.id))
+  if (visible.length === 0) return null
+
+  function handleRsvp(eventId: string, status: 'yes' | 'no') {
+    setRsvping(eventId)
+    startTransition(async () => {
+      await upsertRsvp(eventId, status)
+      setDone(prev => new Set([...prev, eventId]))
+      setRsvping(null)
+    })
+  }
 
   return (
-    <Link href={`/events/${event.id}`} className="block flex-shrink-0" style={{ width: '220px' }}>
-      <div
-        className="rounded-2xl overflow-hidden h-full transition-transform hover:scale-[1.02]"
-        style={{ background: '#161616', border: '1px solid #1e1e1e' }}
-      >
-        {/* Top gradient */}
-        <div
-          style={{
-            height: '80px',
-            background: event.banner_url
-              ? undefined
-              : meta.gradient,
-            backgroundImage: event.banner_url ? `url(${event.banner_url})` : undefined,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            position: 'relative',
-          }}
-        >
-          {event.banner_url && (
-            <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)' }} />
-          )}
-          <div style={{ position: 'relative', padding: '10px 12px' }}>
-            <span style={{ fontSize: '22px' }}>{meta.emoji}</span>
-          </div>
-          {/* Group accent line */}
-          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '2px', background: accent }} />
-        </div>
-
-        {/* Content */}
-        <div style={{ padding: '11px 13px 13px' }}>
-          <p
-            className="text-white font-semibold text-sm leading-tight mb-1 truncate"
-            title={event.title}
-          >
-            {event.title}
-          </p>
-          <p style={{ fontSize: '11px', color: accent, fontWeight: 600, marginBottom: '4px', truncate: true } as any}>
-            {event.group_name}
-          </p>
-          <p style={{ fontSize: '11px', color: '#555', marginBottom: '10px' }}>
-            {formatEventDate(event.starts_at)}
-          </p>
-
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            {event.going_count > 0 ? (
-              <span style={{ fontSize: '11px', color: '#555' }}>
-                {event.going_count} going
-              </span>
-            ) : (
-              <span style={{ fontSize: '11px', color: '#333' }}>No RSVPs yet</span>
-            )}
-            {rsvp ? (
-              <span style={{
-                fontSize: '10px', fontWeight: 700, padding: '2px 7px', borderRadius: '9999px',
-                background: rsvp.bg, color: rsvp.color,
-              }}>
-                {rsvp.label}
-              </span>
-            ) : (
-              <span style={{
-                fontSize: '10px', fontWeight: 600, padding: '2px 7px', borderRadius: '9999px',
-                background: `${accent}22`, color: accent,
-              }}>
-                RSVP
-              </span>
-            )}
-          </div>
-        </div>
+    <div>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 10 }}>
+        <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: T.text }}>Needs you</h3>
+        <span style={{ fontSize: 12, color: T.textMute }}>{visible.length}</span>
       </div>
-    </Link>
-  )
-}
-
-// ─── Group card ───────────────────────────────────────────────────────────────
-
-function getBannerStyle(bannerUrl: string | null): React.CSSProperties {
-  if (!bannerUrl) return {}
-  return { backgroundImage: `url(${bannerUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }
-}
-
-function GroupCard({ group }: { group: GroupWithWindows }) {
-  const accent    = group.theme_color ?? '#6366f1'
-  const hasWindow = !!group.next_window
-  const hasBanner = !!group.banner_url
-
-  return (
-    <Link href={`/groups/${group.id}`} className="block group/card">
-      <div
-        className="relative rounded-2xl overflow-hidden transition-all duration-200 hover:scale-[1.015]"
-        style={{ background: '#161616', border: '1px solid #1e1e1e' }}
-      >
-        <div className="h-1.5 w-full" style={{ background: accent }} />
-        <div
-          className="h-12 w-full"
-          style={hasBanner
-            ? { ...getBannerStyle(group.banner_url), opacity: 0.55 }
-            : { background: `linear-gradient(135deg, ${accent}22 0%, transparent 70%)` }
-          }
-        />
-
-        <div className="px-4 pb-4 -mt-1">
-          <div className="flex items-start justify-between gap-3 mb-3">
-            <div>
-              <h3 className="font-semibold text-white text-sm leading-tight">{group.name}</h3>
-              <p className="text-[#555] text-xs mt-0.5">
-                {group.member_count} {group.member_count === 1 ? 'member' : 'members'}
-              </p>
-            </div>
-            <MemberAvatars members={group.members} max={4} />
-          </div>
-
-          {hasWindow ? (
-            <div
-              className="rounded-xl p-2.5 flex items-center justify-between"
-              style={{ background: '#1e1e1e', border: '1px solid #252525' }}
-            >
-              <div className="min-w-0">
-                <p className="text-[9px] uppercase tracking-widest font-semibold mb-0.5" style={{ color: accent }}>
-                  Next window
-                </p>
-                <p className="text-white text-xs font-medium truncate">{group.next_window!.label}</p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {visible.map(item => (
+          <div key={item.id} style={{
+            display: 'flex', alignItems: 'center', gap: 12,
+            padding: '12px 14px', borderRadius: 12,
+            background: T.bgElev, border: `1px solid ${T.border}`,
+          }}>
+            <div style={{
+              width: 32, height: 32, borderRadius: 8,
+              background: T.amberSoft, color: T.amber,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            }}>🕐</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                {item.group_color && <div style={{ width: 6, height: 6, borderRadius: '50%', background: item.group_color }} />}
+                <span style={{ fontSize: 11, color: T.textMute, fontWeight: 500 }}>{item.group_name}</span>
               </div>
-              <div className="flex flex-col items-end gap-1 flex-shrink-0 ml-2">
-                <MemberAvatars members={group.next_window!.members} max={3} />
-                <p className="text-[#444] text-[10px]">{group.next_window!.members.length} free</p>
+              <div style={{ fontSize: 14, color: T.text, fontWeight: 600, marginBottom: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {item.title}
               </div>
+              <div style={{ fontSize: 12.5, color: T.textDim }}>{item.sub}</div>
             </div>
-          ) : (
-            <div
-              className="rounded-xl p-2.5 flex items-center gap-2"
-              style={{ background: '#1a1a1a', border: '1px dashed #222' }}
-            >
-              <span className="text-base">🗓</span>
-              <p className="text-[#444] text-xs">No windows yet</p>
+            <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+              <button
+                onClick={() => handleRsvp(item.id, 'yes')}
+                disabled={rsvping === item.id}
+                style={{
+                  background: T.greenSoft, color: T.green,
+                  border: 'none', padding: '6px 12px', borderRadius: 8,
+                  fontSize: 12.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                  opacity: rsvping === item.id ? 0.6 : 1,
+                }}
+              >
+                I'm in
+              </button>
+              <button
+                onClick={() => handleRsvp(item.id, 'no')}
+                disabled={rsvping === item.id}
+                style={{
+                  background: 'transparent', color: T.textDim,
+                  border: `1px solid ${T.border}`, padding: '6px 12px', borderRadius: 8,
+                  fontSize: 12.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >
+                Can't
+              </button>
             </div>
-          )}
-        </div>
+          </div>
+        ))}
       </div>
-    </Link>
-  )
-}
-
-// ─── Empty state ──────────────────────────────────────────────────────────────
-
-function EmptyState() {
-  return (
-    <div className="flex flex-col items-center justify-center py-24 text-center px-6">
-      <div className="w-20 h-20 rounded-3xl bg-[#1a1a1a] border border-[#222] flex items-center justify-center text-4xl mb-6">
-        👋
-      </div>
-      <h2 className="text-xl font-semibold text-white mb-2">Start your first group</h2>
-      <p className="text-[#555] text-sm max-w-xs mb-8 leading-relaxed">
-        Rally around the people you actually want to hang out with. Create a group, share availability, and start making plans.
-      </p>
-      <Link
-        href="/groups/new"
-        className="px-6 py-3 rounded-xl font-semibold text-sm text-white transition-all hover:opacity-90"
-        style={{ background: '#7F77DD' }}
-      >
-        Create a group
-      </Link>
     </div>
   )
 }
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
+// ── What's brewing ────────────────────────────────────────────
+function BrewingSection({ groups }: { groups: GroupWithWindows[] }) {
+  // Build brewing items from real group data
+  const items = groups
+    .filter(g => g.next_window || g.member_count > 1)
+    .slice(0, 4)
+    .map(g => {
+      if (g.next_window) {
+        return {
+          icon: '⚡',
+          color: T.violet,
+          group: g.name,
+          groupId: g.id,
+          groupColor: g.theme_color,
+          text: `${g.next_window.members.length} people free ${g.next_window.label.toLowerCase()}`,
+          action: 'Start a plan',
+          href: `/groups/${g.id}`,
+        }
+      }
+      return {
+        icon: '👥',
+        color: T.textMute,
+        group: g.name,
+        groupId: g.id,
+        groupColor: g.theme_color,
+        text: `${g.member_count} member${g.member_count !== 1 ? 's' : ''} · no plans yet`,
+        action: 'Open',
+        href: `/groups/${g.id}`,
+      }
+    })
 
-export default function DashboardClient({ profile, groupsWithWindows, upcomingEvents = [] }: Props) {
-  const firstName  = profile?.display_name?.split(' ')[0] ?? profile?.username ?? 'there'
-  const hasGroups  = groupsWithWindows.length > 0
-  const hasEvents  = upcomingEvents.length > 0
-
-  const bestWindow = groupsWithWindows
-    .filter(g => g.next_window !== null)
-    .sort((a, b) => (b.next_window!.members.length - a.next_window!.members.length))[0]
-
-  const getHour = () => new Date().getHours()
-  const greeting = getHour() < 12 ? 'Good morning' : getHour() < 17 ? 'Hey' : 'Evening'
+  if (items.length === 0) return null
 
   return (
-    <div className="min-h-screen bg-[#0f0f0f] text-white">
-      <div className="max-w-3xl mx-auto px-4 py-8 pb-24">
-
-        {/* Header */}
-        <div className="flex items-center justify-between mb-7">
-          <div>
-            <p className="text-[#444] text-sm mb-0.5">{greeting}, {firstName} 👋</p>
-            <h1 className="text-2xl font-bold text-white tracking-tight">Dashboard</h1>
-          </div>
-          {profile?.avatar_url ? (
-            <Link href="/profile">
-              <img src={profile.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover border-2 border-[#2a2a2a]" />
+    <div>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 10 }}>
+        <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: T.text }}>What's brewing</h3>
+      </div>
+      <div style={{
+        display: 'flex', flexDirection: 'column',
+        borderRadius: 14, border: `1px solid ${T.border}`, background: T.bgElev,
+        overflow: 'hidden',
+      }}>
+        {items.map((it, i) => (
+          <div key={it.groupId} style={{
+            display: 'flex', alignItems: 'center', gap: 12,
+            padding: '12px 14px',
+            borderTop: i === 0 ? 'none' : `1px solid ${T.border}`,
+          }}>
+            <div style={{
+              width: 26, height: 26, borderRadius: 7,
+              background: 'rgba(255,255,255,0.04)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              fontSize: 14,
+            }}>{it.icon}</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13.5, color: T.text, marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {it.text}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                {it.groupColor && <div style={{ width: 5, height: 5, borderRadius: '50%', background: it.groupColor }} />}
+                <span style={{ fontSize: 11.5, color: T.textMute }}>{it.group}</span>
+              </div>
+            </div>
+            <Link href={it.href} style={{
+              background: 'transparent', border: `1px solid ${T.border}`,
+              color: T.textDim, padding: '6px 10px', borderRadius: 8,
+              fontSize: 12, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap',
+              textDecoration: 'none',
+            }}>
+              {it.action}
             </Link>
-          ) : (
-            <Link href="/profile">
-              <div className="w-10 h-10 rounded-full bg-[#1a1a1a] border border-[#2a2a2a] flex items-center justify-center text-sm font-bold text-[#7F77DD]">
-                {firstName.charAt(0).toUpperCase()}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ── Compact groups list ──────────────────────────────────────
+function CompactGroupsList({ groups }: { groups: GroupActivity[] }) {
+  if (groups.length === 0) return null
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 10 }}>
+        <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: T.text }}>Your groups</h3>
+        <span style={{ fontSize: 12, color: T.textMute }}>{groups.length}</span>
+      </div>
+      <div style={{
+        display: 'flex', flexDirection: 'column',
+        borderRadius: 14, border: `1px solid ${T.border}`, background: T.bgElev,
+        overflow: 'hidden',
+      }}>
+        {groups.map((g, i) => (
+          <Link key={g.id} href={`/groups/${g.id}`} style={{ textDecoration: 'none' }}>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: '11px 12px',
+              borderTop: i === 0 ? 'none' : `1px solid ${T.border}`,
+            }}
+              onMouseEnter={e => (e.currentTarget.style.background = T.bgElev2)}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+            >
+              <div style={{
+                width: 28, height: 28, borderRadius: 7, flexShrink: 0,
+                background: g.theme_color
+                  ? `linear-gradient(135deg, ${g.theme_color}, ${g.theme_color}88)`
+                  : 'linear-gradient(135deg, #3a2e5e, #2a1f4d)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#fff', fontSize: 10.5, fontWeight: 700,
+              }}>
+                {initials(g.name)}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {g.name}
+                </div>
+                <div style={{ fontSize: 11.5, color: T.textMute, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {g.last_activity ?? `${g.member_count} member${g.member_count !== 1 ? 's' : ''}`}
+                </div>
+              </div>
+              {g.unread > 0 && (
+                <span style={{
+                  background: T.violet, color: '#fff',
+                  fontSize: 10.5, fontWeight: 700,
+                  padding: '2px 7px', borderRadius: 10, minWidth: 18, textAlign: 'center',
+                }}>{g.unread}</span>
+              )}
+            </div>
+          </Link>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ── Start plan CTA with group picker ─────────────────────────
+function StartPlanCTA({ hasGroups, groups }: { hasGroups: boolean; groups: GroupActivity[] }) {
+  const [open, setOpen] = useState(false)
+
+  if (!hasGroups) {
+    return (
+      <Link href="/groups/new" style={{ textDecoration: 'none' }}>
+        <div style={{
+          width: '100%', background: `linear-gradient(135deg, ${T.violet} 0%, #b66adb 100%)`,
+          color: '#fff', padding: '14px 18px', borderRadius: 12, fontSize: 14, fontWeight: 600,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          cursor: 'pointer', boxShadow: '0 6px 20px rgba(127,119,221,0.25)',
+        }}>
+          <span>+ Create your first group</span>
+        </div>
+      </Link>
+    )
+  }
+
+  return (
+    <div style={{ position: 'relative' }}>
+      <button
+        onClick={() => setOpen(v => !v)}
+        style={{
+          width: '100%', background: `linear-gradient(135deg, ${T.violet} 0%, #b66adb 100%)`,
+          color: '#fff', border: 'none',
+          padding: '14px 18px', borderRadius: 12, fontSize: 14, fontWeight: 600,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+          cursor: 'pointer', boxShadow: '0 6px 20px rgba(127,119,221,0.25)',
+          fontFamily: 'inherit',
+        }}
+      >
+        <span>+ Round up the crew</span>
+        <span style={{ fontSize: 11.5, opacity: 0.7 }}>{open ? '▲' : '▼'}</span>
+      </button>
+
+      {open && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0,
+          background: T.bgElev, border: `1px solid ${T.border}`,
+          borderRadius: 12, overflow: 'hidden',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+          zIndex: 20,
+        }}>
+          <div style={{ padding: '10px 12px 6px' }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: T.textMute, textTransform: 'uppercase', letterSpacing: '0.07em', margin: 0 }}>
+              Pick a group
+            </p>
+          </div>
+          {groups.map((g, i) => (
+            <Link key={g.id} href={`/groups/${g.id}/plans/new`} style={{ textDecoration: 'none' }}
+              onClick={() => setOpen(false)}
+            >
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '10px 12px',
+                borderTop: i === 0 ? `1px solid ${T.border}` : `1px solid ${T.border}`,
+                transition: 'background 0.1s',
+              }}
+                onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)')}
+                onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = 'transparent')}
+              >
+                <div style={{
+                  width: 26, height: 26, borderRadius: 7, flexShrink: 0,
+                  background: g.theme_color
+                    ? `linear-gradient(135deg, ${g.theme_color}, ${g.theme_color}88)`
+                    : 'linear-gradient(135deg, #3a2e5e, #2a1f4d)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: '#fff', fontSize: 9.5, fontWeight: 700,
+                }}>
+                  {initials(g.name)}
+                </div>
+                <span style={{ fontSize: 13, fontWeight: 500, color: T.text }}>{g.name}</span>
               </div>
             </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Main dashboard ────────────────────────────────────────────
+export default function DashboardClient({
+  profile,
+  groupsWithWindows,
+  upcomingPlans,
+  needsYouItems,
+  groupsActivity,
+}: Props) {
+  const firstName  = profile?.display_name?.split(' ')[0] ?? profile?.username ?? 'there'
+  const hasGroups  = groupsWithWindows.length > 0
+  const today      = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+
+  // Pick hero plan: next locked-in event where user RSVPed yes, or first upcoming
+  const heroPlan = upcomingPlans.find(p => p.my_rsvp === 'yes') ?? upcomingPlans[0] ?? null
+
+  return (
+    <div style={{ minHeight: '100vh', background: T.bg, color: T.text, fontFamily: 'inherit' }}>
+
+      {/* Top bar */}
+      <div style={{
+        padding: '18px 36px',
+        borderBottom: `1px solid ${T.border}`,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      }}>
+        <div>
+          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, letterSpacing: '-0.02em', color: T.text }}>
+            {greeting(firstName)}
+          </h1>
+          <div style={{ fontSize: 13, color: T.textMute, marginTop: 2 }}>{today}</div>
+        </div>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 8,
+            background: T.bgElev, border: `1px solid ${T.border}`,
+            padding: '7px 12px', borderRadius: 10, width: 240,
+            color: T.textMute, fontSize: 13,
+          }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+            <span style={{ flex: 1 }}>Search…</span>
+          </div>
+          <Link href="/groups/new" style={{
+            width: 34, height: 34, borderRadius: 9,
+            background: T.bgElev, border: `1px solid ${T.border}`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: T.textDim, textDecoration: 'none', fontSize: 18,
+          }}>+</Link>
+        </div>
+      </div>
+
+      {/* Main content — 2 col grid on desktop */}
+      <div style={{
+        padding: '28px 36px 80px',
+        display: 'grid',
+        gridTemplateColumns: 'minmax(0,1fr) 300px',
+        gap: 28,
+        alignItems: 'start',
+        maxWidth: 1200,
+        margin: '0 auto',
+      }}>
+
+        {/* ── Left column ── */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 28, minWidth: 0 }}>
+
+          {/* Hero */}
+          {heroPlan ? <HeroPlan plan={heroPlan} /> : <EmptyHero hasGroups={hasGroups} />}
+
+          {/* Needs you */}
+          <NeedsYouSection items={needsYouItems} />
+
+          {/* What's brewing */}
+          {hasGroups && <BrewingSection groups={groupsWithWindows} />}
+
+          {/* Empty state steps */}
+          {!hasGroups && (
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: T.textMute, marginBottom: 12 }}>
+                Three steps to your first hang
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {[
+                  { n: 1, title: 'Make a group',       sub: 'Name it, theme it' },
+                  { n: 2, title: 'Invite your friends', sub: 'Share a link, no app needed' },
+                  { n: 3, title: 'Drop your free times',sub: 'Rally finds when you all overlap' },
+                ].map(s => (
+                  <div key={s.n} style={{
+                    display: 'flex', alignItems: 'center', gap: 12,
+                    padding: '13px 14px', borderRadius: 12,
+                    background: T.bgElev, border: `1px solid ${T.border}`,
+                  }}>
+                    <div style={{
+                      width: 28, height: 28, borderRadius: '50%',
+                      background: T.violetSoft, color: T.violet,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 13, fontWeight: 700, flexShrink: 0,
+                    }}>{s.n}</div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: T.text }}>{s.title}</div>
+                      <div style={{ fontSize: 12.5, color: T.textMute, marginTop: 1 }}>{s.sub}</div>
+                    </div>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.textFaint} strokeWidth="2"><path d="M9 6l6 6-6 6"/></svg>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
         </div>
 
-        {/* ── What's on ── upcoming events horizontal scroll */}
-        {hasEvents && (
-          <div className="mb-7">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-[10px] uppercase tracking-widest font-semibold text-[#555]">What's on</p>
-              {upcomingEvents.length > 3 && (
-                <span className="text-[11px] text-[#444]">{upcomingEvents.length} upcoming</span>
-              )}
-            </div>
-            {/* Horizontal scroll strip — negative margin breaks out of padding, padding re-added inside */}
-            <div
-              style={{
-                display: 'flex',
-                gap: '10px',
-                overflowX: 'auto',
-                paddingBottom: '4px',
-                scrollbarWidth: 'none',
-                msOverflowStyle: 'none',
-              }}
-              className="[-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden"
-            >
-              {upcomingEvents.map(event => (
-                <UpcomingEventCard key={event.id} event={event} />
-              ))}
-              {/* "See all" tile */}
-              {hasGroups && (
-                <div className="flex-shrink-0" style={{ width: '100px' }}>
-                  <div className="rounded-2xl h-full flex flex-col items-center justify-center gap-2 text-center" style={{ background: '#161616', border: '1px dashed #222', minHeight: '160px' }}>
-                    <span className="text-2xl">📅</span>
-                    <p className="text-[#444] text-[11px] leading-tight px-2">Browse your groups</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+        {/* ── Right column ── */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 22, position: 'sticky', top: 24 }}>
+          <StartPlanCTA hasGroups={hasGroups} groups={groupsActivity} />
+          <CompactGroupsList groups={groupsActivity} />
+        </div>
 
-        {/* ── Best window hero ── */}
-        {bestWindow && bestWindow.next_window && bestWindow.next_window.members.length >= 2 && (
-          <Link href={`/groups/${bestWindow.id}`} className="block mb-6">
-            <div
-              className="rounded-2xl p-5 relative overflow-hidden"
-              style={{
-                background: `linear-gradient(135deg, ${bestWindow.theme_color ?? '#6366f1'}33 0%, #1a1a1a 60%)`,
-                border: `1px solid ${bestWindow.theme_color ?? '#6366f1'}44`,
-              }}
-            >
-              <div
-                className="absolute -top-8 -right-8 w-32 h-32 rounded-full opacity-20 blur-2xl pointer-events-none"
-                style={{ background: bestWindow.theme_color ?? '#6366f1' }}
-              />
-              <div className="relative">
-                <p className="text-xs uppercase tracking-widest font-semibold mb-2" style={{ color: bestWindow.theme_color ?? '#7F77DD' }}>
-                  ✦ best window coming up
-                </p>
-                <h2 className="text-xl font-bold text-white mb-1">
-                  {bestWindow.next_window.label}
-                </h2>
-                <p className="text-[#666] text-sm mb-4">{bestWindow.name}</p>
-                <div className="flex items-center justify-between">
-                  <MemberAvatars members={bestWindow.next_window.members} max={5} />
-                  <span
-                    className="text-xs font-semibold px-3 py-1.5 rounded-lg"
-                    style={{
-                      background: `${bestWindow.theme_color ?? '#6366f1'}25`,
-                      color:      bestWindow.theme_color ?? '#a5b4fc',
-                    }}
-                  >
-                    {bestWindow.next_window.members.length} free →
-                  </span>
-                </div>
-              </div>
-            </div>
-          </Link>
-        )}
-
-        {/* ── Groups ── */}
-        {hasGroups ? (
-          <>
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-[10px] uppercase tracking-widest font-semibold text-[#555]">Your groups</p>
-              <Link href="/groups/new" className="text-[11px] font-semibold" style={{ color: '#7F77DD' }}>
-                + New group
-              </Link>
-            </div>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 mb-6">
-              {groupsWithWindows.map(group => (
-                <GroupCard key={group.id} group={group} />
-              ))}
-            </div>
-          </>
-        ) : (
-          <EmptyState />
-        )}
-
-        {/* ── Quick actions ── */}
-        {hasGroups && (
-          <div>
-            <p className="text-[10px] uppercase tracking-widest font-semibold text-[#555] mb-3">Quick actions</p>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-              <Link
-                href="/availability"
-                style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '14px', borderRadius: '14px', textDecoration: 'none', background: '#161616', border: '1px solid #1e1e1e', transition: 'border-color 0.15s' }}
-              >
-                <span style={{ fontSize: '20px' }}>🗓</span>
-                <div>
-                  <p style={{ fontSize: '13px', fontWeight: 600, color: '#e0e0e0', margin: '0 0 2px' }}>Availability</p>
-                  <p style={{ fontSize: '11px', color: '#555', margin: 0, lineHeight: 1.4 }}>Update your free time</p>
-                </div>
-              </Link>
-              <Link
-                href="/messages"
-                style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '14px', borderRadius: '14px', textDecoration: 'none', background: '#161616', border: '1px solid #1e1e1e', transition: 'border-color 0.15s' }}
-              >
-                <span style={{ fontSize: '20px' }}>💬</span>
-                <div>
-                  <p style={{ fontSize: '13px', fontWeight: 600, color: '#e0e0e0', margin: '0 0 2px' }}>Messages</p>
-                  <p style={{ fontSize: '11px', color: '#555', margin: 0, lineHeight: 1.4 }}>Group chats &amp; DMs</p>
-                </div>
-              </Link>
-              <Link
-                href="/groups/new"
-                style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '14px', borderRadius: '14px', textDecoration: 'none', background: 'rgba(127,119,221,0.08)', border: '1px solid rgba(127,119,221,0.2)' }}
-              >
-                <span style={{ fontSize: '20px' }}>👥</span>
-                <div>
-                  <p style={{ fontSize: '13px', fontWeight: 600, color: '#7F77DD', margin: '0 0 2px' }}>New group</p>
-                  <p style={{ fontSize: '11px', color: '#555', margin: 0, lineHeight: 1.4 }}>Start a new crew</p>
-                </div>
-              </Link>
-              <Link
-                href="/profile"
-                style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '14px', borderRadius: '14px', textDecoration: 'none', background: '#161616', border: '1px solid #1e1e1e' }}
-              >
-                <span style={{ fontSize: '20px' }}>👤</span>
-                <div>
-                  <p style={{ fontSize: '13px', fontWeight: 600, color: '#e0e0e0', margin: '0 0 2px' }}>Profile</p>
-                  <p style={{ fontSize: '11px', color: '#555', margin: 0, lineHeight: 1.4 }}>Edit your info</p>
-                </div>
-              </Link>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   )

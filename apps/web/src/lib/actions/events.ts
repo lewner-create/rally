@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { generateInviteToken, slugify } from '@/lib/name-generator'
+import { upsertEventBlock } from '@/lib/actions/availability-blocks'
 
 export type EventType   = 'game_night' | 'hangout' | 'meetup' | 'day_trip' | 'road_trip' | 'moto_trip' | 'vacation'
 export type RsvpStatus  = 'yes' | 'maybe' | 'no'
@@ -21,8 +22,6 @@ export async function createEvent(params: {
   status?: EventStatus
   bannerUrl?: string
   groupName?: string
-  location?: string
-  games?: string[]
 }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -35,15 +34,13 @@ export async function createEvent(params: {
       created_by:        user.id,
       title:             params.title,
       event_type:        params.eventType,
-      starts_at:         params.startsAt,
-      ends_at:           params.endsAt,
+      start_time:         params.startsAt,
+      end_time:           params.endsAt,
       description:       params.description ?? null,
       status:            params.status ?? 'published',
       banner_url:        params.bannerUrl ?? null,
       invite_slug:       generateInviteToken(),
       invite_group_slug: slugify(params.groupName ?? 'group'),
-      location:          params.location ?? null,
-      games:             params.games ?? null,
     })
     .select()
     .single()
@@ -51,70 +48,6 @@ export async function createEvent(params: {
   if (error) throw new Error(error.message)
   revalidatePath(`/groups/${params.groupId}`)
   return data
-}
-
-// ─── Update (host edit post-creation) ─────────────────────────────────────
-
-export async function updateEvent(eventId: string, params: {
-  title?: string
-  startsAt?: string
-  endsAt?: string
-  description?: string
-  bannerUrl?: string | null
-  location?: string | null
-  games?: string[] | null
-}) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
-
-  // Verify caller is the event creator
-  const { data: existing } = await supabase
-    .from('events')
-    .select('created_by, group_id')
-    .eq('id', eventId)
-    .single()
-
-  if (!existing || existing.created_by !== user.id) {
-    throw new Error('Not authorised to edit this event')
-  }
-
-  const updates: Record<string, unknown> = {}
-  if (params.title      !== undefined) updates.title       = params.title
-  if (params.startsAt   !== undefined) updates.starts_at   = params.startsAt
-  if (params.endsAt     !== undefined) updates.ends_at     = params.endsAt
-  if (params.description!== undefined) updates.description = params.description
-  if (params.bannerUrl  !== undefined) updates.banner_url  = params.bannerUrl
-  if (params.location   !== undefined) updates.location    = params.location
-  if (params.games      !== undefined) updates.games       = params.games
-
-  const { data, error } = await supabase
-    .from('events')
-    .update(updates)
-    .eq('id', eventId)
-    .select()
-    .single()
-
-  if (error) throw new Error(error.message)
-
-  revalidatePath(`/events/${eventId}`)
-  revalidatePath(`/groups/${existing.group_id}`)
-  return data
-}
-
-// ─── Mark completed ────────────────────────────────────────────────────────
-
-export async function markEventCompleted(eventId: string) {
-  const supabase = await createClient()
-
-  const { error } = await supabase
-    .from('events')
-    .update({ status: 'completed' as any })
-    .eq('id', eventId)
-    .lt('ends_at', new Date().toISOString())
-
-  if (error) throw new Error(error.message)
-  revalidatePath(`/events/${eventId}`)
 }
 
 // ─── Read ───────────────────────────────────────────────────────────────────
@@ -153,25 +86,9 @@ export async function getEventsForGroup(groupId: string) {
     `)
     .eq('group_id', groupId)
     .neq('status', 'cancelled')
-    .gte('starts_at', new Date().toISOString())
-    .order('starts_at', { ascending: true })
+    .gte('start_time', new Date().toISOString())
+    .order('start_time', { ascending: true })
     .limit(5)
-
-  return (data ?? []) as any[]
-}
-
-export async function getCompletedEventsForGroup(groupId: string) {
-  const supabase = await createClient()
-  const { data } = await supabase
-    .from('events')
-    .select(`
-      *,
-      event_attendees (user_id, rsvp_status, profiles:user_id (id, display_name, username, avatar_url))
-    `)
-    .eq('group_id', groupId)
-    .eq('status', 'completed' as any)
-    .order('starts_at', { ascending: false })
-    .limit(10)
 
   return (data ?? []) as any[]
 }
@@ -190,45 +107,6 @@ export async function getEventAttendees(eventId: string) {
     rsvp_status: string
     profiles: { id: string; display_name: string | null; username: string | null; avatar_url: string | null } | null
   }>
-}
-
-export async function getEventPhotos(eventId: string) {
-  const supabase = await createClient()
-  const { data } = await supabase
-    .from('event_photos')
-    .select('*, uploader:uploader_id (id, display_name, avatar_url)')
-    .eq('event_id', eventId)
-    .order('created_at', { ascending: false })
-
-  return (data ?? []) as any[]
-}
-
-export async function saveEventPhoto(eventId: string, publicUrl: string) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
-
-  const { error } = await supabase
-    .from('event_photos')
-    .insert({ event_id: eventId, uploader_id: user.id, public_url: publicUrl })
-
-  if (error) throw new Error(error.message)
-  revalidatePath(`/events/${eventId}`)
-}
-
-export async function deleteEventPhoto(photoId: string, eventId: string) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
-
-  const { error } = await supabase
-    .from('event_photos')
-    .delete()
-    .eq('id', photoId)
-    .eq('uploader_id', user.id)
-
-  if (error) throw new Error(error.message)
-  revalidatePath(`/events/${eventId}`)
 }
 
 // ─── RSVP ──────────────────────────────────────────────────────────────────
@@ -251,6 +129,35 @@ export async function upsertRsvp(eventId: string, rsvp: RsvpStatus) {
     )
 
   if (error) throw new Error(error.message)
+
+  // Auto-create availability block when RSVPing yes
+  // Remove block when changing to maybe/no
+  if (rsvp === 'yes') {
+    const { data: event } = await supabase
+      .from('events')
+      .select('title, start_time, end_time')
+      .eq('id', eventId)
+      .single()
+
+    if (event?.start_time && event?.end_time) {
+      await upsertEventBlock({
+        userId:   user.id,
+        eventId,
+        startsAt: event.start_time,
+        endsAt:   event.end_time,
+        label:    event.title,
+      })
+    }
+  } else {
+    // Remove event block if changing away from yes
+    await supabase
+      .from('availability_blocks')
+      .delete()
+      .eq('user_id', user.id)
+      .eq('event_id', eventId)
+      .eq('source', 'event')
+  }
+
   revalidatePath(`/events/${eventId}`)
 }
 

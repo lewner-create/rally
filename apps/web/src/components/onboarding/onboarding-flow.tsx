@@ -7,188 +7,97 @@ import { saveWeeklyAvailability, type WeeklyAvailability } from '@/lib/actions/a
 
 const accent = '#7F77DD'
 
-// ── Activity interests ──────────────────────────────────────────────
-const ACTIVITY_TYPES = [
-  { id: 'gaming',     label: 'Gaming' },
-  { id: 'dining',     label: 'Dining out' },
-  { id: 'day_trips',  label: 'Day trips' },
-  { id: 'road_trips', label: 'Road trips' },
-  { id: 'hiking',     label: 'Hiking' },
-  { id: 'events',     label: 'Events' },
-  { id: 'nightlife',  label: 'Nightlife' },
-  { id: 'movies',     label: 'Movie nights' },
-  { id: 'sports',     label: 'Sports' },
-  { id: 'travel',     label: 'Travel' },
-]
-
-// ── Availability presets ────────────────────────────────────────────
 type DayKey = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun'
 const WEEKDAYS: DayKey[] = ['mon', 'tue', 'wed', 'thu', 'fri']
-const WEEKEND: DayKey[]  = ['sat', 'sun']
-const ALL_DAYS: DayKey[] = [...WEEKDAYS, WEEKEND[0], WEEKEND[1]]
+const WEEKEND:  DayKey[] = ['sat', 'sun']
+const ALL_DAYS: DayKey[] = [...WEEKDAYS, ...WEEKEND]
 
 const PRESETS = [
-  {
-    id: 'weeknights',
-    label: 'Weeknights',
-    description: 'Mon–Fri evenings',
-    days: WEEKDAYS,
-    hours: [19, 20, 21, 22],
-  },
-  {
-    id: 'weekend_days',
-    label: 'Weekend days',
-    description: 'Sat & Sun daytime',
-    days: WEEKEND,
-    hours: [10, 11, 12, 13, 14, 15, 16, 17],
-  },
-  {
-    id: 'weekend_nights',
-    label: 'Weekend nights',
-    description: 'Fri–Sun evenings',
-    days: ['fri' as DayKey, ...WEEKEND],
-    hours: [20, 21, 22, 23],
-  },
-  {
-    id: 'mornings',
-    label: 'Mornings',
-    description: 'Any day, before noon',
-    days: ALL_DAYS,
-    hours: [7, 8, 9, 10, 11],
-  },
-  {
-    id: 'midday',
-    label: 'Midday',
-    description: 'Weekday lunch windows',
-    days: WEEKDAYS,
-    hours: [11, 12, 13, 14],
-  },
-  {
-    id: 'late_nights',
-    label: 'Late nights',
-    description: 'After 11pm',
-    days: ALL_DAYS,
-    hours: [23],
-  },
+  { id: 'weeknights',    label: 'Weeknights',    description: 'Mon–Fri evenings',    days: WEEKDAYS,                          hours: [19,20,21,22] },
+  { id: 'weekend_days',  label: 'Weekend days',  description: 'Sat & Sun daytime',   days: WEEKEND,                           hours: [10,11,12,13,14,15,16,17] },
+  { id: 'weekend_nights',label: 'Weekend nights',description: 'Fri–Sun evenings',    days: ['fri' as DayKey,...WEEKEND],       hours: [20,21,22,23] },
+  { id: 'mornings',      label: 'Mornings',      description: 'Any day, before noon',days: ALL_DAYS,                          hours: [7,8,9,10,11] },
+  { id: 'midday',        label: 'Midday',        description: 'Weekday lunch windows',days: WEEKDAYS,                         hours: [11,12,13,14] },
+  { id: 'late_nights',   label: 'Late nights',   description: 'After 11pm',          days: ALL_DAYS,                          hours: [23] },
 ]
 
 function presetsToWeekly(selected: string[]): WeeklyAvailability {
-  const result: WeeklyAvailability = {
-    mon: [], tue: [], wed: [], thu: [], fri: [], sat: [], sun: [],
-  }
-  for (const presetId of selected) {
-    const preset = PRESETS.find(p => p.id === presetId)
-    if (!preset) continue
-    for (const day of preset.days) {
-      const existing = new Set(result[day])
-      for (const h of preset.hours) existing.add(h)
-      result[day] = Array.from(existing).sort((a, b) => a - b)
+  const result: WeeklyAvailability = { mon:[],tue:[],wed:[],thu:[],fri:[],sat:[],sun:[] }
+  for (const id of selected) {
+    const p = PRESETS.find(p => p.id === id)
+    if (!p) continue
+    for (const day of p.days) {
+      const s = new Set(result[day])
+      p.hours.forEach(h => s.add(h))
+      result[day] = Array.from(s).sort((a,b) => a-b)
     }
   }
   return result
 }
 
-// ── Component ───────────────────────────────────────────────────────
-interface OnboardingFlowProps {
-  profile: Profile
-}
+interface Props { profile: Profile }
 
-export function OnboardingFlow({ profile }: OnboardingFlowProps) {
+export function OnboardingFlow({ profile }: Props) {
   const router = useRouter()
-  const [step, setStep] = useState(1)
   const [isPending, startTransition] = useTransition()
-  const [error, setError] = useState<string | null>(null)
+
+  // Detect if user needs username step (Google sign-in users have display_name but no username)
+  const needsUsername = !profile.username
+
+  // Steps: 'username' (optional) → 'availability'
+  const [step, setStep] = useState<'username' | 'availability'>(
+    needsUsername ? 'username' : 'availability'
+  )
+  const totalSteps   = needsUsername ? 2 : 1
+  const currentStep  = needsUsername ? (step === 'username' ? 1 : 2) : 1
 
   const [displayName, setDisplayName] = useState(profile.display_name ?? '')
-  const [username, setUsername]       = useState(profile.username ?? '')
-  const [interests, setInterests]     = useState<string[]>([])
-  const [presets, setPresets]         = useState<string[]>([])
-
-  const toggleInterest = (id: string) =>
-    setInterests(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id])
+  const [username,    setUsername]    = useState('')
+  const [presets,     setPresets]     = useState<string[]>([])
 
   const togglePreset = (id: string) =>
     setPresets(prev => prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id])
 
   const handleFinish = () => {
-    setError(null)
     startTransition(async () => {
-      try {
-        // Merge preferences rather than replace — preserve any existing keys
-        const existingPrefs = profile.preferences ?? {}
-        await Promise.all([
-          updateProfile({
-            display_name: displayName,
-            username,
-            preferences: {
-              ...existingPrefs,
-              interests,
-              onboarded: true,
-            },
-          }),
-          saveWeeklyAvailability(presetsToWeekly(presets)),
-        ])
-        router.push('/dashboard')
-      } catch (err: any) {
-        // Surface a friendly error based on the message
-        const msg: string = err?.message ?? ''
-        if (msg.includes('unique') || msg.includes('duplicate') || msg.includes('already')) {
-          setError('That username is already taken — try a different one.')
-          setStep(1) // Send them back to fix it
-        } else {
-          setError('Something went wrong. Please try again.')
-        }
-      }
+      await Promise.all([
+        updateProfile({
+          ...(needsUsername ? { display_name: displayName.trim(), username: username.trim() } : {}),
+          preferences: { ...(profile.preferences ?? {}), onboarded: true },
+        }),
+        presets.length > 0 ? saveWeeklyAvailability(presetsToWeekly(presets)) : Promise.resolve(),
+      ])
+      router.push('/dashboard')
     })
   }
 
+  const firstName = (profile.display_name ?? profile.username ?? 'there').split(' ')[0]
+
   return (
-    <div style={{
-      minHeight: '100vh', background: '#0f0f0f', color: '#fff',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      padding: '24px',
-    }}>
+    <div style={{ minHeight: '100vh', background: '#0f0f0f', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
       <div style={{ width: '100%', maxWidth: '480px' }}>
 
         {/* Logo + progress */}
         <div style={{ marginBottom: '40px' }}>
           <p style={{ fontSize: '17px', fontWeight: 800, color: accent, margin: '0 0 20px' }}>rally</p>
           <div style={{ display: 'flex', gap: '6px' }}>
-            {[1, 2, 3].map(n => (
-              <div key={n} style={{
-                flex: 1, height: '3px', borderRadius: '9999px',
-                background: n <= step ? accent : '#222',
-                transition: 'background 0.3s',
-              }} />
+            {Array.from({ length: totalSteps }).map((_, i) => (
+              <div key={i} style={{ flex: 1, height: '3px', borderRadius: '9999px', background: i < currentStep ? accent : '#222', transition: 'background 0.3s' }} />
             ))}
           </div>
         </div>
 
-        {/* ── Global error banner ── */}
-        {error && (
-          <div style={{
-            marginBottom: '20px', padding: '12px 16px', borderRadius: '12px',
-            background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)',
-            color: '#f87171', fontSize: '14px',
-          }}>
-            {error}
-          </div>
-        )}
-
-        {/* ── Step 1: Name ── */}
-        {step === 1 && (
+        {/* ── Username step (Google users only) ── */}
+        {step === 'username' && (
           <div>
-            <h1 style={{ fontSize: '26px', fontWeight: 800, margin: '0 0 8px' }}>
-              What should we call you?
-            </h1>
-            <p style={{ fontSize: '14px', color: '#666', margin: '0 0 32px' }}>
-              This is how your friends will see you in Rally.
-            </p>
+            <h1 style={h1}>Welcome to Rally{displayName ? `, ${displayName.split(' ')[0]}` : ''}!</h1>
+            <p style={sub}>Just need one thing before we get started — pick a username so your friends can find you.</p>
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '32px' }}>
+              {/* Display name — pre-filled from Google but editable */}
               <div>
                 <label style={labelStyle}>Display name</label>
                 <input
-                  autoFocus
                   value={displayName}
                   onChange={e => setDisplayName(e.target.value)}
                   placeholder="Your name"
@@ -197,148 +106,78 @@ export function OnboardingFlow({ profile }: OnboardingFlowProps) {
                   onBlur={e  => (e.target.style.borderColor = '#2a2a2a')}
                 />
               </div>
+              {/* Username */}
               <div>
                 <label style={labelStyle}>Username</label>
                 <div style={{ position: 'relative' }}>
-                  <span style={{
-                    position: 'absolute', left: '12px', top: '50%',
-                    transform: 'translateY(-50%)', color: '#444', fontSize: '14px',
-                    pointerEvents: 'none',
-                  }}>@</span>
+                  <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#444', fontSize: '14px', pointerEvents: 'none' }}>@</span>
                   <input
+                    autoFocus
                     value={username}
-                    onChange={e => {
-                      setError(null) // Clear error when they start typing
-                      setUsername(e.target.value.replace(/[^a-z0-9_]/gi, '').toLowerCase())
-                    }}
+                    onChange={e => setUsername(e.target.value.replace(/[^a-z0-9_]/gi,'').toLowerCase())}
                     placeholder="username"
                     style={{ ...inputStyle, paddingLeft: '28px' }}
                     onFocus={e => (e.target.style.borderColor = accent)}
                     onBlur={e  => (e.target.style.borderColor = '#2a2a2a')}
                   />
                 </div>
-                <p style={{ fontSize: '11px', color: '#444', marginTop: '5px' }}>
-                  Letters, numbers, and underscores only
-                </p>
+                <p style={{ fontSize: '11px', color: '#444', margin: '6px 0 0' }}>Letters, numbers, and underscores only</p>
               </div>
             </div>
+
             <button
-              onClick={() => { setError(null); setStep(2) }}
+              onClick={() => setStep('availability')}
               disabled={!displayName.trim() || username.trim().length < 3}
-              style={primaryBtnStyle(!!displayName.trim() && username.trim().length >= 3)}
+              style={primaryBtn(!!displayName.trim() && username.trim().length >= 3)}
             >
               Continue
             </button>
           </div>
         )}
 
-        {/* ── Step 2: Interests ── */}
-        {step === 2 && (
+        {/* ── Availability step ── */}
+        {step === 'availability' && (
           <div>
-            <h1 style={{ fontSize: '26px', fontWeight: 800, margin: '0 0 8px' }}>
-              What do you like to do?
-            </h1>
-            <p style={{ fontSize: '14px', color: '#666', margin: '0 0 32px' }}>
-              Pick as many as you like. This helps Rally suggest the right plans.
-            </p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '32px' }}>
-              {ACTIVITY_TYPES.map(a => {
-                const active = interests.includes(a.id)
-                return (
-                  <button
-                    key={a.id}
-                    onClick={() => toggleInterest(a.id)}
-                    style={{
-                      padding: '9px 16px', borderRadius: '9999px',
-                      cursor: 'pointer', fontSize: '14px',
-                      fontWeight: active ? 600 : 400, fontFamily: 'inherit',
-                      transition: 'all 0.15s',
-                      background: active ? `${accent}22` : '#1a1a1a',
-                      border: active ? `1px solid ${accent}66` : '1px solid #2a2a2a',
-                      color: active ? accent : '#888',
-                    }}
-                  >
-                    {a.label}
-                  </button>
-                )
-              })}
-            </div>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button onClick={() => setStep(1)} style={ghostBtnStyle}>Back</button>
-              <button onClick={() => setStep(3)} style={{ ...primaryBtnStyle(true), flex: 1 }}>
-                Continue
-              </button>
-            </div>
-          </div>
-        )}
+            <h1 style={h1}>When are you usually free, {firstName}?</h1>
+            <p style={sub}>Rally uses this to find the best times for your groups. You can always adjust it later.</p>
+            <p style={{ fontSize: '12px', color: '#444', margin: '0 0 28px' }}>Select at least one to get started.</p>
 
-        {/* ── Step 3: Availability ── */}
-        {step === 3 && (
-          <div>
-            <h1 style={{ fontSize: '26px', fontWeight: 800, margin: '0 0 8px' }}>
-              When are you usually free?
-            </h1>
-            <p style={{ fontSize: '14px', color: '#666', margin: '0 0 4px' }}>
-              Pick what fits your week — you can always respond differently later.
-            </p>
-            <p style={{ fontSize: '12px', color: '#444', margin: '0 0 28px' }}>
-              Select at least one to help Rally suggest good times.
-            </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '32px' }}>
               {PRESETS.map(p => {
                 const active = presets.includes(p.id)
                 return (
-                  <button
-                    key={p.id}
-                    onClick={() => togglePreset(p.id)}
-                    style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      padding: '14px 16px', borderRadius: '14px', cursor: 'pointer',
-                      fontFamily: 'inherit', textAlign: 'left', transition: 'all 0.15s',
-                      background: active ? `${accent}18` : '#161616',
-                      border: active ? `1px solid ${accent}44` : '1px solid #222',
-                    }}
-                  >
+                  <button key={p.id} onClick={() => togglePreset(p.id)} style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '14px 16px', borderRadius: '14px', cursor: 'pointer',
+                    fontFamily: 'inherit', textAlign: 'left', transition: 'all 0.15s',
+                    background: active ? `${accent}18` : '#161616',
+                    border: active ? `1px solid ${accent}44` : '1px solid #222',
+                  }}>
                     <div>
-                      <div style={{ fontSize: '14px', fontWeight: 600, color: active ? '#fff' : '#ccc' }}>
-                        {p.label}
-                      </div>
-                      <div style={{ fontSize: '12px', color: '#555', marginTop: '2px' }}>
-                        {p.description}
-                      </div>
+                      <div style={{ fontSize: '14px', fontWeight: 600, color: active ? '#fff' : '#ccc' }}>{p.label}</div>
+                      <div style={{ fontSize: '12px', color: '#555', marginTop: '2px' }}>{p.description}</div>
                     </div>
-                    <div style={{
-                      width: '20px', height: '20px', borderRadius: '50%', flexShrink: 0,
-                      border: active ? 'none' : '2px solid #333',
-                      background: active ? accent : 'transparent',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}>
+                    <div style={{ width: '20px', height: '20px', borderRadius: '50%', flexShrink: 0, border: active ? 'none' : '2px solid #333', background: active ? accent : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}>
                       {active && <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'white' }} />}
                     </div>
                   </button>
                 )
               })}
             </div>
+
             <div style={{ display: 'flex', gap: '10px' }}>
-              <button onClick={() => setStep(2)} style={ghostBtnStyle} disabled={isPending}>
-                Back
-              </button>
-              <button
-                onClick={handleFinish}
-                disabled={isPending || presets.length === 0}
-                style={{
-                  ...primaryBtnStyle(presets.length > 0),
-                  flex: 1,
-                  opacity: isPending ? 0.7 : 1,
-                }}
-              >
-                {isPending ? 'Setting up...' : "Let's go"}
+              {needsUsername && (
+                <button onClick={() => setStep('username')} style={ghostBtn}>Back</button>
+              )}
+              <button onClick={handleFinish} disabled={isPending} style={{ ...primaryBtn(true), flex: 1, opacity: isPending ? 0.7 : 1 }}>
+                {isPending ? 'Setting up…' : "Let's go →"}
               </button>
             </div>
-            {presets.length === 0 && (
-              <p style={{ fontSize: '12px', color: '#444', textAlign: 'center', marginTop: '12px' }}>
-                Pick at least one time to continue
-              </p>
+
+            {!isPending && (
+              <button onClick={handleFinish} style={{ width: '100%', padding: '10px', marginTop: '8px', background: 'none', border: 'none', color: '#333', fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit' }}>
+                Skip for now
+              </button>
             )}
           </div>
         )}
@@ -348,30 +187,9 @@ export function OnboardingFlow({ profile }: OnboardingFlowProps) {
   )
 }
 
-const labelStyle: React.CSSProperties = {
-  display: 'block', fontSize: '11px', fontWeight: 700, color: '#555',
-  textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px',
-}
-
-const inputStyle: React.CSSProperties = {
-  width: '100%', padding: '11px 14px', borderRadius: '12px',
-  border: '1px solid #2a2a2a', fontSize: '15px', outline: 'none',
-  boxSizing: 'border-box', fontFamily: 'inherit', background: '#1a1a1a',
-  color: '#fff', transition: 'border-color 0.15s',
-}
-
-const primaryBtnStyle = (enabled: boolean): React.CSSProperties => ({
-  width: '100%', padding: '13px', borderRadius: '9999px', border: 'none',
-  cursor: enabled ? 'pointer' : 'default',
-  background: enabled ? accent : '#1a1a1a',
-  color: enabled ? 'white' : '#444',
-  fontSize: '15px', fontWeight: 700, fontFamily: 'inherit',
-  transition: 'background 0.2s',
-})
-
-const ghostBtnStyle: React.CSSProperties = {
-  padding: '13px 20px', borderRadius: '9999px',
-  border: '1px solid #2a2a2a', background: 'transparent',
-  color: '#666', fontSize: '15px', fontWeight: 600,
-  cursor: 'pointer', fontFamily: 'inherit',
-}
+const h1: React.CSSProperties          = { fontSize: '26px', fontWeight: 800, margin: '0 0 8px' }
+const sub: React.CSSProperties         = { fontSize: '14px', color: '#666', margin: '0 0 24px', lineHeight: 1.5 }
+const labelStyle: React.CSSProperties  = { display: 'block', fontSize: '11px', fontWeight: 700, color: '#555', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }
+const inputStyle: React.CSSProperties  = { width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1px solid #2a2a2a', fontSize: '15px', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit', background: '#1a1a1a', color: '#fff', transition: 'border-color 0.15s' }
+const primaryBtn = (on: boolean): React.CSSProperties => ({ width: '100%', padding: '13px', borderRadius: '9999px', border: 'none', cursor: on ? 'pointer' : 'default', background: on ? accent : '#1a1a1a', color: on ? 'white' : '#444', fontSize: '15px', fontWeight: 700, fontFamily: 'inherit', transition: 'background 0.2s' })
+const ghostBtn: React.CSSProperties    = { padding: '13px 20px', borderRadius: '9999px', border: '1px solid #2a2a2a', background: 'transparent', color: '#666', fontSize: '15px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }

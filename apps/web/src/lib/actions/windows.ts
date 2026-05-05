@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { getBlocksForUsers } from '@/lib/actions/availability-blocks'
 import type { DayKey, WeeklyAvailability } from './availability'
 
 export interface MemberProfile {
@@ -19,12 +20,10 @@ export interface OpenWindow {
   members: MemberProfile[]
 }
 
-// day index (getDay()) → DayKey
 const DAY_KEYS: Record<number, DayKey> = {
   0: 'sun', 1: 'mon', 2: 'tue', 3: 'wed', 4: 'thu', 5: 'fri', 6: 'sat',
 }
 
-// Generate 3-hour candidate slots for weekday evenings + weekend blocks
 function generateCandidateSlots(from: Date, days: number): { start: Date; end: Date }[] {
   const slots: { start: Date; end: Date }[] = []
 
@@ -55,7 +54,6 @@ export async function getOpenWindows(groupId: string): Promise<OpenWindow[]> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return []
 
-  // Get members + their profile-level availability
   const { data: members } = await supabase
     .from('group_members')
     .select('user_id, profiles(id, display_name, username, avatar_url, weekly_availability)')
@@ -63,31 +61,31 @@ export async function getOpenWindows(groupId: string): Promise<OpenWindow[]> {
 
   if (!members || members.length === 0) return []
 
-  // ── Group-scoped availability (session 21) ──────────────────────────────────
-  // Fetch any group-specific overrides. Members who have set this override their
-  // profile-level availability for this group's windows calculation.
-  const { data: groupAvailRows } = await supabase
-    .from('group_availability')
-    .select('user_id, weekly_availability')
-    .eq('group_id', groupId)
-
-  // Map: user_id → group-specific WeeklyAvailability (if set)
-  const groupAvailMap = new Map<string, WeeklyAvailability>(
-    (groupAvailRows ?? []).map(r => [
-      r.user_id,
-      r.weekly_availability as WeeklyAvailability,
-    ])
-  )
-  // ───────────────────────────────────────────────────────────────────────────
-
   const totalCount = members.length
+  const userIds    = members.map(m => m.user_id)
 
   // Look ahead 14 days starting tomorrow
   const from = new Date()
   from.setDate(from.getDate() + 1)
   from.setHours(0, 0, 0, 0)
 
+  const to = new Date(from)
+  to.setDate(to.getDate() + 14)
+
   const candidates = generateCandidateSlots(from, 14)
+
+  // Fetch all blocks for all members in this window
+  const blocks = await getBlocksForUsers(userIds, from, to)
+
+  // Build a map: userId → array of {start, end} busy intervals
+  const busyMap = new Map<string, { start: Date; end: Date }[]>()
+  for (const block of blocks) {
+    if (!busyMap.has(block.user_id)) busyMap.set(block.user_id, [])
+    busyMap.get(block.user_id)!.push({
+      start: new Date(block.start_time),
+      end:   new Date(block.end_time),
+    })
+  }
 
   const windows: OpenWindow[] = candidates.map(({ start, end }) => {
     const dayKey = DAY_KEYS[start.getDay()]
@@ -95,25 +93,29 @@ export async function getOpenWindows(groupId: string): Promise<OpenWindow[]> {
     const endH   = end.getHours()
 
     const availableMembers = members.filter(m => {
-      // Fallback chain: group-specific → profile-level → empty
-      const groupSpecific = groupAvailMap.get(m.user_id)
-      const profile       = m.profiles as any
-      const avail: Partial<WeeklyAvailability> =
-        groupSpecific ?? (profile?.weekly_availability ?? {})
-
+      const profile  = m.profiles as any
+      const avail    = (profile?.weekly_availability ?? {}) as Partial<WeeklyAvailability>
       const dayHours = (avail[dayKey] ?? []) as number[]
 
-      // Member is available for this slot if every hour in [startH, endH) is marked free
+      // 1. Check recurring availability — every hour must be marked free
       for (let h = startH; h < endH; h++) {
         if (!dayHours.includes(h)) return false
       }
+
+      // 2. Check one-off blocks — any overlap means unavailable
+      const userBlocks = busyMap.get(m.user_id) ?? []
+      for (const block of userBlocks) {
+        // Overlap if block starts before window ends AND block ends after window starts
+        if (block.start < end && block.end > start) return false
+      }
+
       return true
     })
 
     return {
       start,
       end,
-      availableCount: availableMembers.length,
+      availableCount:  availableMembers.length,
       totalCount,
       availableUserIds: availableMembers.map(m => m.user_id),
       members: availableMembers.map(m => {
@@ -128,7 +130,6 @@ export async function getOpenWindows(groupId: string): Promise<OpenWindow[]> {
     }
   })
 
-  // Sort by most available, then soonest
   const sorted = windows
     .filter(w => w.availableCount > 0)
     .sort((a, b) => {
@@ -136,7 +137,6 @@ export async function getOpenWindows(groupId: string): Promise<OpenWindow[]> {
       return a.start.getTime() - b.start.getTime()
     })
 
-  // Deduplicate: skip slots that start within 1 hour of an already-included slot on same day
   const deduped: OpenWindow[] = []
   for (const w of sorted) {
     const conflict = deduped.some(
@@ -147,7 +147,6 @@ export async function getOpenWindows(groupId: string): Promise<OpenWindow[]> {
     if (!conflict) deduped.push(w)
   }
 
-  // Cap by tier
   const { data: group } = await supabase
     .from('groups')
     .select('tier')

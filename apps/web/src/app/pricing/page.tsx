@@ -55,7 +55,7 @@ export default function PricingPage() {
           Simple pricing.
         </h1>
         <p style={{ fontSize: 17, color: T.dim, lineHeight: 1.6, margin: 0 }}>
-          Free during beta. Founders who join now get Rally+ for life — no catch, no expiry.
+          Free during beta. Founders who join now get Volta+ for life — no catch, no expiry.
         </p>
       </section>
 
@@ -69,10 +69,10 @@ export default function PricingPage() {
           <span style={{ fontSize: 28 }}>🎁</span>
           <div style={{ flex: 1, minWidth: 240 }}>
             <div style={{ fontSize: 15, fontWeight: 700, color: T.text, marginBottom: 3 }}>
-              Beta = free Rally+ for life
+              Beta = free Volta+ for life
             </div>
             <div style={{ fontSize: 13.5, color: T.dim, lineHeight: 1.5 }}>
-              Everyone who joins during the beta gets a Founders account — full Rally+ access, permanently. When we launch paid plans, you're grandfathered in forever.
+              Everyone who joins during the beta gets a Founders account — full Volta+ access, permanently. When we launch paid plans, you're grandfathered in forever.
             </div>
           </div>
           <Link href="/request-access" style={{ background: T.amber, color: '#111', textDecoration: 'none', padding: '10px 20px', borderRadius: 10, fontSize: 13, fontWeight: 700, flexShrink: 0 }}>
@@ -105,7 +105,7 @@ export default function PricingPage() {
             </Link>
           </div>
 
-          {/* Rally+ */}
+          {/* Volta+ */}
           <div style={{
             padding: '32px', borderRadius: 20,
             background: 'linear-gradient(135deg, rgba(127,119,221,0.18) 0%, #17171a 70%)',
@@ -116,8 +116,8 @@ export default function PricingPage() {
               BETA = FREE
             </div>
             <div style={{ marginBottom: 24 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: T.violet, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 8 }}>Rally+</div>
-              <div style={{ fontSize: 42, fontWeight: 800, color: T.text, letterSpacing: '-0.03em', lineHeight: 1 }}>TBD</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: T.violet, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 8 }}>Volta+</div>
+              <div style={{ fontSize: 42, fontWeight: 800, color: T.text, letterSpacing: '-0.03em', lineHeight: 1 }}>$7.99 / mo</div>
               <div style={{ fontSize: 13, color: T.mute, marginTop: 4 }}>after beta · founders get it free</div>
             </div>
             <ul style={{ listStyle: 'none', margin: '0 0 32px', padding: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -129,7 +129,7 @@ export default function PricingPage() {
               ))}
             </ul>
             <Link href="/request-access" style={{ marginTop: 'auto', display: 'block', textAlign: 'center', padding: '12px', borderRadius: 10, background: T.violet, color: '#fff', textDecoration: 'none', fontSize: 14, fontWeight: 700, boxShadow: '0 4px 16px rgba(127,119,221,0.35)' }}>
-              Join beta — get Rally+ free →
+              Join beta — get Volta+ free →
             </Link>
           </div>
         </div>
@@ -142,10 +142,10 @@ export default function PricingPage() {
         </h2>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
           {[
-            { q: 'What happens when beta ends?', a: "Everyone who joined during beta keeps their Rally+ access, permanently. We'll introduce a paid plan for new users after launch — beta users are grandfathered in at no cost." },
+            { q: 'What happens when beta ends?', a: "Everyone who joined during beta keeps their Volta+ access, permanently. We'll introduce a paid plan for new users after launch — beta users are grandfathered in at no cost." },
             { q: 'Do I need a credit card to join?', a: 'No. Volta is completely free during beta. No credit card, no trial period, no gotcha.' },
-            { q: 'How many people can be in a group?', a: 'Up to 8 people per group on the Free plan. Rally+ increases this limit — exact numbers coming soon.' },
-            { q: 'What is Rally+?', a: "Rally+ is our paid tier coming after beta. It adds unlimited groups, post-event photo albums, calendar sync, and more. Beta users get it free, forever." },
+            { q: 'How many people can be in a group?', a: 'Up to 8 people per group on the Free plan. Volta+ increases this limit — exact numbers coming soon.' },
+            { q: 'What is Volta+?', a: "Volta+ is our paid tier coming after beta. It adds unlimited groups, post-event photo albums, calendar sync, and more. Beta users get it free as a Founders account, forever." },
           ].map((item, i) => (
             <div key={i} style={{ padding: '20px 0', borderBottom: `1px solid ${T.border}` }}>
               <h3 style={{ margin: '0 0 8px', fontSize: 15, fontWeight: 700, color: T.text }}>{item.q}</h3>

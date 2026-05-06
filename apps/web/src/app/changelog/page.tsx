@@ -37,7 +37,7 @@ const entries: {
     items: [
       'Volta is live — closed beta open to invited users',
       'Request access flow: name + email form, admin approval panel',
-      'Founders accounts: all beta users get Rally+ for life',
+      'Founders accounts: all beta users get Founders accounts (free Volta+ for life)',
       'User invite system: 5 invite credits per account',
       'Admin panel at /admin for managing access requests',
     ],

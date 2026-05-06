@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { Users } from 'lucide-react'
 
-const TIER_LABELS = ['Free', 'Tier 1', 'Tier 2', 'Rally+'] as const
+const TIER_LABELS = ['Free', 'Tier 1', 'Volta+', 'Founders'] as const
 
 interface GroupCardProps {
   group: {

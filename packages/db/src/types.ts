@@ -23,7 +23,7 @@ export interface Database {
           home_address:        string | null
           home_lat:            number | null
           home_lng:            number | null
-          // Rally+ flags (formerly is_podium / boost_count)
+          // Volta+ / Founders flags (formerly is_podium / boost_count)
           is_rally_plus:       boolean
           back_count:          number      // backs available to spend on groups
           created_at:          string

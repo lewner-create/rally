@@ -54,7 +54,7 @@ export default function TermsPage() {
         <p style={s.p}>Volta is currently in beta. The Service is provided "as is" without any guarantees of availability, performance, or data retention. Features may change, be removed, or be unavailable without notice during beta. We will make reasonable efforts to preserve your data, but cannot guarantee it.</p>
 
         <h2 style={s.h2}>6. Paid features</h2>
-        <p style={s.p}>The Service is currently free during beta. Users who join during the beta period ("Founders") will receive access to Rally+ features at no charge, permanently, as a thank-you for participating in beta. We reserve the right to introduce paid plans for new users after the beta period ends. Founders will not be charged retroactively.</p>
+        <p style={s.p}>The Service is currently free during beta. Users who join during the beta period ("Founders") will receive access to Volta+ features at no charge, permanently, as a thank-you for participating in beta. We reserve the right to introduce paid plans for new users after the beta period ends. Founders will not be charged retroactively.</p>
 
         <h2 style={s.h2}>7. Termination</h2>
         <p style={s.p}>You may delete your account at any time through the Settings page. We may suspend or terminate your account if you violate these Terms or engage in conduct harmful to other users or the Service. Upon termination, your right to use the Service ends immediately.</p>

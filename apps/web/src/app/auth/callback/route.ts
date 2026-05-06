@@ -1,49 +1,74 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code  = searchParams.get('code')
   const next  = searchParams.get('next') ?? '/dashboard'
-  const error = searchParams.get('error')
 
-  if (error) {
-    console.error('OAuth error:', error)
-    return NextResponse.redirect(`${origin}/login?error=${error}`)
+  if (!code) {
+    return NextResponse.redirect(`${origin}/login?error=no_code`)
   }
 
-  if (code) {
-    const supabase = await createClient()
-    const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
+  const supabase = await createClient()
 
-    if (!exchangeError && data.session) {
-      const providerToken        = data.session.provider_token
-      const providerRefreshToken = data.session.provider_refresh_token
+  const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
+  if (exchangeError) {
+    return NextResponse.redirect(`${origin}/login?error=auth_failed`)
+  }
 
-      if (providerToken) {
-        try {
-          await supabase.from('calendar_connections').upsert({
-            user_id:       data.session.user.id,
-            provider:      'google',
-            access_token:  providerToken,
-            refresh_token: providerRefreshToken ?? null,
-            updated_at:    new Date().toISOString(),
-          }, { onConflict: 'user_id,provider' })
-        } catch (_) {}
-      }
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return NextResponse.redirect(`${origin}/login?error=no_user`)
+  }
 
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('display_name, preferences')
-        .eq('id', data.session.user.id)
-        .single()
+  // ── Access gate ───────────────────────────────────────────────
+  // Check if this email is approved in access_requests.
+  // Admin client bypasses RLS so we can read any row.
+  const admin = createAdminClient()
+  const { data: request_ } = await admin
+    .from('access_requests')
+    .select('status')
+    .eq('email', user.email?.toLowerCase() ?? '')
+    .maybeSingle()
 
-      const needsOnboarding = !profile?.preferences?.onboarded
-      const redirectTo = needsOnboarding ? '/onboarding' : next
+  // Also allow if they were invited directly via inviteUserByEmail
+  // (those users are auto-confirmed by Supabase, check user metadata)
+  const isInvited = user.user_metadata?.invited === true ||
+                    user.app_metadata?.provider === 'email' && user.email_confirmed_at
 
-      return NextResponse.redirect(`${origin}${redirectTo}`)
+  const isApproved = request_?.status === 'approved'
+
+  if (!isApproved && !isInvited) {
+    // Sign them out and delete the auto-created auth user
+    await supabase.auth.signOut()
+    try {
+      await admin.auth.admin.deleteUser(user.id)
+    } catch {
+      // Best effort — don't fail the redirect if delete fails
     }
+    return NextResponse.redirect(
+      `${origin}/request-access?error=not_approved`
+    )
   }
 
-  return NextResponse.redirect(`${origin}/login?error=auth_failed`)
+  // ── Calendar connections (existing logic) ─────────────────────
+  try {
+    const accessToken  = searchParams.get('access_token')
+    const refreshToken = searchParams.get('refresh_token')
+    if (accessToken) {
+      await supabase.from('calendar_connections').upsert({
+        user_id:       user.id,
+        provider:      'google',
+        access_token:  accessToken,
+        refresh_token: refreshToken,
+        updated_at:    new Date().toISOString(),
+      }, { onConflict: 'user_id,provider' })
+    }
+  } catch {
+    // calendar_connections may not exist yet — silent
+  }
+
+  return NextResponse.redirect(`${origin}${next}`)
 }

@@ -377,7 +377,7 @@ export default function LandingPage({ stats }: { stats?: Stats }) {
             borderRadius: 9, fontSize: isMobile ? 13 : 13.5, fontWeight: 600,
             boxShadow: '0 2px 10px rgba(127,119,221,0.3)',
             whiteSpace: 'nowrap',
-          }}>Sign up free</Link>
+          }}>Request access</Link>
         </div>
       </nav>
 

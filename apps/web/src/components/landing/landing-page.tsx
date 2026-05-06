@@ -717,7 +717,12 @@ export default function LandingPage({ stats }: { stats?: Stats }) {
               }}>{col.title}</div>
               <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 9 }}>
                 {col.links.map(l => (
-                  <li key={l} style={{ fontSize: 13.5, color: T.textDim, cursor: 'pointer' }}>{l}</li>
+                  <li key={l}>
+  <a href={({'Features':'/features','Pricing':'/pricing','Changelog':'/changelog','About':'/about','Privacy':'/privacy','Terms':'/terms','Cookies':'/cookies'} as Record<string,string>)[l] ?? '#'}
+    style={{ fontSize: 13.5, color: T.textDim, textDecoration: 'none', display: 'block', cursor: 'pointer' }}>
+    {l}
+  </a>
+</li>
                 ))}
               </ul>
             </div>

@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
+import { ChatBubble } from '@/components/chat/chat-bubble'
 import { createClient } from '@/lib/supabase/server'
-import { MobileLayoutWrapper } from '@/components/layout/mobile-layout-wrapper'
+import { Sidebar } from '@/components/layout/sidebar'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -24,8 +25,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <MobileLayoutWrapper groups={userGroups}>
-      {children}
-    </MobileLayoutWrapper>
+    <div className="flex h-screen overflow-hidden">
+      <Sidebar groups={userGroups} userId={user.id} />
+      <main className="flex-1 overflow-y-auto" style={{ background: '#0f0f0f' }}>
+        {children}
+        <ChatBubble />
+      </main>
+    </div>
   )
 }

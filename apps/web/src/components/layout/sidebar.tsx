@@ -3,10 +3,11 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
-import { Settings, LogOut, MessageSquare, Plus, ChevronDown, LayoutDashboard, X } from 'lucide-react'
+import { Settings, LogOut, MessageSquare, Plus, ChevronDown, LayoutDashboard } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
+import { NotificationBell } from '@/components/notifications/notification-bell'
 
 interface Group {
   id: string
@@ -17,13 +18,12 @@ interface Group {
 
 interface SidebarProps {
   groups: Group[]
-  mobileOpen?: boolean
-  onMobileClose?: () => void
+  userId: string
 }
 
-export function Sidebar({ groups, mobileOpen = false, onMobileClose }: SidebarProps) {
+export function Sidebar({ groups, userId }: SidebarProps) {
   const pathname = usePathname()
-  const router = useRouter()
+  const router   = useRouter()
   const [groupsOpen, setGroupsOpen] = useState(true)
 
   async function handleSignOut() {
@@ -32,47 +32,27 @@ export function Sidebar({ groups, mobileOpen = false, onMobileClose }: SidebarPr
     router.push('/login')
   }
 
-  // Close mobile sidebar when navigating
-  const close = () => onMobileClose?.()
-
   const isGroupActive = (id: string) => pathname.startsWith(`/groups/${id}`)
 
   return (
-    <aside
-      className={cn(
-        // Base
-        'flex flex-col h-full border-r bg-background',
-        // Mobile: fixed overlay, slides in/out
-        'fixed inset-y-0 left-0 z-50 w-[280px] transition-transform duration-200 ease-in-out',
-        mobileOpen ? 'translate-x-0' : '-translate-x-full',
-        // Desktop: static in flex flow, always visible
-        'md:relative md:inset-auto md:z-auto md:w-56 md:translate-x-0 md:flex-shrink-0',
-      )}
-      style={{ borderColor: '#1e1e1e' }}
-    >
-      {/* Wordmark row — close button visible on mobile only */}
-      <div className="px-5 py-5 pb-4 flex items-center justify-between">
+    <aside className="flex flex-col h-full w-56 border-r bg-background" style={{ borderColor: '#1e1e1e' }}>
+
+      {/* Wordmark */}
+      <div className="px-5 py-5 pb-4">
         <span
           className="text-[22px] font-medium tracking-[-0.03em] leading-none"
           style={{ color: 'var(--rally-primary)' }}
         >
           volta
         </span>
-        <button
-          onClick={close}
-          className="md:hidden p-1.5 rounded-md text-[#666] hover:text-white transition-colors"
-          aria-label="Close menu"
-        >
-          <X className="h-4 w-4" />
-        </button>
       </div>
 
       {/* Main nav */}
       <nav className="flex-1 overflow-y-auto px-3 space-y-0.5">
 
+        {/* Messages */}
         <Link
           href="/messages"
-          onClick={close}
           className={cn(
             'flex items-center gap-2.5 px-2.5 py-2 rounded-md text-sm font-medium transition-colors',
             pathname.startsWith('/messages')
@@ -84,9 +64,9 @@ export function Sidebar({ groups, mobileOpen = false, onMobileClose }: SidebarPr
           Messages
         </Link>
 
+        {/* Dashboard */}
         <Link
           href="/dashboard"
-          onClick={close}
           className={cn(
             'flex items-center gap-2.5 px-2.5 py-2 rounded-md text-sm font-medium transition-colors',
             pathname === '/dashboard'
@@ -116,12 +96,11 @@ export function Sidebar({ groups, mobileOpen = false, onMobileClose }: SidebarPr
             <div className="mt-0.5 space-y-0.5">
               {groups.map(g => {
                 const active = isGroupActive(g.id)
-                const color = g.theme_color ?? '#7F77DD'
+                const color  = g.theme_color ?? '#7F77DD'
                 return (
                   <Link
                     key={g.id}
                     href={`/groups/${g.id}`}
-                    onClick={close}
                     className={cn(
                       'flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors',
                       active
@@ -129,18 +108,15 @@ export function Sidebar({ groups, mobileOpen = false, onMobileClose }: SidebarPr
                         : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
                     )}
                   >
-                    <div
-                      className="h-2 w-2 rounded-full shrink-0"
-                      style={{ background: color }}
-                    />
+                    <div className="h-2 w-2 rounded-full shrink-0" style={{ background: color }} />
                     <span className="truncate">{g.name}</span>
                   </Link>
                 )
               })}
 
+              {/* New group */}
               <Link
                 href="/groups/new"
-                onClick={close}
                 className="flex items-center gap-2 px-2.5 py-2 mt-1 rounded-md text-sm font-semibold transition-colors"
                 style={{
                   background: 'rgba(127,119,221,0.12)',
@@ -158,9 +134,20 @@ export function Sidebar({ groups, mobileOpen = false, onMobileClose }: SidebarPr
 
       {/* Bottom actions */}
       <div className="px-3 pb-4 pt-2 border-t" style={{ borderColor: '#1e1e1e' }}>
+
+        {/* Notification bell row */}
+        <div style={{
+          display: 'flex', alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '4px 2px 4px 10px',
+          marginBottom: '2px',
+        }}>
+          <span style={{ fontSize: '13px', fontWeight: 500, color: '#555' }}>Notifications</span>
+          <NotificationBell userId={userId} />
+        </div>
+
         <Link
           href="/settings"
-          onClick={close}
           className={cn(
             'flex items-center gap-2.5 px-2.5 py-2 rounded-md text-sm font-medium transition-colors mt-1',
             pathname === '/settings'
@@ -171,6 +158,7 @@ export function Sidebar({ groups, mobileOpen = false, onMobileClose }: SidebarPr
           <Settings className="h-4 w-4 shrink-0" />
           Settings
         </Link>
+
         <button
           onClick={handleSignOut}
           className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"

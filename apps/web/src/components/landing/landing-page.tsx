@@ -707,7 +707,7 @@ export default function LandingPage({ stats }: { stats?: Stats }) {
           </div>
           {[
             { title: 'Product', links: ['Features', 'Pricing', 'Changelog'] },
-            { title: 'Company', links: ['About', 'Blog', 'Careers'] },
+            { title: 'Company', links: ['About', ''] },
             { title: 'Legal',   links: ['Privacy', 'Terms', 'Cookies'] },
           ].map(col => (
             <div key={col.title}>

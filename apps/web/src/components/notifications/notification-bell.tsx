@@ -29,12 +29,12 @@ function timeAgo(dateStr: string) {
 
 function typeIcon(type: Notification['type']) {
   switch (type) {
-    case 'new_plan':    return '📋'
-    case 'plan_locked': return '🔒'
-    case 'nudge':       return '👋'
-    case 'new_member':  return '👤'
-    case 'new_message': return '💬'
-    default:            return '🔔'
+    case 'new_plan':    return ''
+    case 'plan_locked': return ''
+    case 'nudge':       return ''
+    case 'new_member':  return ''
+    case 'new_message': return ''
+    default:            return ''
   }
 }
 
@@ -276,7 +276,7 @@ export function NotificationBell({ userId }: { userId: string }) {
               display: 'flex', alignItems: 'center',
               gap: '10px', flexShrink: 0,
             }}>
-              <span style={{ fontSize: '18px' }}>🔔</span>
+              <span style={{ fontSize: '18px' }}></span>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: '13px', fontWeight: 600, color: '#e0e0e0' }}>
                   Enable alerts

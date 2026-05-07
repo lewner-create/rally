@@ -14,12 +14,12 @@ const WEEKEND: DayKey[]  = ['sat', 'sun']
 const ALL_DAYS: DayKey[] = [...WEEKDAYS, WEEKEND[0], WEEKEND[1]]
 
 const PRESETS = [
-  { id: 'weeknights',     label: 'Weeknights',     description: 'Mon–Fri evenings',    emoji: '🌆', days: WEEKDAYS,                         hours: [19, 20, 21, 22] },
-  { id: 'weekend_days',   label: 'Weekend days',   description: 'Sat & Sun daytime',   emoji: '☀️', days: WEEKEND,                          hours: [10, 11, 12, 13, 14, 15, 16, 17] },
-  { id: 'weekend_nights', label: 'Weekend nights', description: 'Fri–Sun evenings',    emoji: '🌙', days: ['fri' as DayKey, ...WEEKEND],     hours: [20, 21, 22, 23] },
-  { id: 'mornings',       label: 'Mornings',       description: 'Every day, 8am–noon', emoji: '🌅', days: ALL_DAYS,                         hours: [7, 8, 9, 10, 11] },
-  { id: 'midday',         label: 'Midday',         description: 'Every day, noon–5pm', emoji: '⛅', days: WEEKDAYS,                         hours: [11, 12, 13, 14] },
-  { id: 'late_nights',    label: 'Late nights',    description: 'Any day, 10pm+',      emoji: '🏙️', days: ALL_DAYS,                         hours: [23] },
+  { id: 'weeknights',     label: 'Weeknights',     description: 'Mon–Fri evenings',    emoji: '', days: WEEKDAYS,                         hours: [19, 20, 21, 22] },
+  { id: 'weekend_days',   label: 'Weekend days',   description: 'Sat & Sun daytime',   emoji: '☀', days: WEEKEND,                          hours: [10, 11, 12, 13, 14, 15, 16, 17] },
+  { id: 'weekend_nights', label: 'Weekend nights', description: 'Fri–Sun evenings',    emoji: '', days: ['fri' as DayKey, ...WEEKEND],     hours: [20, 21, 22, 23] },
+  { id: 'mornings',       label: 'Mornings',       description: 'Every day, 8am–noon', emoji: '', days: ALL_DAYS,                         hours: [7, 8, 9, 10, 11] },
+  { id: 'midday',         label: 'Midday',         description: 'Every day, noon–5pm', emoji: '', days: WEEKDAYS,                         hours: [11, 12, 13, 14] },
+  { id: 'late_nights',    label: 'Late nights',    description: 'Any day, 10pm+',      emoji: '🏙', days: ALL_DAYS,                         hours: [23] },
 ]
 
 function presetsToWeekly(selected: string[]): WeeklyAvailability {
@@ -131,12 +131,12 @@ export function OnboardingFlow() {
                   sub: 'Just rough availability — what your week usually looks like. Takes a minute.',
                 },
                 {
-                  emoji: '⚡',
+                  emoji: '',
                   title: 'See what works',
                   sub: "We'll show when your group lines up, so you're not guessing.",
                 },
                 {
-                  emoji: '✅',
+                  emoji: '',
                   title: 'Make it happen',
                   sub: 'Pick a time, see who\'s in, lock it in. Done.',
                 },

@@ -55,10 +55,10 @@ function formatTime(iso: string) {
 }
 function greeting(name: string) {
   const h = new Date().getHours()
-  if (h < 12) return `Good morning, ${name} ☀️`
-  if (h < 17) return `Hey, ${name} 👋`
-  if (h < 21) return `Evening, ${name} 🌙`
-  return `Hey, ${name} 🌙`
+  if (h < 12) return `Good morning, ${name} ☀`
+  if (h < 17) return `Hey, ${name} `
+  if (h < 21) return `Evening, ${name} `
+  return `Hey, ${name} `
 }
 function useIsMobile(bp = 768) {
   const [v, setV] = useState(false)
@@ -146,7 +146,7 @@ function BestWindowCTA({ groups }: { groups: GroupWithWindows[] }) {
           fontSize: 11, fontWeight: 700, letterSpacing: '0.06em',
           textTransform: 'uppercase', color: accent, marginBottom: 6,
         }}>
-          ⚡ Best window right now
+           Best window right now
         </div>
 
         {/* Window */}
@@ -195,7 +195,7 @@ function HeroPlan({ plan, isMobile }: { plan: UpcomingPlan; isMobile: boolean })
             <span style={{ fontSize: 12.5, color: T.textDim, fontWeight: 500 }}>{plan.group_name}</span>
             <span style={{ color: T.textFaint }}>·</span>
             <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', color: T.green, textTransform: 'uppercase' }}>
-              {plan.my_rsvp === 'yes' ? "✓ You're in" : '📅 Coming up'}
+              {plan.my_rsvp === 'yes' ? "✓ You're in" : ' Coming up'}
             </span>
           </div>
           <div style={{ fontSize: isMobile ? 22 : 26, fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 4, lineHeight: 1.15 }}>{plan.title}</div>
@@ -221,7 +221,7 @@ function EmptyHero({ hasGroups, isMobile }: { hasGroups: boolean; isMobile: bool
   return (
     <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 18, padding: isMobile ? '22px 18px' : '28px 24px', background: `radial-gradient(120% 100% at 0% 0%, rgba(127,119,221,0.32), transparent 60%), linear-gradient(160deg, #1a1430 0%, #2a1a3e 100%)`, border: `1px solid rgba(127,119,221,0.25)` }}>
       <div style={{ display: 'flex', marginBottom: 14 }}>
-        {['👋','🍻','🎲','🏔️'].map((e, i) => (
+        {['','','','🏔'].map((e, i) => (
           <div key={i} style={{ width: 40, height: 40, borderRadius: '50%', background: `hsl(${260 + i * 22} 40% 22%)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, marginLeft: i === 0 ? 0 : -10, border: `2px solid ${T.bg}` }}>{e}</div>
         ))}
       </div>
@@ -264,7 +264,7 @@ function NeedsYouSection({ items }: { items: NeedsYouItem[] }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {visible.map(item => (
           <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 12, background: T.bgElev, border: `1px solid ${T.border}` }}>
-            <div style={{ width: 32, height: 32, borderRadius: 8, flexShrink: 0, background: T.amberSoft, color: T.amber, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🕐</div>
+            <div style={{ width: 32, height: 32, borderRadius: 8, flexShrink: 0, background: T.amberSoft, color: T.amber, display: 'flex', alignItems: 'center', justifyContent: 'center' }}></div>
             <div style={{ flex: 1, minWidth: 0 }}>
               {item.group_color && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
@@ -289,7 +289,7 @@ function NeedsYouSection({ items }: { items: NeedsYouItem[] }) {
 // ── What's brewing ────────────────────────────────────────────────
 function BrewingSection({ groups }: { groups: GroupWithWindows[] }) {
   const items = groups.filter(g => g.next_window || g.member_count > 1).slice(0, 4).map(g => ({
-    icon: g.next_window ? '⚡' : '👥',
+    icon: g.next_window ? '' : '',
     group: g.name, groupId: g.id, groupColor: g.theme_color,
     text: g.next_window
       ? `${g.next_window.members.length} ${g.next_window.members.length === 1 ? 'person' : 'people'} free ${g.next_window.label.toLowerCase()}`

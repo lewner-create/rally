@@ -175,7 +175,7 @@ export default function BannerPicker({ currentBannerUrl, onChange, groupName }: 
             disabled={uploading}
             className="w-full h-16 rounded-xl border-2 border-dashed border-[#2a2a2a] flex items-center justify-center gap-2 text-sm text-[#555] hover:text-[#999] hover:border-[#444] transition-colors"
           >
-            <span className="text-lg">📁</span>
+            <span className="text-lg"></span>
             {uploading ? 'Uploading…' : uploadPreview ? 'Change image' : 'Choose an image'}
           </button>
           <p className="text-[#444] text-xs mt-2">JPG, PNG or WebP. Displays at 3:1 aspect ratio.</p>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { GroupChatDrawer } from '@/components/groups/group-chat-drawer'
 
@@ -48,29 +48,306 @@ type Props = {
   proactiveBannerSlot?: React.ReactNode
 }
 
-const EVENT_TYPE_EMOJI: Record<string, string> = {
-  vacation: '✈️', day_trip: '🚗', road_trip: '🛣️',
-  game_night: '🎮', hangout: '🛋️', meetup: '👋', moto_trip: '🏍️',
+// ─── Event type labels ─────────────────────────────────────────────────────────
+const EVENT_TYPE_LABEL: Record<string, string> = {
+  vacation:   'Vacation',
+  day_trip:   'Day trip',
+  road_trip:  'Road trip',
+  game_night: 'Game night',
+  hangout:    'Hangout',
+  meetup:     'Meetup',
+  moto_trip:  'Moto trip',
 }
 
-function formatDate(d: string | null) {
-  if (!d) return null
-  return new Date(d).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+// ─── Helpers ───────────────────────────────────────────────────────────────────
+function parseDateStr(s: string | null): Date | null {
+  if (!s) return null
+  // Handle "2026-05-10", "2026-05-10T19:00:00Z", "2026-05-10 19:00:00+00"
+  const normalised = s.replace(' ', 'T')
+  const d = new Date(normalised)
+  return isNaN(d.getTime()) ? null : d
 }
 
-function formatTime(t: string | null) {
+function formatDate(d: string | null): string | null {
+  const date = parseDateStr(d)
+  if (!date) return null
+  return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+}
+
+function formatTime(t: string | null): string | null {
   if (!t) return null
-  const [h, m] = t.split(':').map(Number)
+  // Accept "HH:MM", "HH:MM:SS", or full ISO
+  const timePart = t.includes('T') ? t.split('T')[1] : t
+  const [hStr, mStr] = timePart.split(':')
+  const h = parseInt(hStr, 10)
+  const m = parseInt(mStr, 10)
+  if (isNaN(h)) return null
   const suffix = h >= 12 ? 'pm' : 'am'
-  const hour = h > 12 ? h - 12 : h === 0 ? 12 : h
-  return m === 0 ? `${hour}${suffix}` : `${hour}:${String(m).padStart(2, '0')}${suffix}`
+  const hour   = h > 12 ? h - 12 : h === 0 ? 12 : h
+  return isNaN(m) || m === 0 ? `${hour}${suffix}` : `${hour}:${String(m).padStart(2, '0')}${suffix}`
 }
 
-// ── Two-choice start CTA ──────────────────────────────────────────
+function relativeDate(s: string | null): string | null {
+  const d = parseDateStr(s)
+  if (!d) return null
+  const now   = new Date()
+  const diff  = d.getTime() - now.getTime()
+  const days  = Math.ceil(diff / 86_400_000)
+  if (days < 0)  return 'past'
+  if (days === 0) return 'today'
+  if (days === 1) return 'tomorrow'
+  if (days <= 6)  return `in ${days} days`
+  return formatDate(s)
+}
+
+// ─── FOMO copy based on response counts ───────────────────────────────────────
+function getFomoCopy(inCount: number, total: number): string {
+  if (total === 0)   return "Be the first to say you're in"
+  if (inCount === 0) return "No one's committed yet — be the first"
+  if (inCount === 1) return "1 person is in — they need you to make it happen"
+  if (inCount === 2) return "2 people in — one more and this is happening"
+  if (inCount >= 3)  return `${inCount} people in — don't be the one who misses this`
+  return `${inCount} people in`
+}
+
+// ─── Locked event hero ─────────────────────────────────────────────────────────
+function LockedEventHero({ event, accent }: { event: Event; accent: string }) {
+  const [secondsLeft, setSecondsLeft] = useState<number | null>(null)
+
+  useEffect(() => {
+    const target = parseDateStr(event.starts_at)
+    if (!target) return
+    const update = () => {
+      const diff = Math.max(0, Math.floor((target.getTime() - Date.now()) / 1000))
+      setSecondsLeft(diff)
+    }
+    update()
+    const id = setInterval(update, 1000)
+    return () => clearInterval(id)
+  }, [event.starts_at])
+
+  function formatCountdown(s: number): string {
+    const d  = Math.floor(s / 86400)
+    const h  = Math.floor((s % 86400) / 3600)
+    const m  = Math.floor((s % 3600) / 60)
+    const sc = s % 60
+    if (d > 0) return `${d}d ${h}h ${m}m`
+    if (h > 0) return `${h}h ${m}m ${sc}s`
+    return `${m}m ${sc}s`
+  }
+
+  const typeLabel = EVENT_TYPE_LABEL[event.event_type] ?? event.event_type
+  const dateStr   = formatDate(event.starts_at)
+  const timeStr   = formatTime(event.starts_at)
+
+  return (
+    <Link href={`/events/${event.id}`} className="block mb-4">
+      <div
+        className="rounded-2xl overflow-hidden relative"
+        style={{
+          background: `linear-gradient(145deg, ${accent}33 0%, #111 70%)`,
+          border: `1.5px solid ${accent}55`,
+        }}
+      >
+        {/* Glow */}
+        <div
+          className="absolute -top-12 -right-12 w-48 h-48 rounded-full pointer-events-none"
+          style={{ background: accent, opacity: 0.12, filter: 'blur(48px)' }}
+        />
+
+        <div className="relative p-5">
+          {/* Status row */}
+          <div className="flex items-center gap-2 mb-3">
+            <span
+              className="text-[9px] font-bold tracking-widest uppercase px-2.5 py-1 rounded-full"
+              style={{ background: `${accent}33`, color: accent }}
+            >
+              {typeLabel}
+            </span>
+            <span
+              className="text-[9px] font-bold tracking-widest uppercase px-2.5 py-1 rounded-full flex items-center gap-1.5"
+              style={{ background: 'rgba(52,211,153,0.15)', color: '#34d399' }}
+            >
+              <span
+                className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400"
+                style={{ animation: 'pulse 2s infinite' }}
+              />
+              Locked in
+            </span>
+          </div>
+
+          {/* Event name */}
+          <h2
+            className="text-xl font-bold text-white mb-3 leading-tight"
+            style={{ letterSpacing: '-0.02em' }}
+          >
+            {event.name}
+          </h2>
+
+          {/* Date / time / location */}
+          <div className="space-y-1.5 mb-4">
+            {dateStr ? (
+              <p className="text-sm font-semibold text-white/80">
+                {dateStr}{timeStr ? ` · ${timeStr}` : ''}
+              </p>
+            ) : (
+              <p className="text-sm text-[#555]">Date TBD</p>
+            )}
+            {event.location && (
+              <p className="text-xs text-[#666]">{event.location}</p>
+            )}
+          </div>
+
+          {/* Countdown */}
+          {secondsLeft !== null && secondsLeft > 0 && (
+            <div
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg mb-4"
+              style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}
+            >
+              <span className="text-xs text-[#888]">Starts in</span>
+              <span className="text-sm font-bold text-white tabular-nums">
+                {formatCountdown(secondsLeft)}
+              </span>
+            </div>
+          )}
+
+          {/* CTA */}
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-semibold" style={{ color: accent }}>
+              View details
+            </span>
+            <span style={{ color: accent, fontSize: 16 }}>→</span>
+          </div>
+        </div>
+      </div>
+    </Link>
+  )
+}
+
+// ─── FOMO plan card ────────────────────────────────────────────────────────────
+function ActivePlanCard({ card, accent }: { card: ActiveCard; accent: string }) {
+  const counts   = card.response_counts ?? { in: 0, maybe: 0, cant: 0 }
+  const total    = counts.in + counts.maybe + counts.cant
+  const fomoCopy = getFomoCopy(counts.in, total)
+  const relDate  = relativeDate(card.proposed_date)
+  const typeLabel = EVENT_TYPE_LABEL[card.event_type] ?? card.event_type
+
+  // Urgency colour: green if lots in, amber if few, default if none
+  const urgencyColor = counts.in >= 3 ? '#34d399' : counts.in >= 1 ? '#fbbf24' : '#555'
+
+  return (
+    <Link href={`/plans/${card.id}`} className="block">
+      <div
+        className="rounded-xl overflow-hidden transition-all hover:border-[#3a3a3a]"
+        style={{
+          background: `linear-gradient(135deg, ${accent}10 0%, #1a1a1a 60%)`,
+          border: `1px solid ${accent}30`,
+        }}
+      >
+        {/* Top bar */}
+        <div
+          className="flex items-center justify-between px-4 py-2.5 border-b"
+          style={{ borderColor: `${accent}20` }}
+        >
+          <span
+            className="text-[9px] font-bold tracking-widest uppercase"
+            style={{ color: accent }}
+          >
+            {typeLabel} · checking who's in
+          </span>
+          {relDate && relDate !== 'past' && (
+            <span className="text-[9px] font-semibold text-[#555] uppercase tracking-wider">
+              {relDate}
+            </span>
+          )}
+        </div>
+
+        <div className="p-4">
+          {/* Title */}
+          <p className="text-white font-semibold text-base mb-1 leading-tight">{card.title}</p>
+
+          {/* Proposed time */}
+          {card.proposed_date && (
+            <p className="text-[#555] text-xs mb-3">
+              {formatDate(card.proposed_date)}
+              {card.proposed_start && ` · ${formatTime(card.proposed_start)}`}
+            </p>
+          )}
+
+          {/* FOMO copy */}
+          <p
+            className="text-sm font-medium mb-3 leading-snug"
+            style={{ color: urgencyColor }}
+          >
+            {fomoCopy}
+          </p>
+
+          {/* Response bar */}
+          {total > 0 ? (
+            <div className="space-y-2">
+              <div className="flex h-1.5 rounded-full overflow-hidden gap-0.5">
+                {counts.in > 0    && <div className="bg-emerald-500 rounded-full" style={{ width: `${(counts.in / total) * 100}%` }} />}
+                {counts.maybe > 0 && <div className="bg-yellow-500 rounded-full"  style={{ width: `${(counts.maybe / total) * 100}%` }} />}
+                {counts.cant > 0  && <div className="bg-[#333] rounded-full"       style={{ width: `${(counts.cant / total) * 100}%` }} />}
+              </div>
+              <div className="flex gap-4 text-xs">
+                <span className="text-emerald-500 font-medium">{counts.in} in</span>
+                <span className="text-yellow-500">{counts.maybe} maybe</span>
+                <span className="text-[#444]">{counts.cant} can't</span>
+              </div>
+            </div>
+          ) : (
+            <div
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs"
+              style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
+            >
+              <span className="text-[#555]">No responses yet</span>
+              <span className="ml-auto font-semibold" style={{ color: accent }}>Respond →</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </Link>
+  )
+}
+
+// ─── Upcoming event row ────────────────────────────────────────────────────────
+function UpcomingEventRow({ event, accent }: { event: Event; accent: string }) {
+  const dateStr = formatDate(event.starts_at)
+  const timeStr = formatTime(event.starts_at)
+  const typeLabel = EVENT_TYPE_LABEL[event.event_type] ?? event.event_type
+
+  return (
+    <Link href={`/events/${event.id}`} className="block">
+      <div
+        className="flex items-center gap-3 py-3 border-b last:border-0 -mx-4 px-4 transition-colors hover:bg-[#1e1e1e]"
+        style={{ borderColor: '#222' }}
+      >
+        <div
+          className="w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center text-[9px] font-bold uppercase tracking-wider"
+          style={{ background: `${accent}22`, color: accent, letterSpacing: '0.04em' }}
+        >
+          {typeLabel.slice(0, 2)}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-white text-sm font-medium truncate">{event.name}</p>
+          <p className="text-[#555] text-xs mt-0.5">
+            {dateStr
+              ? <>{dateStr}{timeStr && ` · ${timeStr}`}{event.location && ` · ${event.location}`}</>
+              : 'Date TBD'
+            }
+          </p>
+        </div>
+        <span className="text-[#444] flex-shrink-0 text-sm">→</span>
+      </div>
+    </Link>
+  )
+}
+
+// ─── Start something buttons ───────────────────────────────────────────────────
 function StartSomethingButtons({ groupId, accent }: { groupId: string; accent: string }) {
   return (
     <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-      {/* Check who's in — soft secondary */}
       <a
         href={`/groups/${groupId}/plans/new`}
         style={{
@@ -80,12 +357,9 @@ function StartSomethingButtons({ groupId, accent }: { groupId: string; accent: s
           background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)',
         }}
       >
-        <span style={{ fontSize: 20 }}>👋</span>
         <span style={{ fontSize: 13.5, fontWeight: 700, color: '#fff' }}>Check who's in</span>
         <span style={{ fontSize: 12, color: '#666', lineHeight: 1.35 }}>Send a poll, see who's free</span>
       </a>
-
-      {/* Lock in a plan — primary accent */}
       <a
         href={`/groups/${groupId}/events/new`}
         style={{
@@ -95,7 +369,6 @@ function StartSomethingButtons({ groupId, accent }: { groupId: string; accent: s
           background: `${accent}22`, border: `1px solid ${accent}40`,
         }}
       >
-        <span style={{ fontSize: 20 }}>📅</span>
         <span style={{ fontSize: 13.5, fontWeight: 700, color: accent }}>Lock in a plan</span>
         <span style={{ fontSize: 12, color: '#666', lineHeight: 1.35 }}>Create a confirmed event</span>
       </a>
@@ -103,83 +376,7 @@ function StartSomethingButtons({ groupId, accent }: { groupId: string; accent: s
   )
 }
 
-// ── Active plan card ──────────────────────────────────────────────
-function ActivePlanCard({ card, accent }: { card: ActiveCard; accent: string }) {
-  const counts = card.response_counts ?? { in: 0, maybe: 0, cant: 0 }
-  const total  = counts.in + counts.maybe + counts.cant
-
-  return (
-    <Link href={`/plans/${card.id}`} className="block">
-      <div
-        className="rounded-xl p-4 transition-colors hover:border-[#333]"
-        style={{ background: '#1a1a1a', border: '1px solid #252525' }}
-      >
-        <div className="flex items-start justify-between gap-3 mb-3">
-          <div className="min-w-0">
-            <div className="flex items-center gap-1.5 mb-0.5">
-              <span className="text-base">{EVENT_TYPE_EMOJI[card.event_type] ?? '📅'}</span>
-              <span className="text-[10px] uppercase tracking-widest font-semibold" style={{ color: accent }}>
-                checking who's in
-              </span>
-            </div>
-            <p className="text-white font-medium text-sm truncate">{card.title}</p>
-            {card.proposed_date && (
-              <p className="text-[#666] text-xs mt-0.5">
-                {formatDate(card.proposed_date)}
-                {card.proposed_start && ` · ${formatTime(card.proposed_start)}`}
-              </p>
-            )}
-          </div>
-          <span
-            className="text-[10px] font-bold px-2.5 py-1 rounded-full flex-shrink-0"
-            style={{ background: `${accent}22`, color: accent }}
-          >
-            {counts.in} in
-          </span>
-        </div>
-        {total > 0 && (
-          <>
-            <div className="flex h-1.5 rounded-full overflow-hidden gap-0.5">
-              {counts.in > 0    && <div className="bg-emerald-500 rounded-full" style={{ width: `${(counts.in    / total) * 100}%` }} />}
-              {counts.maybe > 0 && <div className="bg-yellow-500  rounded-full" style={{ width: `${(counts.maybe / total) * 100}%` }} />}
-              <div className="bg-[#2a2a2a] rounded-full flex-1" />
-            </div>
-            <div className="flex gap-3 mt-1.5 text-xs">
-              <span className="text-emerald-500">{counts.in} in</span>
-              <span className="text-yellow-500">{counts.maybe} maybe</span>
-              <span className="text-[#555]">{counts.cant} can't</span>
-            </div>
-          </>
-        )}
-      </div>
-    </Link>
-  )
-}
-
-function UpcomingEventRow({ event }: { event: Event }) {
-  return (
-    <Link href={`/events/${event.id}`} className="block">
-      <div
-        className="flex items-center gap-3 py-2.5 border-b last:border-0 hover:bg-[#1e1e1e] -mx-4 px-4 transition-colors"
-        style={{ borderColor: '#222' }}
-      >
-        <span className="text-lg w-7 text-center flex-shrink-0">
-          {EVENT_TYPE_EMOJI[event.event_type] ?? '📅'}
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="text-white text-sm font-medium truncate">{event.name}</p>
-          <p className="text-[#555] text-xs">
-            {formatDate(event.starts_at?.split('T')[0]) ?? 'Date TBD'}
-            {event.starts_at && ` · ${formatTime(event.starts_at?.split('T')[1] ?? '')}`}
-            {event.location && ` · ${event.location}`}
-          </p>
-        </div>
-        <span className="text-[#444] flex-shrink-0">→</span>
-      </div>
-    </Link>
-  )
-}
-
+// ─── Proactive banner ──────────────────────────────────────────────────────────
 function ProactiveBanner({ prompt, accent, groupId }: { prompt: NonNullable<Prompt>; accent: string; groupId: string }) {
   const [dismissed, setDismissed] = useState(false)
   if (dismissed) return null
@@ -188,8 +385,16 @@ function ProactiveBanner({ prompt, accent, groupId }: { prompt: NonNullable<Prom
       className="rounded-xl p-4 mb-4 relative"
       style={{ background: `linear-gradient(135deg, ${accent}18 0%, #1e1e1e 100%)`, border: `1px solid ${accent}33` }}
     >
-      <button onClick={() => setDismissed(true)} className="absolute top-3 right-3 text-[#444] hover:text-[#888] transition-colors text-sm">✕</button>
-      <p className="text-xs font-semibold mb-0.5" style={{ color: accent }}>✦ {prompt.members?.length ?? 0} people are free</p>
+      <button
+        onClick={() => setDismissed(true)}
+        className="absolute top-3 right-3 text-[#444] hover:text-[#888] transition-colors"
+        style={{ fontSize: 16, lineHeight: 1, background: 'none', border: 'none', cursor: 'pointer' }}
+      >
+        ×
+      </button>
+      <p className="text-xs font-semibold mb-0.5" style={{ color: accent }}>
+        {prompt.members?.length ?? 0} people are free right now
+      </p>
       <p className="text-white text-sm font-medium">{prompt.label}</p>
       <p className="text-[#666] text-xs mb-3">{prompt.start_hour}:00–{prompt.end_hour}:00</p>
       <Link
@@ -197,13 +402,13 @@ function ProactiveBanner({ prompt, accent, groupId }: { prompt: NonNullable<Prom
         className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
         style={{ background: `${accent}33`, color: accent }}
       >
-        👋 Check who's in
+        Check who's in →
       </Link>
     </div>
   )
 }
 
-// ── Main component ────────────────────────────────────────────────
+// ─── Main component ────────────────────────────────────────────────────────────
 export function GroupPageClient({
   groupId,
   themeColor,
@@ -215,8 +420,10 @@ export function GroupPageClient({
 }: Props) {
   const [tab, setTab] = useState<'overview' | 'plans'>('overview')
 
-  const accent     = themeColor ?? '#6366f1'
-  const plansBadge = activeCards.length + events.length
+  const accent       = themeColor ?? '#6366f1'
+  const openCards    = activeCards.filter(c => c.status === 'open')
+  const plansBadge   = openCards.length + events.length
+  const hasActivity  = openCards.length > 0 || events.length > 0
 
   return (
     <div className="flex-1 min-h-0 overflow-y-auto" style={{ background: '#111' }}>
@@ -236,7 +443,7 @@ export function GroupPageClient({
               }`}
             >
               {t.label}
-              {t.badge > 0 && (
+              {(t.badge ?? 0) > 0 && (
                 <span
                   className="text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none"
                   style={{ background: accent, color: '#fff' }}
@@ -254,7 +461,7 @@ export function GroupPageClient({
         {/* ── Overview tab ── */}
         {tab === 'overview' && (
           <div>
-            {activeCards.length === 0 && events.length === 0 ? (
+            {!hasActivity ? (
               /* Empty state */
               <div style={{ paddingTop: '8px' }}>
                 <p style={{ fontSize: '13px', color: '#555', marginBottom: '24px', lineHeight: 1.6 }}>
@@ -269,7 +476,6 @@ export function GroupPageClient({
                       background: '#161616', border: '1px solid #252525',
                     }}
                   >
-                    <span style={{ fontSize: '28px' }}>👥</span>
                     <div style={{ textAlign: 'center' }}>
                       <p style={{ fontSize: '14px', fontWeight: 600, color: '#fff', margin: '0 0 3px' }}>Invite people</p>
                       <p style={{ fontSize: '12px', color: '#555', margin: 0 }}>Who's in this group?</p>
@@ -283,7 +489,6 @@ export function GroupPageClient({
                       background: `${accent}12`, border: `1px solid ${accent}33`,
                     }}
                   >
-                    <span style={{ fontSize: '28px' }}>👋</span>
                     <div style={{ textAlign: 'center' }}>
                       <p style={{ fontSize: '14px', fontWeight: 600, color: accent, margin: '0 0 3px' }}>Check who's in</p>
                       <p style={{ fontSize: '12px', color: '#555', margin: 0 }}>See who's free</p>
@@ -292,23 +497,47 @@ export function GroupPageClient({
                 </div>
               </div>
             ) : (
-              /* Normal overview */
               <>
-                {/* Start something card — two choices */}
+                {/* Locked events — hero at top of overview */}
+                {events.length > 0 && (
+                  <div className="mb-5">
+                    <p className="text-[10px] uppercase tracking-widest font-semibold text-[#555] mb-3">
+                      Locked in
+                    </p>
+                    {events.map((event) => (
+                      <LockedEventHero key={event.id} event={event} accent={accent} />
+                    ))}
+                  </div>
+                )}
+
+                {/* Active plan cards */}
+                {openCards.length > 0 && (
+                  <div className="mb-5">
+                    <p className="text-[10px] uppercase tracking-widest font-semibold text-[#555] mb-3">
+                      Who's in?
+                    </p>
+                    <div className="space-y-3">
+                      {openCards.map((card) => (
+                        <ActivePlanCard key={card.id} card={card} accent={accent} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {prompt && <ProactiveBanner prompt={prompt} accent={accent} groupId={groupId} />}
+
+                {/* Start something */}
                 <div
                   className="rounded-2xl p-5 mb-5 relative overflow-hidden"
-                  style={{ background: `linear-gradient(135deg, ${accent}22 0%, #1a1a1a 65%)`, border: `1px solid ${accent}30` }}
+                  style={{ background: `linear-gradient(135deg, ${accent}18 0%, #1a1a1a 65%)`, border: `1px solid ${accent}25` }}
                 >
                   <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full opacity-10 blur-2xl pointer-events-none" style={{ background: accent }} />
                   <div className="relative">
-                    <p className="text-xs uppercase tracking-widest font-semibold mb-1" style={{ color: accent }}>✦ ready to plan?</p>
-                    <h2 className="text-lg font-bold text-white mb-1">Start something</h2>
-                    <p className="text-[#666] text-sm mb-4">Not sure if everyone's free, or already know the plan?</p>
+                    <h2 className="text-base font-bold text-white mb-1">Start something new</h2>
+                    <p className="text-[#666] text-sm mb-4">Check who's free or lock in a plan directly.</p>
                     <StartSomethingButtons groupId={groupId} accent={accent} />
                   </div>
                 </div>
-
-                {prompt && <ProactiveBanner prompt={prompt} accent={accent} groupId={groupId} />}
 
                 <div>
                   <p className="text-[10px] uppercase tracking-widest font-semibold text-[#555] mb-3">Suggested times</p>
@@ -322,33 +551,36 @@ export function GroupPageClient({
         {/* ── Plans tab ── */}
         {tab === 'plans' && (
           <div>
-            {activeCards.length > 0 && (
+            {/* Locked events first — they're the win */}
+            {events.length > 0 && (
               <div className="mb-6">
-                <p className="text-[10px] uppercase tracking-widest font-semibold text-[#555] mb-3">Active</p>
+                <p className="text-[10px] uppercase tracking-widest font-semibold text-[#555] mb-3">Locked in</p>
+                {events.map((event) => (
+                  <LockedEventHero key={event.id} event={event} accent={accent} />
+                ))}
+              </div>
+            )}
+
+            {/* Open plan cards */}
+            {openCards.length > 0 && (
+              <div className="mb-6">
+                <p className="text-[10px] uppercase tracking-widest font-semibold text-[#555] mb-3">Who's in?</p>
                 <div className="space-y-3">
-                  {activeCards.map((card) => (
+                  {openCards.map((card) => (
                     <ActivePlanCard key={card.id} card={card} accent={accent} />
                   ))}
                 </div>
               </div>
             )}
-            {events.length > 0 ? (
-              <div>
-                <p className="text-[10px] uppercase tracking-widest font-semibold text-[#555] mb-2">Upcoming plans</p>
-                <div className="rounded-xl" style={{ background: '#1a1a1a', border: '1px solid #222' }}>
-                  <div className="px-4">
-                    {events.map((event) => <UpcomingEventRow key={event.id} event={event} />)}
-                  </div>
-                </div>
-              </div>
-            ) : activeCards.length === 0 ? (
+
+            {/* Empty state */}
+            {events.length === 0 && openCards.length === 0 && (
               <div className="text-center py-16">
-                <p className="text-4xl mb-4">🗓</p>
                 <p className="text-white font-medium mb-1">Nothing planned yet</p>
                 <p className="text-[#555] text-sm mb-6">Start a plan to kick things off.</p>
                 <StartSomethingButtons groupId={groupId} accent={accent} />
               </div>
-            ) : null}
+            )}
           </div>
         )}
       </div>

@@ -9,8 +9,8 @@ import type { PlanCard as PlanCardType, PlanCardResponseRow } from '@/lib/action
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const EVENT_ICONS: Record<string, string> = {
-  game_night: '🎮', hangout: '☕', meetup: '🤝',
-  day_trip: '🗺️', road_trip: '🚗', moto_trip: '🏍️', vacation: '✈️',
+  game_night: '', hangout: '', meetup: '',
+  day_trip: '🗺', road_trip: '', moto_trip: '🏍', vacation: '✈',
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -185,7 +185,7 @@ export function PlanCard({ planCardId, currentUserId }: PlanCardProps) {
     )
   }
 
-  const icon = EVENT_ICONS[card.event_type] ?? '📅'
+  const icon = EVENT_ICONS[card.event_type] ?? ''
   const toProfiles = (rows: PlanCardResponseRow[]): AvatarProfile[] =>
     rows.map(r => r.profiles ?? { id: r.user_id, display_name: null, username: null, avatar_url: null })
 
@@ -230,9 +230,9 @@ export function PlanCard({ planCardId, currentUserId }: PlanCardProps) {
         background: '#1a1a1a',
       }}>
         {([
-          { key: 'in',    label: 'In',    emoji: '✅', color: '#34d399', list: inList    },
-          { key: 'maybe', label: 'Maybe', emoji: '🤔', color: '#fbbf24', list: maybeList },
-          { key: 'cant',  label: "Can't", emoji: '❌', color: '#666',    list: cantList  },
+          { key: 'in',    label: 'In',    emoji: '', color: '#34d399', list: inList    },
+          { key: 'maybe', label: 'Maybe', emoji: '', color: '#fbbf24', list: maybeList },
+          { key: 'cant',  label: "Can't", emoji: '', color: '#666',    list: cantList  },
         ] as const).map(bucket => (
           <div key={bucket.key} style={{ textAlign: 'center' }}>
             <p style={{ fontSize: '11px', fontWeight: 700, color: bucket.color, margin: '0 0 5px' }}>
@@ -292,7 +292,7 @@ export function PlanCard({ planCardId, currentUserId }: PlanCardProps) {
               display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px',
             }}>
               <p style={{ fontSize: '12px', fontWeight: 600, color: '#34d399', margin: 0 }}>
-                Looks like this is happening 👀
+                Looks like this is happening 
               </p>
               <button
                 onClick={handleLockIn}
@@ -323,7 +323,7 @@ export function PlanCard({ planCardId, currentUserId }: PlanCardProps) {
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#34d399', margin: 0 }}>
-            This is happening! 🎉
+            This is happening! 
           </p>
           {card.event_id && (
             <a

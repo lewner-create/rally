@@ -5,13 +5,13 @@ import { useRouter } from 'next/navigation'
 import { postCheckWhosIn } from '@/lib/actions/plan-cards'
 
 const EVENT_TYPES = [
-  { value: 'hangout',    label: 'Hangout',    emoji: '🛋️' },
-  { value: 'game_night', label: 'Game night', emoji: '🎮' },
-  { value: 'day_trip',   label: 'Day trip',   emoji: '🚗' },
-  { value: 'road_trip',  label: 'Road trip',  emoji: '🛣️' },
-  { value: 'vacation',   label: 'Vacation',   emoji: '✈️' },
-  { value: 'meetup',     label: 'Meetup',     emoji: '👋' },
-  { value: 'moto_trip',  label: 'Moto trip',  emoji: '🏍️' },
+  { value: 'hangout',    label: 'Hangout',    emoji: '🛋' },
+  { value: 'game_night', label: 'Game night', emoji: '' },
+  { value: 'day_trip',   label: 'Day trip',   emoji: '' },
+  { value: 'road_trip',  label: 'Road trip',  emoji: '🛣' },
+  { value: 'vacation',   label: 'Vacation',   emoji: '✈' },
+  { value: 'meetup',     label: 'Meetup',     emoji: '' },
+  { value: 'moto_trip',  label: 'Moto trip',  emoji: '🏍' },
 ] as const
 
 // ── Quick date helpers ────────────────────────────────────────────
@@ -72,7 +72,7 @@ function SuccessScreen({ groupName, groupId, accent, onContinue }: {
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       padding: '24px', flexDirection: 'column', textAlign: 'center',
     }}>
-      <div style={{ fontSize: 64, marginBottom: 20, lineHeight: 1 }}>🎉</div>
+      <div style={{ fontSize: 64, marginBottom: 20, lineHeight: 1 }}></div>
       <h2 style={{ margin: '0 0 10px', fontSize: 26, fontWeight: 800, letterSpacing: '-0.03em' }}>
         It's out there!
       </h2>

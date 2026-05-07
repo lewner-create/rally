@@ -45,13 +45,13 @@ type Props = {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const EVENT_TYPE_META: Record<string, { emoji: string; label: string; gradient: string }> = {
-  vacation:   { emoji: '✈️',  label: 'Vacation',   gradient: 'linear-gradient(135deg, #001a2d, #003a5c)' },
-  day_trip:   { emoji: '🗺️',  label: 'Day trip',   gradient: 'linear-gradient(135deg, #0d2010, #1a4020)' },
-  road_trip:  { emoji: '🚗',  label: 'Road trip',  gradient: 'linear-gradient(135deg, #1a1a1a, #2d2d2d)' },
-  game_night: { emoji: '🎮',  label: 'Game night', gradient: 'linear-gradient(135deg, #1a1040, #2d1f6e)' },
-  hangout:    { emoji: '☕',  label: 'Hangout',    gradient: 'linear-gradient(135deg, #1a1208, #3d2b10)' },
-  meetup:     { emoji: '🤝',  label: 'Meetup',     gradient: 'linear-gradient(135deg, #0d1f2d, #1a3a4a)' },
-  moto_trip:  { emoji: '🏍️',  label: 'Moto trip',  gradient: 'linear-gradient(135deg, #2d0f00, #4a1a00)' },
+  vacation:   { emoji: '✈',  label: 'Vacation',   gradient: 'linear-gradient(135deg, #001a2d, #003a5c)' },
+  day_trip:   { emoji: '🗺',  label: 'Day trip',   gradient: 'linear-gradient(135deg, #0d2010, #1a4020)' },
+  road_trip:  { emoji: '',  label: 'Road trip',  gradient: 'linear-gradient(135deg, #1a1a1a, #2d2d2d)' },
+  game_night: { emoji: '',  label: 'Game night', gradient: 'linear-gradient(135deg, #1a1040, #2d1f6e)' },
+  hangout:    { emoji: '',  label: 'Hangout',    gradient: 'linear-gradient(135deg, #1a1208, #3d2b10)' },
+  meetup:     { emoji: '',  label: 'Meetup',     gradient: 'linear-gradient(135deg, #0d1f2d, #1a3a4a)' },
+  moto_trip:  { emoji: '🏍',  label: 'Moto trip',  gradient: 'linear-gradient(135deg, #2d0f00, #4a1a00)' },
 }
 
 function formatDate(d: string | null) {
@@ -206,7 +206,7 @@ function LockedScreen({ card, responses, accent }: {
   accent: string
 }) {
   const [visible, setVisible] = useState(false)
-  const typeMeta = EVENT_TYPE_META[card.event_type] ?? { emoji: '📅', label: card.event_type, gradient: 'linear-gradient(135deg, #1a1a1a, #2d2d2d)' }
+  const typeMeta = EVENT_TYPE_META[card.event_type] ?? { emoji: '', label: card.event_type, gradient: 'linear-gradient(135deg, #1a1a1a, #2d2d2d)' }
 
   const inResponses = responses.filter(r => r.response === 'in')
 
@@ -245,7 +245,7 @@ function LockedScreen({ card, responses, accent }: {
                 transition: 'transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s',
               }}
             >
-              🎉
+              
             </div>
             <h1
               style={{
@@ -310,7 +310,7 @@ function LockedScreen({ card, responses, accent }: {
                     fontSize: '14px', color: 'rgba(255,255,255,0.8)',
                     margin: 0, display: 'flex', alignItems: 'center', gap: '7px',
                   }}>
-                    <span style={{ opacity: 0.6 }}>📅</span>
+                    <span style={{ opacity: 0.6 }}></span>
                     {formatDate(card.proposed_date)}
                   </p>
                 )}
@@ -319,7 +319,7 @@ function LockedScreen({ card, responses, accent }: {
                     fontSize: '13px', color: 'rgba(255,255,255,0.55)',
                     margin: 0, display: 'flex', alignItems: 'center', gap: '7px',
                   }}>
-                    <span style={{ opacity: 0.5 }}>🕐</span>
+                    <span style={{ opacity: 0.5 }}></span>
                     {formatTime(card.proposed_start)}
                     {card.proposed_end && ` – ${formatTime(card.proposed_end)}`}
                   </p>
@@ -473,7 +473,7 @@ export default function PlanCardDetail({
   const [responding, startRespond]      = useTransition()
 
   const accent = (card.groups as any)?.theme_color ?? '#6366f1'
-  const typeMeta = EVENT_TYPE_META[card.event_type] ?? { emoji: '📅', label: card.event_type, gradient: '' }
+  const typeMeta = EVENT_TYPE_META[card.event_type] ?? { emoji: '', label: card.event_type, gradient: '' }
 
   const inCount    = responses.filter((r) => r.response === 'in').length
   const maybeCount = responses.filter((r) => r.response === 'maybe').length
@@ -553,13 +553,13 @@ export default function PlanCardDetail({
               <div className="flex flex-wrap gap-3 text-sm text-[#aaa]">
                 {card.proposed_date && (
                   <span className="flex items-center gap-1.5">
-                    <span className="text-[#555]">📅</span>
+                    <span className="text-[#555]"></span>
                     {formatDate(card.proposed_date)}
                   </span>
                 )}
                 {card.proposed_start && (
                   <span className="flex items-center gap-1.5">
-                    <span className="text-[#555]">🕐</span>
+                    <span className="text-[#555]"></span>
                     {formatTime(card.proposed_start)}
                     {card.proposed_end && ` – ${formatTime(card.proposed_end)}`}
                   </span>
@@ -577,9 +577,9 @@ export default function PlanCardDetail({
             </p>
             <div className="grid grid-cols-3 gap-2">
               {([
-                { value: 'in',    label: "I'm in",   emoji: '✅', color: '#22c55e' },
-                { value: 'maybe', label: 'Maybe',    emoji: '🤔', color: '#eab308' },
-                { value: 'cant',  label: "Can't",    emoji: '❌', color: '#ef4444' },
+                { value: 'in',    label: "I'm in",   emoji: '', color: '#22c55e' },
+                { value: 'maybe', label: 'Maybe',    emoji: '', color: '#eab308' },
+                { value: 'cant',  label: "Can't",    emoji: '', color: '#ef4444' },
               ] as const).map((opt) => {
                 const isSelected = userResponse === opt.value
                 return (
@@ -615,17 +615,17 @@ export default function PlanCardDetail({
 
             <div className="space-y-4">
               <ResponseBucket
-                label="In"    emoji="✅" color="#22c55e"
+                label="In"    emoji="" color="#22c55e"
                 responses={responses.filter((r) => r.response === 'in')}
                 members={members}
               />
               <ResponseBucket
-                label="Maybe" emoji="🤔" color="#eab308"
+                label="Maybe" emoji="" color="#eab308"
                 responses={responses.filter((r) => r.response === 'maybe')}
                 members={members}
               />
               <ResponseBucket
-                label="Can't" emoji="❌" color="#ef4444"
+                label="Can't" emoji="" color="#ef4444"
                 responses={responses.filter((r) => r.response === 'cant')}
                 members={members}
               />
@@ -652,7 +652,7 @@ export default function PlanCardDetail({
             }}
           >
             <p className="text-sm font-semibold text-white mb-1">
-              {inCount} {inCount === 1 ? 'person is' : 'people are'} in 🎉
+              {inCount} {inCount === 1 ? 'person is' : 'people are'} in 
             </p>
             <p className="text-[#666] text-xs mb-4">
               Looks good — lock it in to create the plan.

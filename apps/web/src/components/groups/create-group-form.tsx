@@ -6,11 +6,11 @@ import { createGroup } from '@/lib/actions/groups'
 const ACCENT = '#7F77DD'
 
 const VIBES = [
-  { id: 'gaming',    label: 'Gaming',       emoji: '🎮', interests: ['gaming'],              group_type: 'recurring' },
-  { id: 'nights',    label: 'Nights out',   emoji: '🌙', interests: ['bars'],                group_type: 'recurring' },
-  { id: 'trips',     label: 'Trips',        emoji: '✈️', interests: ['travel', 'road_trips'], group_type: 'recurring' },
-  { id: 'events',    label: 'Events',       emoji: '🎉', interests: ['birthday'],            group_type: 'one_time'  },
-  { id: 'ongoing',   label: 'Ongoing crew', emoji: '👥', interests: [],                      group_type: 'recurring' },
+  { id: 'gaming',    label: 'Gaming',       emoji: '', interests: ['gaming'],              group_type: 'recurring' },
+  { id: 'nights',    label: 'Nights out',   emoji: '', interests: ['bars'],                group_type: 'recurring' },
+  { id: 'trips',     label: 'Trips',        emoji: '✈', interests: ['travel', 'road_trips'], group_type: 'recurring' },
+  { id: 'events',    label: 'Events',       emoji: '', interests: ['birthday'],            group_type: 'one_time'  },
+  { id: 'ongoing',   label: 'Ongoing crew', emoji: '', interests: [],                      group_type: 'recurring' },
 ] as const
 
 type VibeId = typeof VIBES[number]['id']

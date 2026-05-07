@@ -77,7 +77,7 @@ export function ProactiveBanner({ groupId, prompt }: ProactiveBannerProps) {
       {/* Message — padded right so it doesn't overlap dismiss button */}
       <div style={{ paddingRight: '32px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px' }}>
-          <span style={{ fontSize: '18px' }}>✨</span>
+          <span style={{ fontSize: '18px' }}></span>
           <p style={{ fontSize: '14px', fontWeight: 700, color: 'white', margin: 0, lineHeight: 1.3 }}>
             {prompt.message}
           </p>

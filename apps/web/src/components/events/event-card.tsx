@@ -3,13 +3,13 @@
 import Link from 'next/link'
 
 const EVENT_ICONS: Record<string, string> = {
-  game_night: '🎮',
-  hangout:    '☕',
-  meetup:     '🤝',
-  day_trip:   '🗺️',
-  road_trip:  '🚗',
-  moto_trip:  '🏍️',
-  vacation:   '✈️',
+  game_night: '',
+  hangout:    '',
+  meetup:     '',
+  day_trip:   '🗺',
+  road_trip:  '',
+  moto_trip:  '🏍',
+  vacation:   '✈',
 }
 
 interface EventCardProps {
@@ -77,7 +77,7 @@ export function EventCard({ event }: EventCardProps) {
               color: 'rgba(255,255,255,0.9)',
               textTransform: 'uppercase', letterSpacing: '0.06em',
             }}>
-              {EVENT_ICONS[event.event_type] ?? '📅'}
+              {EVENT_ICONS[event.event_type] ?? ''}
             </div>
           </div>
         )}
@@ -94,7 +94,7 @@ export function EventCard({ event }: EventCardProps) {
               background: '#f4f3ff', display: 'flex', alignItems: 'center',
               justifyContent: 'center', fontSize: '17px', flexShrink: 0,
             }}>
-              {EVENT_ICONS[event.event_type] ?? '📅'}
+              {EVENT_ICONS[event.event_type] ?? ''}
             </div>
           )}
 

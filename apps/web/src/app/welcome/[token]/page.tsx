@@ -29,7 +29,7 @@ export default async function WelcomePage({ params }: Props) {
         padding: '24px',
       }}>
         <div style={{ maxWidth: '400px', width: '100%', textAlign: 'center' }}>
-          <div style={{ fontSize: '48px', marginBottom: '20px' }}>🔗</div>
+          <div style={{ fontSize: '48px', marginBottom: '20px' }}></div>
           <h1 style={{ fontSize: '22px', fontWeight: 800, color: '#fff', margin: '0 0 10px' }}>
             Invite unavailable
           </h1>

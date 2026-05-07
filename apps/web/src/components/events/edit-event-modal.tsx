@@ -188,7 +188,7 @@ export function EditEventModal({ open, onClose, event, onSaved }: Props) {
         {/* Header */}
         <div style={{ padding: '12px 24px 16px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h2 style={{ fontSize: '17px', fontWeight: 700, color: '#fff', margin: 0, letterSpacing: '-0.2px' }}>
-            ✏️ Edit event
+            ✏ Edit event
           </h2>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#444', fontSize: '18px', lineHeight: 1 }}>✕</button>
         </div>

@@ -134,7 +134,7 @@ export function MomentsTab({ eventId, currentUserId, initialPhotos }: Props) {
             background: '#1a1a1a', display: 'flex', alignItems: 'center',
             justifyContent: 'center', margin: '0 auto 12px', fontSize: '20px',
           }}>
-            📸
+            
           </div>
           <p style={{ fontSize: '14px', color: '#aaa', margin: '0 0 4px', fontWeight: 600 }}>
             Add your first photo

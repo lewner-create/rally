@@ -9,13 +9,13 @@ import { generateEventTitle } from '@/lib/name-generator'
 import Link from 'next/link'
 
 const ALL_EVENT_TYPES: Array<{ id: EventType; label: string; icon: string; interests: string[]; gradient: string }> = [
-  { id: 'game_night', label: 'Game night', icon: '🎮', interests: ['gaming'],                                          gradient: 'linear-gradient(145deg, #1a1040, #2d1f6e)' },
-  { id: 'hangout',    label: 'Hangout',    icon: '☕', interests: ['dining','bars','movies','music','kids','wellness'], gradient: 'linear-gradient(145deg, #1a1208, #3d2b10)' },
-  { id: 'meetup',     label: 'Meetup',     icon: '🤝', interests: [],                                                   gradient: 'linear-gradient(145deg, #0d1f2d, #1a3a4a)' },
-  { id: 'day_trip',   label: 'Day trip',   icon: '🗺️', interests: ['hiking','cycling','photography'],                   gradient: 'linear-gradient(145deg, #0d2010, #1a4020)' },
-  { id: 'road_trip',  label: 'Road trip',  icon: '🚗', interests: ['road_trips','travel'],                              gradient: 'linear-gradient(145deg, #1a1a1a, #2d2d2d)' },
-  { id: 'moto_trip',  label: 'Moto trip',  icon: '🏍️', interests: ['motorcycles'],                                      gradient: 'linear-gradient(145deg, #2d0f00, #4a1a00)' },
-  { id: 'vacation',   label: 'Vacation',   icon: '✈️', interests: ['travel','vacation'],                                gradient: 'linear-gradient(145deg, #001a2d, #003a5c)' },
+  { id: 'game_night', label: 'Game night', icon: '', interests: ['gaming'],                                          gradient: 'linear-gradient(145deg, #1a1040, #2d1f6e)' },
+  { id: 'hangout',    label: 'Hangout',    icon: '', interests: ['dining','bars','movies','music','kids','wellness'], gradient: 'linear-gradient(145deg, #1a1208, #3d2b10)' },
+  { id: 'meetup',     label: 'Meetup',     icon: '', interests: [],                                                   gradient: 'linear-gradient(145deg, #0d1f2d, #1a3a4a)' },
+  { id: 'day_trip',   label: 'Day trip',   icon: '🗺', interests: ['hiking','cycling','photography'],                   gradient: 'linear-gradient(145deg, #0d2010, #1a4020)' },
+  { id: 'road_trip',  label: 'Road trip',  icon: '', interests: ['road_trips','travel'],                              gradient: 'linear-gradient(145deg, #1a1a1a, #2d2d2d)' },
+  { id: 'moto_trip',  label: 'Moto trip',  icon: '🏍', interests: ['motorcycles'],                                      gradient: 'linear-gradient(145deg, #2d0f00, #4a1a00)' },
+  { id: 'vacation',   label: 'Vacation',   icon: '✈', interests: ['travel','vacation'],                                gradient: 'linear-gradient(145deg, #001a2d, #003a5c)' },
 ]
 
 const OCCASION_EVENT_MAP: Record<string, EventType> = {
@@ -41,21 +41,21 @@ type ContextualConfig = {
 function getContextualConfig(type: EventType): ContextualConfig {
   switch (type) {
     case 'game_night':
-      return { showLocation: true, locationLabel: 'Where', locationPlaceholder: "Someone's place, address…", locationIcon: '📍', showGames: true }
+      return { showLocation: true, locationLabel: 'Where', locationPlaceholder: "Someone's place, address…", locationIcon: '', showGames: true }
     case 'hangout':
-      return { showLocation: true, locationLabel: 'Venue', locationPlaceholder: 'Bar, restaurant, park…', locationIcon: '📍', showGames: false }
+      return { showLocation: true, locationLabel: 'Venue', locationPlaceholder: 'Bar, restaurant, park…', locationIcon: '', showGames: false }
     case 'meetup':
-      return { showLocation: true, locationLabel: 'Location', locationPlaceholder: 'Address or landmark…', locationIcon: '📍', showGames: false }
+      return { showLocation: true, locationLabel: 'Location', locationPlaceholder: 'Address or landmark…', locationIcon: '', showGames: false }
     case 'day_trip':
-      return { showLocation: true, locationLabel: 'Destination', locationPlaceholder: 'Where are you headed?', locationIcon: '🗺️', showGames: false }
+      return { showLocation: true, locationLabel: 'Destination', locationPlaceholder: 'Where are you headed?', locationIcon: '🗺', showGames: false }
     case 'road_trip':
-      return { showLocation: true, locationLabel: 'Destination', locationPlaceholder: 'End destination or route…', locationIcon: '🛣️', showGames: false }
+      return { showLocation: true, locationLabel: 'Destination', locationPlaceholder: 'End destination or route…', locationIcon: '🛣', showGames: false }
     case 'moto_trip':
-      return { showLocation: true, locationLabel: 'Route / destination', locationPlaceholder: 'Destination or meeting point…', locationIcon: '🏍️', showGames: false }
+      return { showLocation: true, locationLabel: 'Route / destination', locationPlaceholder: 'Destination or meeting point…', locationIcon: '🏍', showGames: false }
     case 'vacation':
-      return { showLocation: true, locationLabel: 'Destination', locationPlaceholder: 'City, country…', locationIcon: '✈️', showGames: false }
+      return { showLocation: true, locationLabel: 'Destination', locationPlaceholder: 'City, country…', locationIcon: '✈', showGames: false }
     default:
-      return { showLocation: false, locationLabel: 'Location', locationPlaceholder: '', locationIcon: '📍', showGames: false }
+      return { showLocation: false, locationLabel: 'Location', locationPlaceholder: '', locationIcon: '', showGames: false }
   }
 }
 
@@ -140,7 +140,7 @@ function CalendarPicker({ value, onChange, themeColor }: { value: string; onChan
         display:'flex', alignItems:'center', justifyContent:'space-between',
         transition:'all 0.15s',
       }}>
-        <span>📅 {displayValue}</span>
+        <span> {displayValue}</span>
         <span style={{fontSize:'11px',color:'#444'}}>{open?'▲':'▼'}</span>
       </button>
 
@@ -207,7 +207,7 @@ function GameTagInput({ games, onAdd, onRemove, themeColor }: {
         <div style={{ display:'flex', flexWrap:'wrap', gap:'6px', marginBottom:'8px' }}>
           {games.map(g => (
             <span key={g} style={{ display:'inline-flex', alignItems:'center', gap:'5px', padding:'4px 10px', borderRadius:'9999px', background:`${themeColor}18`, border:`1.5px solid ${themeColor}40`, fontSize:'12px', fontWeight:600, color:themeColor }}>
-              🎮 {g}
+               {g}
               <button onClick={()=>onRemove(g)} style={{ background:'none', border:'none', cursor:'pointer', color:themeColor, fontSize:'13px', padding:0, lineHeight:1, opacity:0.7, fontFamily:'inherit' }}>×</button>
             </span>
           ))}
@@ -417,7 +417,7 @@ export function CreateEventForm({ groupId, groupName, groupType='recurring', int
                 {games.length > 0 && (
                   <div style={{ display:'flex', flexWrap:'wrap', gap:'4px', marginTop:'8px' }}>
                     {games.slice(0,4).map(g=>(
-                      <span key={g} style={{ padding:'2px 8px', borderRadius:'9999px', background:'rgba(255,255,255,0.12)', fontSize:'11px', color:'rgba(255,255,255,0.7)', fontWeight:500 }}>🎮 {g}</span>
+                      <span key={g} style={{ padding:'2px 8px', borderRadius:'9999px', background:'rgba(255,255,255,0.12)', fontSize:'11px', color:'rgba(255,255,255,0.7)', fontWeight:500 }}> {g}</span>
                     ))}
                     {games.length > 4 && <span style={{ padding:'2px 8px', borderRadius:'9999px', background:'rgba(255,255,255,0.12)', fontSize:'11px', color:'rgba(255,255,255,0.5)' }}>+{games.length-4} more</span>}
                   </div>
@@ -433,7 +433,7 @@ export function CreateEventForm({ groupId, groupName, groupType='recurring', int
           {/* Banner upload */}
           <div>
             <button onClick={()=>fileRef.current?.click()} style={{ width:'100%', padding:'11px', borderRadius:'12px', border:`1.5px dashed ${bannerPreview?themeColor:'#2a2a2a'}`, background:bannerPreview?`${themeColor}10`:'#161616', fontSize:'13px', fontWeight:600, color:bannerPreview?themeColor:'#444', cursor:'pointer', fontFamily:'inherit', display:'flex', alignItems:'center', justifyContent:'center', gap:'7px', transition:'all 0.15s' }}>
-              <span style={{ fontSize:'15px' }}>{bannerPreview?'🖼️':'📷'}</span>
+              <span style={{ fontSize:'15px' }}>{bannerPreview?'🖼':''}</span>
               {bannerPreview?'Change banner image':'Add a banner image'}
             </button>
             <input ref={fileRef} type="file" accept="image/*" onChange={handleFileChange} style={{ display:'none' }}/>
@@ -448,9 +448,9 @@ export function CreateEventForm({ groupId, groupName, groupType='recurring', int
             <div style={{ display:'flex', gap:'8px', flexWrap:'wrap' }}>
               <input autoFocus value={title} onChange={e=>setTitle(e.target.value)} placeholder="Name your plan…" style={{...inputStyle,flex:1}}
                 onFocus={e=>(e.target.style.borderColor=themeColor)} onBlur={e=>(e.target.style.borderColor='#2a2a2a')}/>
-              <button onClick={handleSuggestTitle} title="Generate a fun name" style={{ width:'44px', height:'44px', borderRadius:'10px', border:'1.5px solid #2a2a2a', background:suggesting?`${themeColor}20`:'#1a1a1a', fontSize:'18px', cursor:'pointer', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', transition:'background 0.15s' }}>🎲</button>
+              <button onClick={handleSuggestTitle} title="Generate a fun name" style={{ width:'44px', height:'44px', borderRadius:'10px', border:'1.5px solid #2a2a2a', background:suggesting?`${themeColor}20`:'#1a1a1a', fontSize:'18px', cursor:'pointer', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', transition:'background 0.15s' }}></button>
             </div>
-            <p style={{ fontSize:'11px', color:'#444', marginTop:'5px' }}>Hit 🎲 to generate a fun name</p>
+            <p style={{ fontSize:'11px', color:'#444', marginTop:'5px' }}>Hit  to generate a fun name</p>
           </div>
 
           {/* Event type */}
@@ -504,7 +504,7 @@ export function CreateEventForm({ groupId, groupName, groupType='recurring', int
           {/* Contextual: Games */}
           {ctx.showGames && (
             <div style={{ padding:'20px 22px', borderBottom:'1px solid #1e1e1e' }}>
-              <Label>🎮 Games</Label>
+              <Label> Games</Label>
               <GameTagInput games={games} onAdd={g=>setGames(prev=>[...prev,g])} onRemove={g=>setGames(prev=>prev.filter(x=>x!==g))} themeColor={themeColor}/>
             </div>
           )}

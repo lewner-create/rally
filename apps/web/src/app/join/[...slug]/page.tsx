@@ -26,7 +26,7 @@ export default async function JoinPage({ params }: Props) {
     return (
       <div style={centerStyle}>
         <div style={cardStyle}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>💀</div>
+          <div style={{ fontSize: '48px', marginBottom: '16px' }}></div>
           <h2 style={headingStyle}>Invite not found</h2>
           <p style={subStyle}>This link is invalid or has expired.</p>
           <Link href="/dashboard" style={btnSecondaryStyle}>Go to dashboard</Link>
@@ -44,7 +44,7 @@ export default async function JoinPage({ params }: Props) {
   return (
     <div style={centerStyle}>
       <div style={cardStyle}>
-        <div style={{ fontSize: '48px', marginBottom: '16px' }}>⚡</div>
+        <div style={{ fontSize: '48px', marginBottom: '16px' }}></div>
         <p style={{ fontSize: '13px', fontWeight: 700, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '8px' }}>
           You're invited
         </p>

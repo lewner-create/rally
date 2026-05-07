@@ -372,7 +372,7 @@ export function SettingsForm({ profile }: SettingsFormProps) {
               paddingLeft: '16px',
             }}
           >
-            <span style={{ fontSize: '16px' }}>🗺️</span>
+            <span style={{ fontSize: '16px' }}>🗺</span>
             Repeat Volta guide
           </button>
         </div>

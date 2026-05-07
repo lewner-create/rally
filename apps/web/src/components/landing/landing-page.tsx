@@ -282,9 +282,9 @@ function DashboardThumb() {
           <div style={{ fontSize: 10.5, color: T.textDim }}>Tonight · 7:30 PM</div>
         </div>
         {[
-          { icon: '🕐', title: "Boys Trip",       sub: 'Reply needed' },
-          { icon: '✨', title: 'Cabin date poll', sub: '4 of 6 voted' },
-          { icon: '🔥', title: 'On a streak',     sub: '4 hangs in 3 weeks' },
+          { icon: '', title: "Boys Trip",       sub: 'Reply needed' },
+          { icon: '', title: 'Cabin date poll', sub: '4 of 6 voted' },
+          { icon: '', title: 'On a streak',     sub: '4 hangs in 3 weeks' },
         ].map((r, i) => (
           <div key={i} style={{
             display: 'flex', alignItems: 'center', gap: 8,
@@ -311,7 +311,7 @@ function GroupThumb() {
       </div>
       <div style={{ padding: 10, display: 'flex', flexDirection: 'column', gap: 5 }}>
         {[
-          { tag: '🔥 MOST LIKELY', day: 'Saturday', sub: '5 of 5 free', hot: true },
+          { tag: ' MOST LIKELY', day: 'Saturday', sub: '5 of 5 free', hot: true },
           { tag: 'OPEN',           day: 'Wed eve',  sub: '3 free · 2 maybe', hot: false },
         ].map((r, i) => (
           <div key={i} style={{
@@ -405,7 +405,7 @@ export default function LandingPage({ stats }: { stats?: Stats }) {
               padding: '6px 12px', borderRadius: 99,
               background: T.violetSoft, border: `1px solid ${T.violetMid}`,
               fontSize: 12, color: T.violet, fontWeight: 600, marginBottom: 20,
-            }}>✨ Now in open beta</div>
+            }}> Now in open beta</div>
             <h1 style={{
               margin: 0,
               fontFamily: '"Bricolage Grotesque", system-ui, sans-serif',
@@ -462,10 +462,10 @@ export default function LandingPage({ stats }: { stats?: Stats }) {
           gap: isMobile ? 24 : 32,
         }}>
           {[
-            { num: stats?.groups ?? '0',     label: 'friend groups',     emoji: '👯' },
-            { num: stats?.events ?? '0',     label: 'hangs locked in',   emoji: '🎉' },
-            { num: stats?.freeBlocks ?? '0', label: 'busy times synced', emoji: '📅' },
-            { num: stats?.users ?? '0',      label: 'people on Volta',   emoji: '🙌' },
+            { num: stats?.groups ?? '0',     label: 'friend groups',     emoji: '' },
+            { num: stats?.events ?? '0',     label: 'hangs locked in',   emoji: '' },
+            { num: stats?.freeBlocks ?? '0', label: 'busy times synced', emoji: '' },
+            { num: stats?.users ?? '0',      label: 'people on Volta',   emoji: '' },
           ].map((s, i) => (
             <div key={i} style={{
               display: 'flex', flexDirection: 'column', gap: 4,
@@ -504,9 +504,9 @@ export default function LandingPage({ stats }: { stats?: Stats }) {
             gap: isMobile ? 16 : 22,
           }}>
             {[
-              { n: 1, emoji: '👯', title: 'Make a group',         sub: 'The Crew, soccer guys, brunch club — whatever your friends are.',               visual: <StepGroupViz /> },
-              { n: 2, emoji: '📅', title: 'Drop your free times',  sub: "Tap the hours you're around. Volta watches for overlaps with your friends.",    visual: <StepAvailViz /> },
-              { n: 3, emoji: '🎉', title: 'Lock in the hang',      sub: 'Volta suggests when most of you are free. Pick a window, send it to chat, done.', visual: <StepLockViz /> },
+              { n: 1, emoji: '', title: 'Make a group',         sub: 'The Crew, soccer guys, brunch club — whatever your friends are.',               visual: <StepGroupViz /> },
+              { n: 2, emoji: '', title: 'Drop your free times',  sub: "Tap the hours you're around. Volta watches for overlaps with your friends.",    visual: <StepAvailViz /> },
+              { n: 3, emoji: '', title: 'Lock in the hang',      sub: 'Volta suggests when most of you are free. Pick a window, send it to chat, done.', visual: <StepLockViz /> },
             ].map(s => (
               <div key={s.n} style={{
                 borderRadius: 18, padding: isMobile ? 22 : 28,
@@ -625,7 +625,7 @@ export default function LandingPage({ stats }: { stats?: Stats }) {
                   }}>Your crew in your pocket.</h3>
                   <p style={{ margin: '8px 0 0', fontSize: 13, color: T.textDim, lineHeight: 1.5 }}>Drop free times in 3 taps. iOS + Android coming soon.</p>
                 </div>
-                <div style={{ fontSize: 32, marginTop: 'auto' }}>📱</div>
+                <div style={{ fontSize: 32, marginTop: 'auto' }}></div>
               </div>
             </div>
           </div>
@@ -646,7 +646,7 @@ export default function LandingPage({ stats }: { stats?: Stats }) {
           border: '1px solid rgba(127,119,221,0.4)',
           textAlign: 'center',
         }}>
-          <div style={{ fontSize: 44, marginBottom: 14 }}>🎉</div>
+          <div style={{ fontSize: 44, marginBottom: 14 }}></div>
           <h2 style={{
             margin: 0,
             fontFamily: '"Bricolage Grotesque", system-ui, sans-serif',
@@ -734,7 +734,7 @@ export default function LandingPage({ stats }: { stats?: Stats }) {
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8,
           fontSize: 12, color: T.textMute,
         }}>
-          <span>© 2026 Volta Labs, Inc. Made with 💜 for friend groups.</span>
+          <span>© 2026 Volta Labs, Inc. Made with  for friend groups.</span>
           <span>Beta · Web only for now</span>
         </div>
       </footer>

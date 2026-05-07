@@ -8,9 +8,9 @@ import type { EventQuestion } from '@/lib/actions/questionnaire'
 type RsvpStatus = 'yes' | 'maybe' | 'no'
 
 const OPTIONS = [
-  { value: 'yes'   as const, label: "I'm in",  emoji: '✅', color: '#22c55e' },
-  { value: 'maybe' as const, label: 'Maybe',   emoji: '🤔', color: '#eab308' },
-  { value: 'no'    as const, label: "Can't",   emoji: '❌', color: '#ef4444' },
+  { value: 'yes'   as const, label: "I'm in",  emoji: '', color: '#22c55e' },
+  { value: 'maybe' as const, label: 'Maybe',   emoji: '', color: '#eab308' },
+  { value: 'no'    as const, label: "Can't",   emoji: '', color: '#ef4444' },
 ]
 
 export default function RsvpSection({

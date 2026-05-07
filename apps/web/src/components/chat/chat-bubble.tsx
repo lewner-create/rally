@@ -75,7 +75,7 @@ export function ChatBubble() {
         onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.08)')}
         onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
       >
-        💬
+        
         {unread > 0 && (
           <div style={{ position: 'absolute', top: '-2px', right: '-2px', width: '18px', height: '18px', borderRadius: '50%', background: '#D85A30', border: '2px solid white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 800, color: 'white', lineHeight: 1 }}>
             {unread > 9 ? '9+' : unread}

@@ -166,7 +166,7 @@ export function AdminPanel({ requests }: { requests: AccessRequest[] }) {
       {shown.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '64px 0', color: T.mute }}>
           <div style={{ fontSize: 40, marginBottom: 12 }}>
-            {tab === 'pending' ? '📭' : tab === 'approved' ? '✅' : '🚫'}
+            {tab === 'pending' ? '' : tab === 'approved' ? '' : ''}
           </div>
           <p style={{ fontSize: 14, margin: 0 }}>No {tab} requests</p>
         </div>

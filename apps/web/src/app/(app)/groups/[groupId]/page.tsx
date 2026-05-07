@@ -45,7 +45,7 @@ export default async function GroupPage({ params }: { params: Promise<{ groupId:
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
 
-      {/* ── Mobile group header — hidden on md+ ───────────────────────── */}
+      {/* â”€â”€ Mobile group header â€” hidden on md+ â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {/*
         Back button wraps the arrow AND group name as one big touch target.
         Settings icon is a separate link on the right.
@@ -76,7 +76,7 @@ export default async function GroupPage({ params }: { params: Promise<{ groupId:
           </span>
         </Link>
 
-        {/* Settings — right side */}
+        {/* Settings â€” right side */}
         <Link
           href={`/groups/${groupId}/settings`}
           className="p-2 rounded-lg flex-shrink-0"
@@ -87,10 +87,10 @@ export default async function GroupPage({ params }: { params: Promise<{ groupId:
         </Link>
       </div>
 
-      {/* ── Main row (left panel + content) ──────────────────────────── */}
+      {/* â”€â”€ Main row (left panel + content) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div style={{ display: 'flex', flex: 1 }}>
 
-        {/* ── Left panel — hidden on mobile ──────────────────────────── */}
+        {/* â”€â”€ Left panel â€” hidden on mobile â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <div
           className="hidden md:flex"
           style={{
@@ -160,13 +160,13 @@ export default async function GroupPage({ params }: { params: Promise<{ groupId:
               <div style={{ borderTop: '0.5px solid #222', margin: '14px 0' }} />
               <div>
                 <p style={SECTION_LABEL}>Invite people</p>
-                <InvitePanel groupId={group.id} initialInvites={invites} />
+                <InvitePanel groupId={group.id} groupName={group.name} initialInvites={invites} />
               </div>
             </>
           )}
         </div>
 
-        {/* ── Main content ──────────────────────────────────────────── */}
+        {/* â”€â”€ Main content â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <GroupPageClient
           groupId={groupId}
           themeColor={themeColor}

@@ -39,13 +39,13 @@ interface Props {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const EVENT_TYPE_META: Record<string, { emoji: string; label: string }> = {
-  vacation:   { emoji: '✈️',  label: 'Vacation'   },
-  day_trip:   { emoji: '🗺️',  label: 'Day trip'   },
-  road_trip:  { emoji: '🛣️',  label: 'Road trip'  },
-  game_night: { emoji: '🎮',  label: 'Game night' },
-  hangout:    { emoji: '☕',  label: 'Hangout'    },
-  meetup:     { emoji: '🤝',  label: 'Meetup'     },
-  moto_trip:  { emoji: '🏍️',  label: 'Moto trip'  },
+  vacation:   { emoji: '✈',  label: 'Vacation'   },
+  day_trip:   { emoji: '🗺',  label: 'Day trip'   },
+  road_trip:  { emoji: '🛣',  label: 'Road trip'  },
+  game_night: { emoji: '',  label: 'Game night' },
+  hangout:    { emoji: '',  label: 'Hangout'    },
+  meetup:     { emoji: '',  label: 'Meetup'     },
+  moto_trip:  { emoji: '🏍',  label: 'Moto trip'  },
 }
 
 function formatDate(iso: string | null) {
@@ -70,7 +70,7 @@ export function EventPageClient({ event: initialEvent, rsvps, members, userRsvp,
 
   const accentColor = event.groups?.theme_color ?? '#6366f1'
   const groupName   = event.groups?.name ?? ''
-  const typeMeta    = EVENT_TYPE_META[event.event_type] ?? { emoji: '📅', label: event.event_type }
+  const typeMeta    = EVENT_TYPE_META[event.event_type] ?? { emoji: '', label: event.event_type }
   const goingCount  = rsvps.filter(r => r.rsvp_status === 'yes').length
   const isCompleted = event.status === 'completed'
 
@@ -78,7 +78,7 @@ export function EventPageClient({ event: initialEvent, rsvps, members, userRsvp,
     <div className="space-y-4">
       {event.location && (
         <p className="text-[#aaa] text-sm flex items-center gap-2">
-          <span>📍</span> {event.location}
+          <span></span> {event.location}
         </p>
       )}
       {event.description && (
@@ -138,7 +138,7 @@ export function EventPageClient({ event: initialEvent, rsvps, members, userRsvp,
                     color: '#666',
                   }}
                 >
-                  ✏️ Edit
+                  ✏ Edit
                 </button>
               )}
             </div>
@@ -192,7 +192,7 @@ export function EventPageClient({ event: initialEvent, rsvps, members, userRsvp,
                     )}
                     {event.location && (
                       <span className="text-sm text-[#aaa] flex items-center gap-1">
-                        <span>📍</span>{event.location}
+                        <span></span>{event.location}
                       </span>
                     )}
                   </div>

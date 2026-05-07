@@ -188,7 +188,7 @@ export async function lockInPlanCard(planCardId: string): Promise<{ eventId?: st
         createNotification({
           userId:      voter.user_id,
           type:        'plan_locked',
-          title:       'Plan locked in! 🔒',
+          title:       'Plan locked in! ',
           body:        `${actorName} locked in "${card.title}"`,
           groupId:     card.group_id,
           eventId:     event.id,

@@ -10,7 +10,7 @@ import type { DMThread, DMMessage } from '@/lib/actions/dms'
 import type { MessageWithProfile } from '@/lib/actions/messages'
 
 const EVENT_ICON: Record<string, string> = {
-  game_night: '🎮', hangout: '☕', day_trip: '🗺️', road_trip: '🚗', moto_trip: '🏍️', vacation: '✈️',
+  game_night: '', hangout: '', day_trip: '🗺', road_trip: '', moto_trip: '🏍', vacation: '✈',
 }
 
 const BG        = '#0f0f0f'
@@ -186,7 +186,7 @@ export function MessagesHub({
             width: '38px', height: '38px', borderRadius: '50%', flexShrink: 0,
             background: `linear-gradient(135deg, ${ACCENT}, #5B52C8)`,
             display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px',
-          }}>⚡</div>
+          }}></div>
           <div>
             <div style={{ fontSize: '14px', fontWeight: 700, color: TEXT }}>Radio</div>
             <div style={{ fontSize: '12px', color: MUTED }}>Notifications & updates</div>
@@ -323,7 +323,7 @@ export function MessagesHub({
                   onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = HOVER_BG }}
                   onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'none' }}
                 >
-                  <span style={{ fontSize: '13px' }}>{EVENT_ICON[ev.event_type] ?? '📅'}</span>
+                  <span style={{ fontSize: '13px' }}>{EVENT_ICON[ev.event_type] ?? ''}</span>
                   <span style={{
                     fontSize: '13px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                     color: isActive ? ACCENT : MUTED, fontWeight: isActive ? 600 : 400,
@@ -390,7 +390,7 @@ export function MessagesHub({
       ) : (
         // Empty state — only visible on desktop (mobile starts on list view)
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '12px' }}>
-          <div style={{ fontSize: '48px' }}>💬</div>
+          <div style={{ fontSize: '48px' }}></div>
           <p style={{ fontSize: '15px', color: MUTED, margin: 0 }}>Select a conversation</p>
         </div>
       )}

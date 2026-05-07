@@ -24,7 +24,7 @@ type Props = {
 const TABS = [
   { id: 'about',   label: 'About'          },
   { id: 'details', label: 'Costs & details' },
-  { id: 'moments', label: '📸 Moments'      },
+  { id: 'moments', label: ' Moments'      },
 ] as const
 
 type TabId = typeof TABS[number]['id']

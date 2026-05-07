@@ -4,13 +4,13 @@ import Link from 'next/link'
 import { InviteRsvpButtons } from '@/components/events/invite-rsvp-buttons'
 
 const TYPE_META: Record<string, { label: string; icon: string }> = {
-  game_night: { label: 'Game Night', icon: '🎮' },
-  hangout:    { label: 'Hangout',    icon: '☕' },
-  meetup:     { label: 'Meetup',     icon: '🤝' },
-  day_trip:   { label: 'Day Trip',   icon: '🗺️' },
-  road_trip:  { label: 'Road Trip',  icon: '🚗' },
-  moto_trip:  { label: 'Moto Trip',  icon: '🏍️' },
-  vacation:   { label: 'Vacation',   icon: '✈️' },
+  game_night: { label: 'Game Night', icon: '' },
+  hangout:    { label: 'Hangout',    icon: '' },
+  meetup:     { label: 'Meetup',     icon: '' },
+  day_trip:   { label: 'Day Trip',   icon: '🗺' },
+  road_trip:  { label: 'Road Trip',  icon: '' },
+  moto_trip:  { label: 'Moto Trip',  icon: '🏍' },
+  vacation:   { label: 'Vacation',   icon: '✈' },
 }
 
 function formatDate(startsAt: string) {
@@ -46,7 +46,7 @@ export default async function EventInvitePage({ params }: Props) {
     return (
       <div style={centerStyle}>
         <div style={cardStyle}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>💀</div>
+          <div style={{ fontSize: '48px', marginBottom: '16px' }}></div>
           <h2 style={headingStyle}>Event not found</h2>
           <p style={subStyle}>This invite link is invalid or has expired.</p>
           <Link href="/dashboard" style={btnSecondaryStyle}>Go to dashboard</Link>
@@ -58,7 +58,7 @@ export default async function EventInvitePage({ params }: Props) {
   const { data: { user } } = await supabase.auth.getUser()
   const groupId   = (event.groups as any)?.id as string
   const groupName = (event.groups as any)?.name as string
-  const meta      = TYPE_META[event.event_type] ?? { label: event.event_type, icon: '📅' }
+  const meta      = TYPE_META[event.event_type] ?? { label: event.event_type, icon: '' }
   const bannerUrl = event.banner_url as string | null
 
   let isMember = false

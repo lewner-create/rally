@@ -15,11 +15,11 @@ const T = {
 type Tag = 'launch' | 'feature' | 'design' | 'fix' | 'infra'
 
 const TAG_STYLES: Record<Tag, { bg: string; color: string; label: string }> = {
-  launch:  { bg: 'rgba(232,182,90,0.15)',  color: '#e8b65a', label: '🚀 Launch'  },
-  feature: { bg: 'rgba(127,119,221,0.15)', color: '#7F77DD', label: '✨ Feature'  },
-  design:  { bg: 'rgba(95,207,138,0.15)',  color: '#5fcf8a', label: '🎨 Design'   },
-  fix:     { bg: 'rgba(220,90,90,0.15)',   color: '#e87070', label: '🔧 Fix'      },
-  infra:   { bg: 'rgba(90,180,220,0.15)',  color: '#5db4e8', label: '⚙️ Infra'    },
+  launch:  { bg: 'rgba(232,182,90,0.15)',  color: '#e8b65a', label: ' Launch'  },
+  feature: { bg: 'rgba(127,119,221,0.15)', color: '#7F77DD', label: ' Feature'  },
+  design:  { bg: 'rgba(95,207,138,0.15)',  color: '#5fcf8a', label: ' Design'   },
+  fix:     { bg: 'rgba(220,90,90,0.15)',   color: '#e87070', label: ' Fix'      },
+  infra:   { bg: 'rgba(90,180,220,0.15)',  color: '#5db4e8', label: '⚙ Infra'    },
 }
 
 const entries: {

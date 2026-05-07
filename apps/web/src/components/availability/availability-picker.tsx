@@ -12,12 +12,12 @@ const FRI_WEEKEND: DayKey[] = ['fri','sat','sun']
 type Preset = { id: string; label: string; emoji: string; desc: string; days: DayKey[]; hours: number[] }
 
 const PRESETS: Preset[] = [
-  { id: 'weeknights',     label: 'Weeknights',     emoji: '🌆', desc: 'Mon–Fri evenings',    days: WEEKDAYS,    hours: [18,19,20,21,22] },
-  { id: 'weekend-days',   label: 'Weekend days',   emoji: '☀️', desc: 'Sat & Sun daytime',   days: WEEKEND,     hours: [10,11,12,13,14,15,16,17] },
-  { id: 'weekend-nights', label: 'Weekend nights', emoji: '🌙', desc: 'Fri–Sun evenings',    days: FRI_WEEKEND, hours: [18,19,20,21,22] },
-  { id: 'mornings',       label: 'Mornings',       emoji: '🌅', desc: 'Every day, 8am–noon', days: ALL_DAYS,    hours: [8,9,10,11] },
-  { id: 'midday',         label: 'Midday',         emoji: '⛅', desc: 'Every day, noon–5pm', days: ALL_DAYS,    hours: [12,13,14,15,16] },
-  { id: 'late-nights',    label: 'Late nights',    emoji: '🌃', desc: 'Any day, 10pm+',      days: ALL_DAYS,    hours: [22] },
+  { id: 'weeknights',     label: 'Weeknights',     emoji: '', desc: 'Mon–Fri evenings',    days: WEEKDAYS,    hours: [18,19,20,21,22] },
+  { id: 'weekend-days',   label: 'Weekend days',   emoji: '☀', desc: 'Sat & Sun daytime',   days: WEEKEND,     hours: [10,11,12,13,14,15,16,17] },
+  { id: 'weekend-nights', label: 'Weekend nights', emoji: '', desc: 'Fri–Sun evenings',    days: FRI_WEEKEND, hours: [18,19,20,21,22] },
+  { id: 'mornings',       label: 'Mornings',       emoji: '', desc: 'Every day, 8am–noon', days: ALL_DAYS,    hours: [8,9,10,11] },
+  { id: 'midday',         label: 'Midday',         emoji: '', desc: 'Every day, noon–5pm', days: ALL_DAYS,    hours: [12,13,14,15,16] },
+  { id: 'late-nights',    label: 'Late nights',    emoji: '', desc: 'Any day, 10pm+',      days: ALL_DAYS,    hours: [22] },
 ]
 
 const DAY_KEY_MAP: Record<number, DayKey> = { 0:'sun', 1:'mon', 2:'tue', 3:'wed', 4:'thu', 5:'fri', 6:'sat' }

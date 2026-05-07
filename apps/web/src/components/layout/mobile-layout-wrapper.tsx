@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { Menu } from 'lucide-react'
 import { Sidebar } from '@/components/layout/sidebar'
 import { ChatBubble } from '@/components/chat/chat-bubble'
+import { NotificationBell } from '@/components/notifications/notification-bell'
 
 interface Group {
   id: string
@@ -57,6 +58,9 @@ export function MobileLayoutWrapper({
           >
             volta
           </span>
+          <div className="ml-auto">
+            <NotificationBell />
+          </div>
         </div>
 
         {children}

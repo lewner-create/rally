@@ -1,4 +1,4 @@
-﻿'use client'
+ï»¿'use client'
 
 import { useState, useTransition } from 'react'
 import { useSearchParams } from 'next/navigation'
@@ -46,20 +46,20 @@ export default function RequestAccessClient() {
       <div style={{ width: '100%', maxWidth: '360px', background: '#fff', borderRadius: 20, padding: '32px', boxShadow: '0 32px 80px rgba(0,0,0,0.35)' }}>
         {done ? (
           <div style={{ textAlign: 'center', padding: '8px 0' }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>ðŸŽ‰</div>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>Ã°Å¸Å½â°</div>
             <h2 style={{ fontSize: 20, fontWeight: 800, color: '#111', margin: '0 0 10px' }}>
               You're on the list!
             </h2>
             <p style={{ fontSize: 14, color: '#777', lineHeight: 1.6, margin: '0 0 24px' }}>
               We'll send an invite to <strong style={{ color: '#333' }}>{email}</strong> when your spot is ready.
             </p>
-            <Link href="/" style={{ fontSize: 13, color: accent, textDecoration: 'none', fontWeight: 500 }}>â† Back to home</Link>
+            <Link href="/" style={{ fontSize: 13, color: accent, textDecoration: 'none', fontWeight: 500 }}>Ã¢â Â Back to home</Link>
           </div>
         ) : (
           <>
             {bounced && (
               <div style={{ background: '#FEF3C7', border: '1px solid #F59E0B', borderRadius: 10, padding: '12px 14px', marginBottom: 20, display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                <span style={{ fontSize: 18, flexShrink: 0 }}>ðŸ”’</span>
+                <span style={{ fontSize: 18, flexShrink: 0 }}>Ã°Å¸ââ</span>
                 <div>
                   <div style={{ fontSize: 13, fontWeight: 700, color: '#92400E', marginBottom: 2 }}>Volta is invite-only right now</div>
                   <div style={{ fontSize: 12, color: '#92400E', lineHeight: 1.5 }}>Your account wasn't found on the access list. Request access below and we'll reach out when your spot is ready.</div>
@@ -98,7 +98,7 @@ export default function RequestAccessClient() {
                 boxShadow: (name.trim() && email.trim()) ? '0 4px 14px rgba(127,119,221,0.4)' : 'none',
                 opacity: isPending ? 0.7 : 1, transition: 'all 0.15s',
               }}>
-                {isPending ? 'Sendingâ€¦' : 'Request access â†’'}
+                {isPending ? 'SendingÃ¢â¬Â¦' : 'Request access Ã¢â â'}
               </button>
             </form>
 

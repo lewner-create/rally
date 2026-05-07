@@ -31,7 +31,7 @@ const plusFeatures = [
   'Calendar sync (Google, Apple)',
   'Priority support',
   'Early access to new features',
-  '💜 Founder badge on your profile',
+  ' Founder badge on your profile',
 ]
 
 export const metadata = { title: 'Pricing — Volta' }
@@ -66,7 +66,7 @@ export default function PricingPage() {
           background: 'rgba(232,182,90,0.10)', border: '1px solid rgba(232,182,90,0.3)',
           display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
         }}>
-          <span style={{ fontSize: 28 }}>🎁</span>
+          <span style={{ fontSize: 28 }}></span>
           <div style={{ flex: 1, minWidth: 240 }}>
             <div style={{ fontSize: 15, fontWeight: 700, color: T.text, marginBottom: 3 }}>
               Beta = free Volta+ for life

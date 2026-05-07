@@ -121,7 +121,7 @@ export function ChatPanel({
         background: '#1e1e1e', display: 'flex', alignItems: 'center',
         justifyContent: 'center', fontSize: '20px',
       }}>
-        💬
+        
       </div>
       <div style={{ textAlign: 'center' }}>
         <p style={{ fontSize: '14px', color: '#aaa', margin: '0 0 4px' }}>No messages yet</p>

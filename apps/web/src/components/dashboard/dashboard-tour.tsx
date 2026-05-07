@@ -7,21 +7,21 @@ const accent = '#7F77DD'
 
 const STEPS = [
   {
-    emoji: '👋',
+    emoji: '',
     title: 'Welcome to Volta!',
     body: "You're all set up. Here's a 30-second tour of how the app works — then you're on your own.",
     position: 'center' as const,
     hint: null,
   },
   {
-    emoji: '👥',
+    emoji: '',
     title: 'Your groups',
     body: 'Open the menu (top-left on mobile, sidebar on desktop) to see your groups. Each group has its own chat, availability grid, and plans.',
     position: 'top-left' as const,
     hint: '← Tap the menu to explore your groups',
   },
   {
-    emoji: '👋',
+    emoji: '',
     title: 'Start a plan',
     body: "Inside any group, choose \"Check who's in\" to poll the group, or \"Lock in a plan\" to create a confirmed event directly.",
     position: 'center' as const,

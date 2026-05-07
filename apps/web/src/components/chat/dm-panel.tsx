@@ -89,7 +89,7 @@ export function DMPanel({ otherId, initialMessages, currentUserId, height = '100
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
         {messages.length === 0 && (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ccc', fontSize: '14px', paddingTop: '40px' }}>
-            No messages yet. Say hi! 👋
+            No messages yet. Say hi! 
           </div>
         )}
         {messages.map((msg, i) => {

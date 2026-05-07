@@ -94,7 +94,7 @@ export function GroupSidebar({ groupId, groupName, themeColor, description, memb
                 <p style={{ fontSize: '12px', fontWeight: 600, color: isCustom ? themeColor : '#888', margin: 0, lineHeight: 1.3 }}>{isCustom ? 'Custom for this group' : 'Using default'}</p>
                 <p style={{ fontSize: '11px', color: MUTED, margin: 0, lineHeight: 1.3 }}>Tap to {isCustom ? 'adjust' : 'customise'}</p>
               </div>
-              <span style={{ marginLeft: 'auto', color: MUTED, fontSize: '12px', flexShrink: 0 }}>›</span>
+              <span style={{ marginLeft: 'auto', color: MUTED, fontSize: '12px', flexShrink: 0 }}>â€º</span>
             </button>
           </div>
 
@@ -111,7 +111,7 @@ export function GroupSidebar({ groupId, groupName, themeColor, description, memb
               <div style={{ borderTop: `1px solid ${BORDER}`, margin: '14px 0', flexShrink: 0 }} />
               <div style={{ flexShrink: 0 }}>
                 <p style={SECTION}>Invite people</p>
-                <InvitePanel groupId={groupId} initialInvites={invites} />
+                <InvitePanel groupId={groupId} groupName={groupName} initialInvites={invites} />
               </div>
             </>
           )}

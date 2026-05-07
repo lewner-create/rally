@@ -10,7 +10,7 @@ interface InviteRsvpButtonsProps {
 }
 
 const OPTIONS = [
-  { status: 'yes'   as const, label: '✓ Going',   color: '#1D9E75', confirm: "You're going! 🎉" },
+  { status: 'yes'   as const, label: '✓ Going',   color: '#1D9E75', confirm: "You're going! " },
   { status: 'maybe' as const, label: '? Maybe',    color: '#666',    confirm: "Marked as maybe"   },
   { status: 'no'    as const, label: "✕ Can't",   color: '#D85A30', confirm: "Maybe next time"    },
 ]
@@ -37,7 +37,7 @@ export function InviteRsvpButtons({ eventId, eventUrl }: InviteRsvpButtonsProps)
           fontSize: '32px', marginBottom: '12px',
           animation: 'none',
         }}>
-          {selected === 'yes' ? '🎉' : selected === 'maybe' ? '🤔' : '😢'}
+          {selected === 'yes' ? '' : selected === 'maybe' ? '' : ''}
         </div>
         <p style={{ fontSize: '16px', fontWeight: 700, color: '#111', margin: '0 0 4px' }}>
           {confirm}

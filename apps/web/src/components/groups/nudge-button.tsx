@@ -7,13 +7,13 @@ import { postCheckWhosIn } from '@/lib/actions/plan-cards'
 import type { EventType } from '@/lib/actions/events'
 
 const EVENT_TYPES: Array<{ id: EventType; label: string; icon: string }> = [
-  { id: 'game_night', label: 'Game night', icon: '🎮' },
-  { id: 'hangout',    label: 'Hangout',    icon: '☕' },
-  { id: 'meetup',     label: 'Meetup',     icon: '🤝' },
-  { id: 'day_trip',   label: 'Day trip',   icon: '🗺️' },
-  { id: 'road_trip',  label: 'Road trip',  icon: '🚗' },
-  { id: 'moto_trip',  label: 'Moto trip',  icon: '🏍️' },
-  { id: 'vacation',   label: 'Vacation',   icon: '✈️' },
+  { id: 'game_night', label: 'Game night', icon: '' },
+  { id: 'hangout',    label: 'Hangout',    icon: '' },
+  { id: 'meetup',     label: 'Meetup',     icon: '' },
+  { id: 'day_trip',   label: 'Day trip',   icon: '🗺' },
+  { id: 'road_trip',  label: 'Road trip',  icon: '' },
+  { id: 'moto_trip',  label: 'Moto trip',  icon: '🏍' },
+  { id: 'vacation',   label: 'Vacation',   icon: '✈' },
 ]
 
 export interface NudgeButtonProps {
@@ -144,7 +144,7 @@ export function NudgeButton({
         whiteSpace: 'nowrap', fontFamily: 'inherit',
       }}
     >
-      <span>👋</span>
+      <span></span>
       <span>{isSent ? 'Sent ✓' : "Check who's in"}</span>
       {!isSent && <span style={{ fontSize: '9px', opacity: 0.65, marginLeft: 2 }}>▾</span>}
     </button>
@@ -169,7 +169,7 @@ export function NudgeButton({
       padding: '7px 10px', borderRadius: '9px',
       background: '#252525', fontSize: '12px', color: '#aaa', fontWeight: 500,
     }}>
-      <span>📅</span>
+      <span></span>
       <span>{windowLabel}</span>
       {windowTimeLabel && <span style={{ color: '#555' }}>· {windowTimeLabel}</span>}
     </div>
@@ -199,7 +199,7 @@ export function NudgeButton({
           onMouseEnter={e => (e.currentTarget.style.background = 'rgba(127,119,221,0.25)')}
           onMouseLeave={e => (e.currentTarget.style.background = 'rgba(127,119,221,0.15)')}
         >
-          <span style={{ fontSize: '22px', flexShrink: 0 }}>📅</span>
+          <span style={{ fontSize: '22px', flexShrink: 0 }}></span>
           <div>
             <div style={{ fontSize: '13px', fontWeight: 700, color: '#c4c0f5', marginBottom: '2px' }}>It's happening</div>
             <div style={{ fontSize: '11px', color: '#555', lineHeight: 1.4 }}>Create the event &amp; invite</div>
@@ -219,7 +219,7 @@ export function NudgeButton({
           onMouseEnter={e => (e.currentTarget.style.background = '#2a2a2a')}
           onMouseLeave={e => (e.currentTarget.style.background = '#222')}
         >
-          <span style={{ fontSize: '22px', flexShrink: 0 }}>👋</span>
+          <span style={{ fontSize: '22px', flexShrink: 0 }}></span>
           <div>
             <div style={{ fontSize: '13px', fontWeight: 700, color: '#e0e0e0', marginBottom: '2px' }}>Check who's in</div>
             <div style={{ fontSize: '11px', color: '#555', lineHeight: 1.4 }}>Poll the group first</div>

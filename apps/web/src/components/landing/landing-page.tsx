@@ -152,7 +152,7 @@ function HeroAvailabilityGraphic({ isMobile }: { isMobile: boolean }) {
           background: 'rgba(127,119,221,0.18)', border: '1px solid rgba(127,119,221,0.4)',
           display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
         }}>
-          <span style={{ fontSize: 18 }}>🔥</span>
+          
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>Saturday afternoon — all 5 are free</div>
             <div style={{ fontSize: 11.5, color: T.textDim, marginTop: 1 }}>First overlap in 3 weeks. Lock it in?</div>
@@ -175,7 +175,7 @@ function HeroAvailabilityGraphic({ isMobile }: { isMobile: boolean }) {
               display: 'flex', alignItems: 'center', gap: 6, transform: 'rotate(2deg)',
             }}>
               <Avatar name="Sam" color="#5db4e8" size={18} />
-              <span>"sat works 🙌"</span>
+              <span>"sat works"</span>
             </div>
             <div style={{
               position: 'absolute', bottom: -14, left: -12,
@@ -185,7 +185,7 @@ function HeroAvailabilityGraphic({ isMobile }: { isMobile: boolean }) {
               display: 'flex', alignItems: 'center', gap: 6, transform: 'rotate(-3deg)',
             }}>
               <Avatar name="Taylor" color="#e8b65a" size={16} />
-              <span>"down 🍻"</span>
+              <span>"down"</span>
             </div>
           </>
         )}
@@ -250,7 +250,7 @@ function StepLockViz() {
       background: 'rgba(127,119,221,0.18)', border: '1px solid rgba(127,119,221,0.35)',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-        <span style={{ fontSize: 14 }}>🔥</span>
+        
         <Eyebrow color={T.violet}>Most likely</Eyebrow>
       </div>
       <div style={{ fontSize: 15, fontWeight: 700, color: T.text }}>Saturday afternoon</div>
@@ -361,8 +361,8 @@ export default function LandingPage({ stats }: { stats?: Stats }) {
         {/* Desktop: middle links */}
         {!isMobile && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 28, fontSize: 14, color: T.textDim, fontWeight: 500 }}>
-            <span style={{ cursor: 'pointer' }}>How it works</span>
-            <span style={{ cursor: 'pointer' }}>Features</span>
+            <a href="#how-it-works" style={{ color: 'inherit', textDecoration: 'none', cursor: 'pointer' }}>How it works</a>
+            <Link href="/features" style={{ color: 'inherit', textDecoration: 'none' }}>Features</Link>
           </div>
         )}
 
@@ -430,13 +430,13 @@ export default function LandingPage({ stats }: { stats?: Stats }) {
                 fontSize: isMobile ? 14 : 15, fontWeight: 600,
                 display: 'inline-flex', alignItems: 'center', gap: 8,
                 boxShadow: '0 8px 24px rgba(127,119,221,0.4)',
-              }}>Get Volta — free →</Link>
+              }}>Request access →</Link>
               {!isMobile && (
                 <button style={{
                   background: 'rgba(255,255,255,0.06)', color: T.text,
                   border: `1px solid ${T.border}`,
                   padding: '14px 20px', borderRadius: 11, fontSize: 15, fontWeight: 500, cursor: 'pointer',
-                }}>How it works</button>
+                onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}}>How it works</button>
               )}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 24, fontSize: 12.5, color: T.textMute }}>
@@ -484,7 +484,7 @@ export default function LandingPage({ stats }: { stats?: Stats }) {
       </section>
 
       {/* ── How it works ── */}
-      <section style={{ padding: isMobile ? '60px 20px' : '90px 48px' }}>
+      <section id="how-it-works" style={{ padding: isMobile ? '60px 20px' : '90px 48px' }}>
         <div style={{ maxWidth: 1180, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: isMobile ? 40 : 60 }}>
             <Eyebrow>How it works</Eyebrow>

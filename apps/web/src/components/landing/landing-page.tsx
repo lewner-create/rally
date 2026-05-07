@@ -436,7 +436,7 @@ export default function LandingPage({ stats }: { stats?: Stats }) {
                   background: 'rgba(255,255,255,0.06)', color: T.text,
                   border: `1px solid ${T.border}`,
                   padding: '14px 20px', borderRadius: 11, fontSize: 15, fontWeight: 500, cursor: 'pointer',
-                onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}}>How it works</button>
+                }} onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}>How it works</button>
               )}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 24, fontSize: 12.5, color: T.textMute }}>

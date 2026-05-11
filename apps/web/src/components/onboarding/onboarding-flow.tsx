@@ -7,19 +7,18 @@ import { saveWeeklyAvailability, type WeeklyAvailability } from '@/lib/actions/a
 
 const accent = '#7F77DD'
 
-// ââ Availability presets âââââââââââââââââââââââââââââââââââââââââ
 type DayKey = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun'
 const WEEKDAYS: DayKey[] = ['mon', 'tue', 'wed', 'thu', 'fri']
 const WEEKEND: DayKey[]  = ['sat', 'sun']
 const ALL_DAYS: DayKey[] = [...WEEKDAYS, WEEKEND[0], WEEKEND[1]]
 
 const PRESETS = [
-  { id: 'weeknights',     label: 'Weeknights',     description: 'MonâFri evenings',    emoji: '', days: WEEKDAYS,                         hours: [19, 20, 21, 22] },
-  { id: 'weekend_days',   label: 'Weekend days',   description: 'Sat & Sun daytime',   emoji: 'â', days: WEEKEND,                          hours: [10, 11, 12, 13, 14, 15, 16, 17] },
-  { id: 'weekend_nights', label: 'Weekend nights', description: 'FriâSun evenings',    emoji: '', days: ['fri' as DayKey, ...WEEKEND],     hours: [20, 21, 22, 23] },
-  { id: 'mornings',       label: 'Mornings',       description: 'Every day, 8amânoon', emoji: '', days: ALL_DAYS,                         hours: [7, 8, 9, 10, 11] },
-  { id: 'midday',         label: 'Midday',         description: 'Every day, noonâ5pm', emoji: '', days: WEEKDAYS,                         hours: [11, 12, 13, 14] },
-  { id: 'late_nights',    label: 'Late nights',    description: 'Any day, 10pm+',      emoji: 'ð', days: ALL_DAYS,                         hours: [23] },
+  { id: 'weeknights',     label: 'Weeknights',     description: 'Mon-Fri evenings',    days: WEEKDAYS,                         hours: [19, 20, 21, 22] },
+  { id: 'weekend_days',   label: 'Weekend days',   description: 'Sat & Sun daytime',   days: WEEKEND,                          hours: [10, 11, 12, 13, 14, 15, 16, 17] },
+  { id: 'weekend_nights', label: 'Weekend nights', description: 'Fri-Sun evenings',    days: ['fri' as DayKey, ...WEEKEND],    hours: [20, 21, 22, 23] },
+  { id: 'mornings',       label: 'Mornings',       description: 'Every day, 8am-noon', days: ALL_DAYS,                        hours: [7, 8, 9, 10, 11] },
+  { id: 'midday',         label: 'Midday',         description: 'Every day, noon-5pm', days: WEEKDAYS,                        hours: [11, 12, 13, 14] },
+  { id: 'late_nights',    label: 'Late nights',    description: 'Any day, 10pm+',      days: ALL_DAYS,                        hours: [23] },
 ]
 
 function presetsToWeekly(selected: string[]): WeeklyAvailability {
@@ -44,7 +43,6 @@ function presetSummary(selected: string[]): string {
   return `Usually free ${labels.slice(0, -1).map(l => l.toLowerCase()).join(', ')}, and ${labels[labels.length - 1].toLowerCase()}`
 }
 
-// ââ Shared styles ââââââââââââââââââââââââââââââââââââââââââââââââ
 const primaryBtn = (enabled: boolean): React.CSSProperties => ({
   width: '100%', padding: '14px', borderRadius: '9999px', border: 'none',
   cursor: enabled ? 'pointer' : 'default',
@@ -61,7 +59,6 @@ const ghostBtn: React.CSSProperties = {
   cursor: 'pointer', fontFamily: 'inherit',
 }
 
-// ââ Main component âââââââââââââââââââââââââââââââââââââââââââââââ
 export function OnboardingFlow(_props?: unknown) {
   const router = useRouter()
   const [step, setStep]   = useState<1 | 2>(1)
@@ -75,12 +72,7 @@ export function OnboardingFlow(_props?: unknown) {
     startTransition(async () => {
       await Promise.all([
         saveWeeklyAvailability(presetsToWeekly(presets)),
-        updateProfile({
-          preferences: {
-            onboarded: true,
-            tour_completed: false,
-          },
-        }),
+        updateProfile({ preferences: { onboarded: true, tour_completed: false } }),
       ])
       router.push('/dashboard')
     })
@@ -89,12 +81,10 @@ export function OnboardingFlow(_props?: unknown) {
   return (
     <div style={{
       minHeight: '100vh', background: '#0f0f0f', color: '#fff',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      padding: '24px',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px',
     }}>
       <div style={{ width: '100%', maxWidth: '440px' }}>
 
-        {/* Logo + progress */}
         <div style={{ marginBottom: '40px' }}>
           <p style={{ fontSize: '18px', fontWeight: 800, color: accent, margin: '0 0 22px', letterSpacing: '-0.02em' }}>
             volta
@@ -103,50 +93,27 @@ export function OnboardingFlow(_props?: unknown) {
             {[1, 2].map(n => (
               <div key={n} style={{
                 flex: 1, height: '3px', borderRadius: '9999px',
-                background: n <= step ? accent : '#222',
-                transition: 'background 0.3s',
+                background: n <= step ? accent : '#222', transition: 'background 0.3s',
               }} />
             ))}
           </div>
         </div>
 
-        {/* ââ Step 1: Intro ââ */}
         {step === 1 && (
           <div>
-            <h1 style={{
-              fontSize: '28px', fontWeight: 800, margin: '0 0 10px',
-              letterSpacing: '-0.03em', lineHeight: 1.15, color: '#fff',
-            }}>
+            <h1 style={{ fontSize: '28px', fontWeight: 800, margin: '0 0 10px', letterSpacing: '-0.03em', lineHeight: 1.15, color: '#fff' }}>
               Get your crew set up in 30 seconds.
             </h1>
             <p style={{ fontSize: '15px', color: '#666', margin: '0 0 32px', lineHeight: 1.6 }}>
               No more "are you free?" texts going nowhere.
             </p>
-
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '36px' }}>
               {[
-                {
-                  emoji: 'ð',
-                  title: 'Set your free time',
-                  sub: 'Just rough availability â what your week usually looks like. Takes a minute.',
-                },
-                {
-                  emoji: '',
-                  title: 'See what works',
-                  sub: "We'll show when your group lines up, so you're not guessing.",
-                },
-                {
-                  emoji: '',
-                  title: 'Make it happen',
-                  sub: 'Pick a time, see who\'s in, lock it in. Done.',
-                },
+                { title: 'Set your free time',  sub: 'Just rough availability ? what your week usually looks like. Takes a minute.' },
+                { title: 'See what works',       sub: "We'll show when your group lines up, so you're not guessing." },
+                { title: 'Make it happen',       sub: "Pick a time, see who's in, lock it in. Done." },
               ].map((f, i) => (
-                <div key={i} style={{
-                  display: 'flex', gap: 14,
-                  padding: '15px 16px', borderRadius: 14,
-                  background: '#161616', border: '1px solid #222',
-                }}>
-                  <span style={{ fontSize: 22, flexShrink: 0, lineHeight: 1.2 }}>{f.emoji}</span>
+                <div key={i} style={{ display: 'flex', gap: 14, padding: '15px 16px', borderRadius: 14, background: '#161616', border: '1px solid #222' }}>
                   <div>
                     <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 3 }}>{f.title}</div>
                     <div style={{ fontSize: 13, color: '#666', lineHeight: 1.45 }}>{f.sub}</div>
@@ -154,23 +121,20 @@ export function OnboardingFlow(_props?: unknown) {
                 </div>
               ))}
             </div>
-
             <button onClick={() => setStep(2)} style={primaryBtn(true)}>
-              Let's go â
+              Let's go
             </button>
           </div>
         )}
 
-        {/* ââ Step 2: Availability ââ */}
         {step === 2 && (
           <div>
             <h1 style={{ fontSize: '26px', fontWeight: 800, margin: '0 0 8px', letterSpacing: '-0.02em' }}>
               When are you usually free?
             </h1>
             <p style={{ fontSize: '14px', color: '#666', margin: '0 0 28px', lineHeight: 1.5 }}>
-              Nothing rigid â just pick what fits your typical week. You can change it any time.
+              Nothing rigid ? just pick what fits your typical week. You can change it any time.
             </p>
-
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
               {PRESETS.map(p => {
                 const active = presets.includes(p.id)
@@ -186,16 +150,9 @@ export function OnboardingFlow(_props?: unknown) {
                       border: active ? `1px solid ${accent}44` : '1px solid #222',
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <span style={{ fontSize: 20 }}>{p.emoji}</span>
-                      <div>
-                        <div style={{ fontSize: '14px', fontWeight: 600, color: active ? '#fff' : '#ccc' }}>
-                          {p.label}
-                        </div>
-                        <div style={{ fontSize: '12px', color: '#555', marginTop: '2px' }}>
-                          {p.description}
-                        </div>
-                      </div>
+                    <div>
+                      <div style={{ fontSize: '14px', fontWeight: 600, color: active ? '#fff' : '#ccc' }}>{p.label}</div>
+                      <div style={{ fontSize: '12px', color: '#555', marginTop: '2px' }}>{p.description}</div>
                     </div>
                     <div style={{
                       width: '20px', height: '20px', borderRadius: '50%', flexShrink: 0,
@@ -209,26 +166,15 @@ export function OnboardingFlow(_props?: unknown) {
                 )
               })}
             </div>
-
-            {/* Live summary */}
             {presets.length > 0 && (
-              <div style={{
-                padding: '11px 16px', borderRadius: 12, marginBottom: 20,
-                background: `${accent}12`, border: `1px solid ${accent}30`,
-                fontSize: 13, color: accent, fontWeight: 500,
-              }}>
-                â¦ {presetSummary(presets)}
+              <div style={{ padding: '11px 16px', borderRadius: 12, marginBottom: 20, background: `${accent}12`, border: `1px solid ${accent}30`, fontSize: 13, color: accent, fontWeight: 500 }}>
+                {presetSummary(presets)}
               </div>
             )}
-
             <div style={{ display: 'flex', gap: '10px' }}>
               <button onClick={() => setStep(1)} style={ghostBtn}>Back</button>
-              <button
-                onClick={handleFinish}
-                disabled={isPending}
-                style={{ ...primaryBtn(true), flex: 1, opacity: isPending ? 0.7 : 1 }}
-              >
-                {isPending ? 'Setting upâ¦' : 'Start something â'}
+              <button onClick={handleFinish} disabled={isPending} style={{ ...primaryBtn(true), flex: 1, opacity: isPending ? 0.7 : 1 }}>
+                {isPending ? 'Setting up...' : 'Start something'}
               </button>
             </div>
             <p style={{ textAlign: 'center', fontSize: 12, color: '#3a3a3a', marginTop: 14 }}>
@@ -236,7 +182,6 @@ export function OnboardingFlow(_props?: unknown) {
             </p>
           </div>
         )}
-
       </div>
     </div>
   )

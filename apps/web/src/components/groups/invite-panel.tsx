@@ -1,27 +1,19 @@
 'use client'
 
 import { useState, useTransition, useEffect } from 'react'
-import { createInviteLink, inviteByUsername, revokeInvite } from '@/lib/actions/groups'
+import { inviteByUsername } from '@/lib/actions/groups'
 import { generateInviteToken, getGroupInviteTokens, type InviteToken } from '@/lib/actions/invites'
 import { getMyInviteCredits } from '@/lib/actions/get-invite-credits'
 import { Input } from '@/components/ui/input'
-import { Copy, Check, Link2, Trash2, UserPlus, Sparkles } from 'lucide-react'
-
-interface Invite {
-  id: string
-  token: string
-  use_count: number
-  expires_at: string
-}
+import { Copy, Check, UserPlus, Sparkles } from 'lucide-react'
 
 interface InvitePanelProps {
   groupId: string
   groupName: string
-  initialInvites: Invite[]
+  initialInvites?: unknown[]
 }
 
 export function InvitePanel({ groupId, groupName, initialInvites }: InvitePanelProps) {
-  const [invites, setInvites]           = useState<Invite[]>(initialInvites)
   const [copied, setCopied]             = useState<string | null>(null)
   const [username, setUsername]         = useState('')
   const [usernameMsg, setUsernameMsg]   = useState<{ type: 'error' | 'success'; text: string } | null>(null)
@@ -41,15 +33,9 @@ export function InvitePanel({ groupId, groupName, initialInvites }: InvitePanelP
 
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
 
-  // ── Existing invite link handlers ──────────────────────────────────────
+  // removed ──────────────────────────────────────
 
-  function copyLink(token: string) {
-    navigator.clipboard.writeText(`${baseUrl}/join/${token}`)
-    setCopied(token)
-    setTimeout(() => setCopied(null), 2000)
-  }
-
-  function handleCreateLink() {
+  function handleCreateLink_REMOVED() {
     startTransition(async () => {
       const result = await createInviteLink(groupId)
       if (result.token) window.location.reload()

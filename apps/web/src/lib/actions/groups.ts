@@ -23,10 +23,23 @@ export async function createGroup(formData: FormData) {
   let interests: string[] = []
   try { interests = JSON.parse(formData.get('interests') as string ?? '[]') } catch {}
 
+  // Generate a unique slug for this group
+  const baseSlug = slugify(name)
+  let slug = baseSlug
+  let slugAttempt = 0
+  while (true) {
+    const { data: existing } = await supabase
+      .from('groups').select('id').eq('slug', slug).maybeSingle()
+    if (!existing) break
+    slugAttempt++
+    slug = `${baseSlug}-${slugAttempt}`
+  }
+
   const { data: group, error } = await supabase
     .from('groups')
     .insert({
       name,
+      slug,
       owner_id:    user.id,
       tier:        0,
       group_type:  groupType,

@@ -7,19 +7,19 @@ import { saveWeeklyAvailability, type WeeklyAvailability } from '@/lib/actions/a
 
 const accent = '#7F77DD'
 
-// ── Availability presets ─────────────────────────────────────────
+// ââ Availability presets âââââââââââââââââââââââââââââââââââââââââ
 type DayKey = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun'
 const WEEKDAYS: DayKey[] = ['mon', 'tue', 'wed', 'thu', 'fri']
 const WEEKEND: DayKey[]  = ['sat', 'sun']
 const ALL_DAYS: DayKey[] = [...WEEKDAYS, WEEKEND[0], WEEKEND[1]]
 
 const PRESETS = [
-  { id: 'weeknights',     label: 'Weeknights',     description: 'Mon–Fri evenings',    emoji: '', days: WEEKDAYS,                         hours: [19, 20, 21, 22] },
-  { id: 'weekend_days',   label: 'Weekend days',   description: 'Sat & Sun daytime',   emoji: '☀', days: WEEKEND,                          hours: [10, 11, 12, 13, 14, 15, 16, 17] },
-  { id: 'weekend_nights', label: 'Weekend nights', description: 'Fri–Sun evenings',    emoji: '', days: ['fri' as DayKey, ...WEEKEND],     hours: [20, 21, 22, 23] },
-  { id: 'mornings',       label: 'Mornings',       description: 'Every day, 8am–noon', emoji: '', days: ALL_DAYS,                         hours: [7, 8, 9, 10, 11] },
-  { id: 'midday',         label: 'Midday',         description: 'Every day, noon–5pm', emoji: '', days: WEEKDAYS,                         hours: [11, 12, 13, 14] },
-  { id: 'late_nights',    label: 'Late nights',    description: 'Any day, 10pm+',      emoji: '🏙', days: ALL_DAYS,                         hours: [23] },
+  { id: 'weeknights',     label: 'Weeknights',     description: 'MonâFri evenings',    emoji: '', days: WEEKDAYS,                         hours: [19, 20, 21, 22] },
+  { id: 'weekend_days',   label: 'Weekend days',   description: 'Sat & Sun daytime',   emoji: 'â', days: WEEKEND,                          hours: [10, 11, 12, 13, 14, 15, 16, 17] },
+  { id: 'weekend_nights', label: 'Weekend nights', description: 'FriâSun evenings',    emoji: '', days: ['fri' as DayKey, ...WEEKEND],     hours: [20, 21, 22, 23] },
+  { id: 'mornings',       label: 'Mornings',       description: 'Every day, 8amânoon', emoji: '', days: ALL_DAYS,                         hours: [7, 8, 9, 10, 11] },
+  { id: 'midday',         label: 'Midday',         description: 'Every day, noonâ5pm', emoji: '', days: WEEKDAYS,                         hours: [11, 12, 13, 14] },
+  { id: 'late_nights',    label: 'Late nights',    description: 'Any day, 10pm+',      emoji: 'ð', days: ALL_DAYS,                         hours: [23] },
 ]
 
 function presetsToWeekly(selected: string[]): WeeklyAvailability {
@@ -44,7 +44,7 @@ function presetSummary(selected: string[]): string {
   return `Usually free ${labels.slice(0, -1).map(l => l.toLowerCase()).join(', ')}, and ${labels[labels.length - 1].toLowerCase()}`
 }
 
-// ── Shared styles ────────────────────────────────────────────────
+// ââ Shared styles ââââââââââââââââââââââââââââââââââââââââââââââââ
 const primaryBtn = (enabled: boolean): React.CSSProperties => ({
   width: '100%', padding: '14px', borderRadius: '9999px', border: 'none',
   cursor: enabled ? 'pointer' : 'default',
@@ -61,8 +61,8 @@ const ghostBtn: React.CSSProperties = {
   cursor: 'pointer', fontFamily: 'inherit',
 }
 
-// ── Main component ───────────────────────────────────────────────
-export function OnboardingFlow() {
+// ââ Main component âââââââââââââââââââââââââââââââââââââââââââââââ
+export function OnboardingFlow(_props?: unknown) {
   const router = useRouter()
   const [step, setStep]   = useState<1 | 2>(1)
   const [presets, setPresets] = useState<string[]>([])
@@ -110,7 +110,7 @@ export function OnboardingFlow() {
           </div>
         </div>
 
-        {/* ── Step 1: Intro ── */}
+        {/* ââ Step 1: Intro ââ */}
         {step === 1 && (
           <div>
             <h1 style={{
@@ -126,9 +126,9 @@ export function OnboardingFlow() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '36px' }}>
               {[
                 {
-                  emoji: '🗓',
+                  emoji: 'ð',
                   title: 'Set your free time',
-                  sub: 'Just rough availability — what your week usually looks like. Takes a minute.',
+                  sub: 'Just rough availability â what your week usually looks like. Takes a minute.',
                 },
                 {
                   emoji: '',
@@ -156,19 +156,19 @@ export function OnboardingFlow() {
             </div>
 
             <button onClick={() => setStep(2)} style={primaryBtn(true)}>
-              Let's go →
+              Let's go â
             </button>
           </div>
         )}
 
-        {/* ── Step 2: Availability ── */}
+        {/* ââ Step 2: Availability ââ */}
         {step === 2 && (
           <div>
             <h1 style={{ fontSize: '26px', fontWeight: 800, margin: '0 0 8px', letterSpacing: '-0.02em' }}>
               When are you usually free?
             </h1>
             <p style={{ fontSize: '14px', color: '#666', margin: '0 0 28px', lineHeight: 1.5 }}>
-              Nothing rigid — just pick what fits your typical week. You can change it any time.
+              Nothing rigid â just pick what fits your typical week. You can change it any time.
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
@@ -217,7 +217,7 @@ export function OnboardingFlow() {
                 background: `${accent}12`, border: `1px solid ${accent}30`,
                 fontSize: 13, color: accent, fontWeight: 500,
               }}>
-                ✦ {presetSummary(presets)}
+                â¦ {presetSummary(presets)}
               </div>
             )}
 
@@ -228,7 +228,7 @@ export function OnboardingFlow() {
                 disabled={isPending}
                 style={{ ...primaryBtn(true), flex: 1, opacity: isPending ? 0.7 : 1 }}
               >
-                {isPending ? 'Setting up…' : 'Start something →'}
+                {isPending ? 'Setting upâ¦' : 'Start something â'}
               </button>
             </div>
             <p style={{ textAlign: 'center', fontSize: 12, color: '#3a3a3a', marginTop: 14 }}>

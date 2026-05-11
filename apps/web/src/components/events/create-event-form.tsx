@@ -7,6 +7,8 @@ import { createEvent } from '@/lib/actions/events'
 import type { EventType, EventStatus } from '@/lib/actions/events'
 import { generateEventTitle } from '@/lib/name-generator'
 import Link from 'next/link'
+import { useEffect, useCallback } from 'react'
+import { checkEventConflicts, type ConflictEvent } from '@/lib/actions/check-conflicts'
 
 const ALL_EVENT_TYPES: Array<{ id: EventType; label: string; icon: string; interests: string[]; gradient: string }> = [
   { id: 'game_night', label: 'Game night', icon: '', interests: ['gaming'],                                          gradient: 'linear-gradient(145deg, #1a1040, #2d1f6e)' },
@@ -307,6 +309,18 @@ export function CreateEventForm({ groupId, groupName, groupType='recurring', int
   const [submitting,setSubmitting]       = useState<EventStatus|null>(null)
   const [suggesting,setSuggesting]       = useState(false)
   const [uploadError,setUploadError]     = useState('')
+  const [conflicts, setConflicts]         = useState<ConflictEvent[]>([])
+
+  // Check for conflicts whenever date or time changes
+  const checkConflicts = useCallback(async () => {
+    if (!date || !startTime || !endTime) { setConflicts([]); return }
+    const startsAt = `${date}T${startTime}:00`
+    const endsAt   = `${date}T${endTime}:00`
+    const results  = await checkEventConflicts(groupId, startsAt, endsAt)
+    setConflicts(results)
+  }, [groupId, date, startTime, endTime])
+
+  useEffect(() => { checkConflicts() }, [checkConflicts])
 
   const canSubmit   = title.trim().length > 0 && date.length > 0 && !submitting
   const currentType = ALL_EVENT_TYPES.find(t=>t.id===eventType)

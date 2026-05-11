@@ -542,6 +542,25 @@ export function CreateEventForm({ groupId, groupName, groupType='recurring', int
               onBlur={e=>(e.target.style.borderColor='#2a2a2a')}
             />
 
+            {/* Conflict warning */}
+            {conflicts.length > 0 && (
+              <div style={{
+                padding: '12px 16px', borderRadius: '12px', marginBottom: '12px',
+                background: 'rgba(220,90,90,0.10)', border: '1px solid rgba(220,90,90,0.30)',
+              }}>
+                <p style={{ fontSize: '12px', fontWeight: 700, color: '#e87070', margin: '0 0 6px' }}>
+                  Heads up — scheduling conflict
+                </p>
+                {conflicts.map(c => (
+                  <p key={c.id} style={{ fontSize: '12px', color: '#999', margin: '2px 0' }}>
+                    {c.conflict_type === 'same_group'
+                      ? `This group already has "${c.title}" on this day`
+                      : `You're going to "${c.title}" in ${c.group_name} at the same time`
+                    }
+                  </p>
+                ))}
+              </div>
+            )}
             <div style={{ display:'flex', gap:'10px', marginTop:'16px' }}>
               <button onClick={()=>handleSubmit('draft')} disabled={!canSubmit} style={{ flex:1, padding:'13px', borderRadius:'12px', border:'1.5px solid #2a2a2a', background:'#1a1a1a', fontSize:'14px', fontWeight:600, color:canSubmit?'#aaa':'#444', cursor:canSubmit?'pointer':'not-allowed', opacity:canSubmit?1:0.5, fontFamily:'inherit' }}>
                 {submitting==='draft'?'Saving…':'Save draft'}

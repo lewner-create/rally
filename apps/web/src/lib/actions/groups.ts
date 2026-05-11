@@ -286,7 +286,22 @@ export async function updateGroup(groupId: string, fields: {
   if (membership?.role !== 'admin') return { error: 'Only admins can edit group settings' }
 
   const update: Record<string, unknown> = {}
-  if (fields.name        !== undefined) update.name        = fields.name.trim()
+  if (fields.name        !== undefined) {
+    const trimmed = fields.name.trim()
+    update.name = trimmed
+    // Re-slugify with collision handling
+    const baseSlug = slugify(trimmed)
+    let slug = baseSlug
+    let attempt = 0
+    while (true) {
+      const { data: existing } = await supabase
+        .from('groups').select('id').eq('slug', slug).neq('id', groupId).maybeSingle()
+      if (!existing) break
+      attempt++
+      slug = `${baseSlug}-${attempt}`
+    }
+    update.slug = slug
+  }
   if (fields.description !== undefined) update.description = fields.description
   if (fields.theme_color !== undefined) update.theme_color = fields.theme_color
   if (fields.banner_url  !== undefined) update.banner_url  = fields.banner_url

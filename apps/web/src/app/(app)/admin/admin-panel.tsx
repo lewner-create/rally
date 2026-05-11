@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { approveRequest, rejectRequest } from '@/lib/actions/access'
 import type { AccessRequest } from '@/lib/actions/access'
 

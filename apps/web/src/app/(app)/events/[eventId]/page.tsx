@@ -168,6 +168,8 @@ export default async function EventPage({ params }: Props) {
               eventType={event.event_type}
               members={members}
               isCreator={isCreator}
+              currentUserId={user.id}
+              initialPhotos={[]}
               aboutSlot={aboutSlot}
             />
           </div>

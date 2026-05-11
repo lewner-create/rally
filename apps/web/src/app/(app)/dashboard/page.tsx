@@ -14,7 +14,7 @@ export default async function DashboardPage() {
     .eq('id', user.id)
     .single()
 
-  if (!profile?.display_name || !profile?.preferences?.onboarded) redirect('/onboarding')
+  if (!profile?.preferences?.onboarded) redirect('/onboarding')
 
   const [groupsWithWindows, upcomingPlans, needsYouItems] = await Promise.all([
     getGroupsWithWindows(user.id),

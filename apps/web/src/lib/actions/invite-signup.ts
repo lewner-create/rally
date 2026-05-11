@@ -40,12 +40,10 @@ export async function createAdminSignup(params: {
 
   const newUserId = authData.user.id
 
-  // 3. Supabase should auto-create a profile via trigger,
-  //    but ensure display_name is set
+  // 3. Upsert profile ? trigger may not have run yet when using admin client
   await admin
     .from('profiles')
-    .update({ display_name: params.displayName })
-    .eq('id', newUserId)
+    .upsert({ id: newUserId, display_name: params.displayName }, { onConflict: 'id' })
 
   // 4. Consume token + create approved access_request
   const consume = await consumeInviteToken({

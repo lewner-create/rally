@@ -13,9 +13,9 @@ const WEEKEND: DayKey[]  = ['sat', 'sun']
 const ALL_DAYS: DayKey[] = [...WEEKDAYS, WEEKEND[0], WEEKEND[1]]
 
 const PRESETS = [
-  { id: 'weeknights',     label: 'Weeknights',     description: 'Mon-Fri evenings',    days: WEEKDAYS,                         hours: [19, 20, 21, 22] },
-  { id: 'weekend_days',   label: 'Weekend days',   description: 'Sat & Sun daytime',   days: WEEKEND,                          hours: [10, 11, 12, 13, 14, 15, 16, 17] },
-  { id: 'weekend_nights', label: 'Weekend nights', description: 'Fri-Sun evenings',    days: ['fri' as DayKey, ...WEEKEND],    hours: [20, 21, 22, 23] },
+  { id: 'weeknights',     label: 'Weeknights',     description: 'Mon-Fri evenings',    days: WEEKDAYS,                        hours: [19, 20, 21, 22] },
+  { id: 'weekend_days',   label: 'Weekend days',   description: 'Sat & Sun daytime',   days: WEEKEND,                         hours: [10, 11, 12, 13, 14, 15, 16, 17] },
+  { id: 'weekend_nights', label: 'Weekend nights', description: 'Fri-Sun evenings',    days: ['fri' as DayKey, ...WEEKEND],   hours: [20, 21, 22, 23] },
   { id: 'mornings',       label: 'Mornings',       description: 'Every day, 8am-noon', days: ALL_DAYS,                        hours: [7, 8, 9, 10, 11] },
   { id: 'midday',         label: 'Midday',         description: 'Every day, noon-5pm', days: WEEKDAYS,                        hours: [11, 12, 13, 14] },
   { id: 'late_nights',    label: 'Late nights',    description: 'Any day, 10pm+',      days: ALL_DAYS,                        hours: [23] },
@@ -109,15 +109,13 @@ export function OnboardingFlow(_props?: unknown) {
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '36px' }}>
               {[
-                { title: 'Set your free time',  sub: 'Just rough availability ? what your week usually looks like. Takes a minute.' },
+                { title: 'Set your free time',  sub: 'Just rough availability — what your week usually looks like. Takes a minute.' },
                 { title: 'See what works',       sub: "We'll show when your group lines up, so you're not guessing." },
                 { title: 'Make it happen',       sub: "Pick a time, see who's in, lock it in. Done." },
               ].map((f, i) => (
-                <div key={i} style={{ display: 'flex', gap: 14, padding: '15px 16px', borderRadius: 14, background: '#161616', border: '1px solid #222' }}>
-                  <div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 3 }}>{f.title}</div>
-                    <div style={{ fontSize: 13, color: '#666', lineHeight: 1.45 }}>{f.sub}</div>
-                  </div>
+                <div key={i} style={{ padding: '15px 16px', borderRadius: 14, background: '#161616', border: '1px solid #222' }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 3 }}>{f.title}</div>
+                  <div style={{ fontSize: 13, color: '#666', lineHeight: 1.45 }}>{f.sub}</div>
                 </div>
               ))}
             </div>
@@ -133,7 +131,7 @@ export function OnboardingFlow(_props?: unknown) {
               When are you usually free?
             </h1>
             <p style={{ fontSize: '14px', color: '#666', margin: '0 0 28px', lineHeight: 1.5 }}>
-              Nothing rigid ? just pick what fits your typical week. You can change it any time.
+              Nothing rigid — just pick what fits your typical week. You can change it any time.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
               {PRESETS.map(p => {

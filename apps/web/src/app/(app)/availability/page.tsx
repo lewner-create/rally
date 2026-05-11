@@ -5,7 +5,7 @@ import { AvailabilityPicker } from '@/components/availability/availability-picke
 import { CalendarSyncBanner } from '@/components/availability/calendar-sync-banner'
 import { BusyTimesPanel } from '@/components/availability/busy-times-panel'
 
-export const metadata = { title: 'Availability – Rally' }
+export const metadata = { title: 'Availability – Volta' }
 
 export default async function AvailabilityPage() {
   const [weekly, { connected }, blocks] = await Promise.all([

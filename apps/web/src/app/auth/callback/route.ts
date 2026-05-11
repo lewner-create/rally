@@ -36,7 +36,7 @@ export async function GET(request: Request) {
   // Also allow if they were invited directly via inviteUserByEmail
   // (those users are auto-confirmed by Supabase, check user metadata)
   const isInvited = user.user_metadata?.invited === true ||
-                    user.app_metadata?.provider === 'email' && user.email_confirmed_at
+                    (user.app_metadata?.provider === 'email' && !!user.email_confirmed_at)
 
   const isApproved = request_?.status === 'approved'
 

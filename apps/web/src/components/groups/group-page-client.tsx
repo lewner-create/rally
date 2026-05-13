@@ -590,7 +590,6 @@ export function GroupPageClient({
         currentUserId={currentUserId ?? ''}
         accentColor={accent}
       />
-    </div>
       {/* FAB ? mobile only, always visible */}
       <button
         onClick={() => setFabNudgeOpen(true)}
@@ -601,6 +600,7 @@ export function GroupPageClient({
         <span style={{ fontSize: '20px', lineHeight: 1 }}>+</span>
         Start a plan
       </button>
+    </div>
   )
 }
 

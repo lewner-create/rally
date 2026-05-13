@@ -170,6 +170,7 @@ export default async function GroupPage({ params }: { params: Promise<{ groupId:
         <GroupPageClient
           groupId={groupId}
           streak={streak}
+          streak={streak}
           themeColor={themeColor}
           events={events}
           activeCards={activeCards}

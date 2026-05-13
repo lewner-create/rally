@@ -221,16 +221,6 @@ function LockedEventHero({ event, accent }: { event: Event; accent: string }) {
         </div>
       </div>
     </Link>
-      {/* FAB ? mobile only, always visible */}
-      <button
-        onClick={() => setFabNudgeOpen(true)}
-        className="lg:hidden fixed bottom-6 right-6 z-50 flex items-center gap-2 px-5 h-12 rounded-full text-white text-sm font-semibold shadow-lg transition-transform active:scale-95"
-        style={{ background: themeColor }}
-        aria-label="Start a plan"
-      >
-        <span style={{ fontSize: '20px', lineHeight: 1 }}>+</span>
-        Start a plan
-      </button>
   )
 }
 
@@ -601,6 +591,16 @@ export function GroupPageClient({
         accentColor={accent}
       />
     </div>
+      {/* FAB ? mobile only, always visible */}
+      <button
+        onClick={() => setFabNudgeOpen(true)}
+        className="lg:hidden fixed bottom-6 right-6 z-50 flex items-center gap-2 px-5 h-12 rounded-full text-white text-sm font-semibold shadow-lg transition-transform active:scale-95"
+        style={{ background: themeColor }}
+        aria-label="Start a plan"
+      >
+        <span style={{ fontSize: '20px', lineHeight: 1 }}>+</span>
+        Start a plan
+      </button>
   )
 }
 

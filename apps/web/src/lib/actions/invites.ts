@@ -122,6 +122,8 @@ export async function lookupInviteToken(token: string): Promise<{
   groupName?: string
   groupBanner?: string
   groupColor?: string
+  groupMembers?: { display_name: string | null; avatar_url: string | null }[]
+  groupMemberCount?: number
   error?: string
 }> {
   const admin = createAdminClient()
@@ -134,7 +136,8 @@ export async function lookupInviteToken(token: string): Promise<{
         display_name, username, avatar_url
       ),
       group:groups!invite_tokens_group_id_fkey(
-        name, banner_url, theme_color
+        name, banner_url, theme_color,
+        group_members(profiles(display_name, avatar_url))
       )
     `)
     .eq('token', token)
@@ -153,7 +156,9 @@ export async function lookupInviteToken(token: string): Promise<{
     inviterAvatar: inviter?.avatar_url ?? null,
     groupName:     group?.name ?? null,
     groupBanner:   group?.banner_url ?? null,
-    groupColor:    group?.theme_color ?? null,
+    groupColor:       group?.theme_color ?? null,
+    groupMembers:     (group?.group_members ?? []).slice(0,3).map((m) => m.profiles).filter(Boolean),
+    groupMemberCount: group?.group_members?.length ?? 0,
   }
 }
 

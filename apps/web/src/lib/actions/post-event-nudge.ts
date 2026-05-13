@@ -1,7 +1,7 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
-import { sendPushToUser } from '@/lib/push-sender'
+import { sendPush } from '@/lib/push-sender'
 
 export async function sendPostEventNudges() {
   const admin = createAdminClient()
@@ -32,7 +32,7 @@ export async function sendPostEventNudges() {
 
     for (const { user_id } of members) {
       try {
-        await sendPushToUser(user_id, {
+        await sendPush(user_id, {
           title: 'How did it go?',
           body:  `Plan the next "${event.title}" with your crew`,
           url:   `/groups/${event.group_id}`,

@@ -46,6 +46,7 @@ type Props = {
   members?: unknown[]
   isAdmin?: boolean
   proactiveBannerSlot?: React.ReactNode
+  streak?: { streak: number; totalHangouts: number }
 }
 
 // ─── Event type labels ─────────────────────────────────────────────────────────

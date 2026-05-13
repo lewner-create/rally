@@ -1,4 +1,4 @@
-import { getGroupWithMembers, getGroupInvites } from '@/lib/actions/groups'
+import { getGroupWithMembers, getGroupStreak } from '@/lib/actions/groups'
 import { getEventsForGroup } from '@/lib/actions/events'
 import { getActivePlanCards } from '@/lib/actions/plan-cards'
 import { getProactivePrompt } from '@/lib/actions/prompts'
@@ -27,9 +27,9 @@ export default async function GroupPage({ params }: { params: Promise<{ groupId:
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [group, invites, events, activeCards, prompt] = await Promise.all([
+  const [group, streak, events, activeCards, prompt] = await Promise.all([
     getGroupWithMembers(groupId),
-    getGroupInvites(groupId),
+    getGroupStreak(groupId),
     getEventsForGroup(groupId),
     getActivePlanCards(groupId),
     getProactivePrompt(groupId),
@@ -169,6 +169,7 @@ export default async function GroupPage({ params }: { params: Promise<{ groupId:
         {/* â”€â”€ Main content â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <GroupPageClient
           groupId={groupId}
+          streak={streak}
           themeColor={themeColor}
           events={events}
           activeCards={activeCards}

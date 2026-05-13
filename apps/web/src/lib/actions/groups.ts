@@ -345,6 +345,49 @@ export async function removeMember(groupId: string, targetUserId: string) {
   return { success: true }
 }
 
+export async function getGroupStreak(groupId: string): Promise<{ streak: number; totalHangouts: number }> {
+  const supabase = await createClient()
+  const { data: events } = await supabase
+    .from('events')
+    .select('ends_at')
+    .eq('group_id', groupId)
+    .eq('status', 'published')
+    .lt('ends_at', new Date().toISOString())
+    .order('ends_at', { ascending: false })
+    .limit(52) // max 52 weeks lookback
+
+  if (!events?.length) return { streak: 0, totalHangouts: 0 }
+
+  const totalHangouts = events.length
+
+  // Get unique calendar weeks (YYYY-WW) for events
+  const weeks = new Set(events.map(e => {
+    const d = new Date(e.ends_at!)
+    const jan1 = new Date(d.getFullYear(), 0, 1)
+    const week = Math.ceil(((d.getTime() - jan1.getTime()) / 86400000 + jan1.getDay() + 1) / 7)
+    return `${d.getFullYear()}-${week}`
+  }))
+
+  // Current week
+  const now = new Date()
+  const jan1 = new Date(now.getFullYear(), 0, 1)
+  const currentWeek = Math.ceil(((now.getTime() - jan1.getTime()) / 86400000 + jan1.getDay() + 1) / 7)
+
+  let streak = 0
+  let checkWeek = currentWeek
+  let checkYear = now.getFullYear()
+
+  while (true) {
+    const key = `${checkYear}-${checkWeek}`
+    if (!weeks.has(key)) break
+    streak++
+    checkWeek--
+    if (checkWeek <= 0) { checkWeek = 52; checkYear-- }
+  }
+
+  return { streak, totalHangouts }
+}
+
 export async function deleteGroup(groupId: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

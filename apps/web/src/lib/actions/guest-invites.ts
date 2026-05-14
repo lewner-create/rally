@@ -1,5 +1,3 @@
-'use server'
-
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
@@ -33,6 +31,9 @@ function isEventFrozen(endsAt: string | null): boolean {
   if (!endsAt) return false
   return Date.now() > new Date(endsAt).getTime() + GUEST_ACCESS_GRACE_HOURS * 3600000
 }
+
+
+'use server'
 
 export async function sendEventInvites(eventId: string, emails: string[]) {
   const supabase = await createClient()

@@ -5,7 +5,6 @@ import EventDetails from '@/components/events/event-details'
 import { MomentsTab } from '@/components/events/moments-tab'
 import ExpensesTab from '@/components/events/expenses-tab'
 import GuestMessagesTab from '@/components/events/guest-messages-tab'
-import ExpensesTab from '@/components/events/expenses-tab'
 import type { EventPhoto } from '@/lib/actions/photos'
 
 type Member = {

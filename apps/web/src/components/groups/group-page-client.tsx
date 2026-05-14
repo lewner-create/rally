@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useTransition } from 'react'
 import Link from 'next/link'
+import { respondToPlanCard } from '@/lib/actions/plan-cards'
 import { GroupChatDrawer } from '@/components/groups/group-chat-drawer'
 
 type ActiveCard = {
@@ -13,6 +14,7 @@ type ActiveCard = {
   proposed_end: string | null
   status: 'open' | 'locked'
   response_counts?: { in: number; maybe: number; cant: number }
+  currentUserResponse?: string | null
 }
 
 type Event = {
@@ -232,12 +234,20 @@ function ActivePlanCard({ card, accent }: { card: ActiveCard; accent: string }) 
   const fomoCopy = getFomoCopy(counts.in, total)
   const relDate  = relativeDate(card.proposed_date)
   const typeLabel = EVENT_TYPE_LABEL[card.event_type] ?? card.event_type
-
-  // Urgency colour: green if lots in, amber if few, default if none
   const urgencyColor = counts.in >= 3 ? '#34d399' : counts.in >= 1 ? '#fbbf24' : '#555'
 
+  const [myResponse, setMyResponse] = useState<string | null>(card.currentUserResponse ?? null)
+  const [pending, startTransition]  = useTransition()
+
+  function handleRespond(r: 'in' | 'cant') {
+    startTransition(async () => {
+      await respondToPlanCard(card.id, r)
+      setMyResponse(r)
+    })
+  }
+
   return (
-    <Link href={`/plans/${card.id}`} className="block">
+    <div className="block">
       <div
         className="rounded-xl overflow-hidden transition-all hover:border-[#3a3a3a]"
         style={{

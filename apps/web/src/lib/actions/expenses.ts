@@ -45,14 +45,7 @@ export async function getEventExpenses(eventId: string): Promise<EventExpense[]>
   const supabase = await createClient()
   const { data } = await supabase
     .from('event_expenses')
-    .select(\`
-      *,
-      creator:profiles!event_expenses_created_by_fkey(display_name, username),
-      splits:event_expense_splits(
-        *,
-        profiles(id, display_name, username, avatar_url, payment_links)
-      )
-    \`)
+    .select('*,creator:profiles!event_expenses_created_by_fkey(display_name,username),splits:event_expense_splits(*,profiles(id,display_name,username,avatar_url,payment_links))')
     .eq('event_id', eventId)
     .order('created_at', { ascending: false })
   return (data ?? []) as EventExpense[]

@@ -1,12 +1,13 @@
+'use server'
+
+import { GUEST_CAP_FREE, GUEST_ACCESS_GRACE_HOURS, INVITE_TOKEN_LENGTH } from '@/lib/guest-invite-config'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
 import { sendInviteEmail } from '@/lib/resend'
 import { nanoid } from 'nanoid'
 
-export const GUEST_CAP_FREE           = 10
-export const GUEST_ACCESS_GRACE_HOURS = 72
-export const INVITE_TOKEN_LENGTH      = 12
+
 
 export interface EventInvite {
   id: string; event_id: string; invited_by: string; email: string
@@ -32,8 +33,6 @@ function isEventFrozen(endsAt: string | null): boolean {
   return Date.now() > new Date(endsAt).getTime() + GUEST_ACCESS_GRACE_HOURS * 3600000
 }
 
-
-'use server'
 
 export async function sendEventInvites(eventId: string, emails: string[]) {
   const supabase = await createClient()

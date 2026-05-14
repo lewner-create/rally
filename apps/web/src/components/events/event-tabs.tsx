@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import EventDetails from '@/components/events/event-details'
 import { MomentsTab } from '@/components/events/moments-tab'
+import ExpensesTab from '@/components/events/expenses-tab'
 import type { EventPhoto } from '@/lib/actions/photos'
 
 type Member = {
@@ -24,7 +25,8 @@ type Props = {
 const TABS = [
   { id: 'about',   label: 'About'          },
   { id: 'details', label: 'Costs & details' },
-  { id: 'moments', label: ' Moments'      },
+  { id: 'moments',  label: ' Moments'   },
+  { id: 'expenses', label: 'Expenses'      },
 ] as const
 
 type TabId = typeof TABS[number]['id']
@@ -69,7 +71,10 @@ export default function EventTabs({
       {/* Tab panels */}
       {active === 'about' && <div>{aboutSlot}</div>}
 
-      {active === 'details' && (
+      {active === 'expenses' && (
+          <ExpensesTab eventId={eventId} members={members} currentUserId={currentUserId} />
+        )}
+        {active === 'details' && (
         <EventDetails
           eventId={eventId}
           eventType={eventType}

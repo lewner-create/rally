@@ -10,6 +10,7 @@ export interface Profile {
   avatar_url: string | null
   bio: string | null
   preferences: Record<string, any> | null
+  payment_links: Record<string, string> | null
   created_at: string
   updated_at: string
 }
@@ -21,7 +22,7 @@ export async function getProfile(): Promise<Profile | null> {
 
   const { data } = await supabase
     .from('profiles')
-    .select('id, username, display_name, avatar_url, bio, preferences, created_at, updated_at')
+    .select('id, username, display_name, avatar_url, bio, preferences, payment_links, created_at, updated_at')
     .eq('id', user.id)
     .single()
 
@@ -34,6 +35,7 @@ export async function updateProfile(fields: {
   avatar_url?: string
   bio?: string
   preferences?: Record<string, any>
+  payment_links?: Record<string, string>
 }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

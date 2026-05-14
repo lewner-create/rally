@@ -4,41 +4,24 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { sendPush } from '@/lib/push-sender'
 
-export type ExpenseCategory = 'lodging' | 'food' | 'gas' | 'activities' | 'transport' | 'other'
-export type ExpenseStatus = 'pending_approval' | 'active' | 'cancelled'
-export type SplitStatus = 'pending' | 'approved' | 'rejected' | 'paid'
-
-export interface ExpenseSplit {
-  id: string
-  expense_id: string
-  user_id: string
-  amount: number
-  status: SplitStatus
-  paid_at: string | null
-  payment_screenshot_url: string | null
-  profiles?: {
-    id: string
-    display_name: string | null
-    username: string | null
-    avatar_url: string | null
-    payment_links: Record<string, string> | null
-  } | null
-}
+export type ExpenseCategory = 'food' | 'lodging' | 'gas' | 'transport' | 'activities' | 'other'
 
 export interface EventExpense {
-  id: string
-  event_id: string
-  created_by: string
-  title: string
-  category: ExpenseCategory
-  total_amount: number
-  expense_date: string | null
-  pay_by_date: string | null
-  receipt_url: string | null
-  status: ExpenseStatus
-  created_at: string
-  creator?: { display_name: string | null; username: string | null } | null
+  id: string; event_id: string; created_by: string; title: string
+  category: ExpenseCategory; total_amount: number
+  expense_date: string | null; pay_by_date: string | null
+  receipt_url: string | null; status: string
+  created_at: string; updated_at: string
+  creator: { display_name: string | null; username: string } | null
   splits: ExpenseSplit[]
+}
+
+export interface ExpenseSplit {
+  id: string; expense_id: string; user_id: string; amount: number
+  status: 'pending' | 'approved' | 'rejected' | 'paid'
+  paid_at: string | null; payment_screenshot_url: string | null
+  created_at: string; updated_at: string
+  profiles: { id: string; display_name: string | null; username: string; avatar_url: string | null; payment_links: Record<string, string> | null } | null
 }
 
 export async function getEventExpenses(eventId: string): Promise<EventExpense[]> {
@@ -103,12 +86,12 @@ export async function createExpense(eventId: string, fields: {
   for (const uid of otherUsers) {
     await sendPush(uid, {
       title: 'New expense split',
-      body: \`You have been added to "\${fields.title}" ? $\${perPerson.toFixed(2)}. Tap to approve.\`,
-      url: \`/events/\${eventId}\`,
+      body: 'You have been added to "' + fields.title + '" - $' + perPerson.toFixed(2) + '. Tap to approve.',
+      url: '/events/' + eventId,
     }).catch(() => {})
   }
 
-  revalidatePath(\`/events/\${eventId}\`)
+  revalidatePath('/events/' + eventId)
   return { success: true, expenseId: expense.id }
 }
 
@@ -142,8 +125,8 @@ export async function respondToExpenseSplit(splitId: string, response: 'approved
       await supabase.from('event_expenses').update({ status: 'cancelled' }).eq('id', expense.id)
       await sendPush(expense.created_by, {
         title: 'Expense cancelled',
-        body: \`All users declined "\${expense.title}". Expense cancelled.\`,
-        url: \`/events/\${expense.event_id}\`,
+        body: 'All users declined "' + expense.title + '". Expense cancelled.',
+        url: '/events/' + expense.event_id,
       }).catch(() => {})
     } else {
       const newAmount = Math.round((expense.total_amount / active.length) * 100) / 100
@@ -155,8 +138,8 @@ export async function respondToExpenseSplit(splitId: string, response: 'approved
       for (const s of active) {
         await sendPush((s as any).user_id, {
           title: (s as any).user_id === expense.created_by ? 'Expense split declined' : 'Expense share updated',
-          body: \`\${name} declined "\${expense.title}". Your share is now $\${newAmount.toFixed(2)}.\`,
-          url: \`/events/\${expense.event_id}\`,
+          body: name + ' declined "' + expense.title + '". Your share is now $' + newAmount.toFixed(2) + '.',
+          url: '/events/' + expense.event_id,
         }).catch(() => {})
       }
     }
@@ -164,7 +147,7 @@ export async function respondToExpenseSplit(splitId: string, response: 'approved
     await supabase.from('event_expenses').update({ status: 'active' }).eq('id', expense.id)
   }
 
-  revalidatePath(\`/events/\${expense.event_id}\`)
+  revalidatePath('/events/' + expense.event_id)
   return { success: true }
 }
 
@@ -193,11 +176,11 @@ export async function markSplitPaid(splitId: string, screenshotUrl?: string) {
 
   await sendPush(expense.created_by, {
     title: 'Payment received',
-    body: \`\${name} marked their share of "\${expense.title}" as paid.\`,
-    url: \`/events/\${expense.event_id}\`,
+    body: name + ' marked their share of "' + expense.title + '" as paid.',
+    url: '/events/' + expense.event_id,
   }).catch(() => {})
 
-  revalidatePath(\`/events/\${expense.event_id}\`)
+  revalidatePath('/events/' + expense.event_id)
   return { success: true }
 }
 
@@ -222,6 +205,6 @@ export async function deleteExpense(expenseId: string) {
   if (!expense || (expense as any).created_by !== user.id) return { error: 'Unauthorized' }
 
   await supabase.from('event_expenses').delete().eq('id', expenseId)
-  revalidatePath(\`/events/\${(expense as any).event_id}\`)
+  revalidatePath('/events/' + (expense as any).event_id)
   return { success: true }
 }

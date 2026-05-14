@@ -4,6 +4,7 @@ import { useState } from 'react'
 import EventDetails from '@/components/events/event-details'
 import { MomentsTab } from '@/components/events/moments-tab'
 import ExpensesTab from '@/components/events/expenses-tab'
+import GuestMessagesTab from '@/components/events/guest-messages-tab'
 import ExpensesTab from '@/components/events/expenses-tab'
 import type { EventPhoto } from '@/lib/actions/photos'
 
@@ -18,6 +19,7 @@ type Props = {
   eventType: string
   members: Member[]
   isCreator: boolean
+  guestMessageCount?: number
   currentUserId: string
   initialPhotos: EventPhoto[]
   aboutSlot: React.ReactNode
@@ -28,6 +30,7 @@ const TABS = [
   { id: 'details', label: 'Costs & details' },
   { id: 'moments',  label: ' Moments'   },
   { id: 'expenses', label: 'Expenses'      },
+  { id: 'guests',   label: 'Guests'        },
 ] as const
 
 type TabId = typeof TABS[number]['id']
@@ -72,7 +75,10 @@ export default function EventTabs({
       {/* Tab panels */}
       {active === 'about' && <div>{aboutSlot}</div>}
 
-      {active === 'expenses' && (
+      {active === 'guests' && isCreator && (
+          <GuestMessagesTab eventId={eventId} />
+        )}
+        {active === 'expenses' && (
           <ExpensesTab eventId={eventId} members={members} currentUserId={currentUserId} />
         )}
         {active === 'expenses' && (

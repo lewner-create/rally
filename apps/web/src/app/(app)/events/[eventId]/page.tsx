@@ -3,6 +3,7 @@ import { redirect, notFound } from 'next/navigation'
 import EventTabs from '@/components/events/event-tabs'
 import { ChatPanel } from '@/components/chat/chat-panel'
 import RsvpSection from '@/components/events/rsvp-section'
+import InviteGuestsPanel from '@/components/events/invite-guests-panel'
 
 type Props = {
   params: Promise<{ eventId: string }>
@@ -161,6 +162,10 @@ export default async function EventPage({ params }: Props) {
                 eventId={eventId}
                 currentRsvp={userRsvp?.rsvp_status ?? null}
               />
+            </div>
+
+            <div className="mb-4">
+              <InviteGuestsPanel eventId={eventId} />
             </div>
 
             <EventTabs

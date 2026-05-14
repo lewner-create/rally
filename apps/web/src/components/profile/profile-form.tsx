@@ -37,6 +37,9 @@ export function ProfileForm({ profile }: { profile: Profile }) {
   const [interests,   setInterests]   = useState<string[]>(
     (profile.preferences?.interests as string[]) ?? []
   )
+  const [paymentLinks, setPaymentLinks] = useState<Record<string, string>>(
+    (profile.payment_links as Record<string, string>) ?? {}
+  )
   const [saved,     setSaved]    = useState(false)
   const [uploading, setUploading] = useState(false)
   const [isPending, startTransition] = useTransition()
@@ -47,7 +50,7 @@ export function ProfileForm({ profile }: { profile: Profile }) {
 
   const handleSave = () => {
     startTransition(async () => {
-      await updateProfile({ display_name: displayName, username, bio, preferences: { interests } })
+      await updateProfile({ display_name: displayName, username, bio, preferences: { interests }, payment_links: paymentLinks })
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
     })

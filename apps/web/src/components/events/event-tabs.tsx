@@ -4,6 +4,7 @@ import { useState } from 'react'
 import EventDetails from '@/components/events/event-details'
 import { MomentsTab } from '@/components/events/moments-tab'
 import ExpensesTab from '@/components/events/expenses-tab'
+import ExpensesTab from '@/components/events/expenses-tab'
 import type { EventPhoto } from '@/lib/actions/photos'
 
 type Member = {
@@ -72,6 +73,9 @@ export default function EventTabs({
       {active === 'about' && <div>{aboutSlot}</div>}
 
       {active === 'expenses' && (
+          <ExpensesTab eventId={eventId} members={members} currentUserId={currentUserId} />
+        )}
+        {active === 'expenses' && (
           <ExpensesTab eventId={eventId} members={members} currentUserId={currentUserId} />
         )}
         {active === 'details' && (

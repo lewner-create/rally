@@ -229,11 +229,11 @@ function LockedEventHero({ event, accent }: { event: Event; accent: string }) {
 
 // ─── FOMO plan card ────────────────────────────────────────────────────────────
 function ActivePlanCard({ card, accent }: { card: ActiveCard; accent: string }) {
-  const counts   = card.response_counts ?? { in: 0, maybe: 0, cant: 0 }
-  const total    = counts.in + counts.maybe + counts.cant
-  const fomoCopy = getFomoCopy(counts.in, total)
-  const relDate  = relativeDate(card.proposed_date)
-  const typeLabel = EVENT_TYPE_LABEL[card.event_type] ?? card.event_type
+  const counts      = card.response_counts ?? { in: 0, maybe: 0, cant: 0 }
+  const total       = counts.in + counts.maybe + counts.cant
+  const fomoCopy    = getFomoCopy(counts.in, total)
+  const relDate     = relativeDate(card.proposed_date)
+  const typeLabel   = EVENT_TYPE_LABEL[card.event_type] ?? card.event_type
   const urgencyColor = counts.in >= 3 ? '#34d399' : counts.in >= 1 ? '#fbbf24' : '#555'
 
   const [myResponse, setMyResponse] = useState<string | null>(card.currentUserResponse ?? null)
@@ -247,7 +247,7 @@ function ActivePlanCard({ card, accent }: { card: ActiveCard; accent: string }) 
   }
 
   return (
-    <div className="block">
+    <Link href={`/plans/${card.id}`} className="block">
       <div
         className="rounded-xl overflow-hidden transition-all hover:border-[#3a3a3a]"
         style={{
@@ -264,7 +264,7 @@ function ActivePlanCard({ card, accent }: { card: ActiveCard; accent: string }) 
             className="text-[9px] font-bold tracking-widest uppercase"
             style={{ color: accent }}
           >
-            {typeLabel} · checking who's in
+            {typeLabel} ? checking who's in
           </span>
           {relDate && relDate !== 'past' && (
             <span className="text-[9px] font-semibold text-[#555] uppercase tracking-wider">
@@ -281,7 +281,7 @@ function ActivePlanCard({ card, accent }: { card: ActiveCard; accent: string }) 
           {card.proposed_date && (
             <p className="text-[#555] text-xs mb-3">
               {formatDate(card.proposed_date)}
-              {card.proposed_start && ` · ${formatTime(card.proposed_start)}`}
+              {card.proposed_start && `? ${formatTime(card.proposed_start)}`}
             </p>
           )}
 
@@ -313,16 +313,48 @@ function ActivePlanCard({ card, accent }: { card: ActiveCard; accent: string }) 
               style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
             >
               <span className="text-[#555]">No responses yet</span>
-              <span className="ml-auto font-semibold" style={{ color: accent }}>Respond →</span>
+              <span className="ml-auto font-semibold" style={{ color: accent }}>Respond ?</span>
             </div>
           )}
+
+          {/* Going / Pass inline buttons */}
+          <div className="flex gap-2 mt-3">
+            <button
+              onClick={e => { e.preventDefault(); handleRespond('in') }}
+              disabled={pending}
+              className="flex-1 py-2 rounded-lg text-xs font-semibold transition-all"
+              style={{
+                background: myResponse === 'in' ? '#22c55e18' : 'rgba(255,255,255,0.04)',
+                border: `1px solid ${myResponse === 'in' ? '#22c55e66' : 'rgba(255,255,255,0.06)'}`,
+                color: myResponse === 'in' ? '#22c55e' : '#555',
+                cursor: pending ? 'default' : 'pointer',
+                fontFamily: 'inherit',
+              }}
+            >
+              {myResponse === 'in' ? '✓ Going' : "I'm in"}
+            </button>
+            <button
+              onClick={e => { e.preventDefault(); handleRespond('cant') }}
+              disabled={pending}
+              className="flex-1 py-2 rounded-lg text-xs font-semibold transition-all"
+              style={{
+                background: myResponse === 'cant' ? '#ef444418' : 'rgba(255,255,255,0.04)',
+                border: `1px solid ${myResponse === 'cant' ? '#ef444466' : 'rgba(255,255,255,0.06)'}`,
+                color: myResponse === 'cant' ? '#ef4444' : '#555',
+                cursor: pending ? 'default' : 'pointer',
+                fontFamily: 'inherit',
+              }}
+            >
+              {myResponse === 'cant' ? '✗ Pass' : "Can't"}
+            </button>
+          </div>
         </div>
       </div>
     </Link>
   )
 }
 
-// ─── Upcoming event row ────────────────────────────────────────────────────────
+
 function UpcomingEventRow({ event, accent }: { event: Event; accent: string }) {
   const dateStr = formatDate(event.starts_at)
   const timeStr = formatTime(event.starts_at)

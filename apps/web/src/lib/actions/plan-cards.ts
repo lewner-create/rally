@@ -207,17 +207,32 @@ export async function lockInPlanCard(planCardId: string): Promise<{ eventId?: st
 
 // ─── Get active plan cards for a group ────────────────────────────────────────
 
-export async function getActivePlanCards(groupId: string): Promise<{ id: string; title: string; event_type: string }[]> {
+export async function getActivePlanCards(groupId: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return []
 
   const { data } = await supabase
     .from('plan_cards')
-    .select('id, title, event_type')
+    .select(`
+      id, title, event_type, proposed_date, proposed_start, proposed_end, status,
+      plan_card_responses(response, user_id)
+    `)
     .eq('group_id', groupId)
     .eq('status', 'open')
     .order('created_at', { ascending: false })
 
-  return (data ?? []) as { id: string; title: string; event_type: string }[]
+  return (data ?? []).map((card: any) => {
+    const responses = card.plan_card_responses ?? []
+    const counts = { in: 0, maybe: 0, cant: 0 }
+    let currentUserResponse: string | null = null
+    for (const r of responses) {
+      if (r.response === 'in')    counts.in++
+      if (r.response === 'maybe') counts.maybe++
+      if (r.response === 'cant')  counts.cant++
+      if (r.user_id === user.id)  currentUserResponse = r.response
+    }
+    const { plan_card_responses: _, ...rest } = card
+    return { ...rest, response_counts: counts, currentUserResponse }
+  })
 }

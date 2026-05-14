@@ -223,38 +223,6 @@ function LockedEventHero({ event, accent }: { event: Event; accent: string }) {
           </div>
         </div>
       </div>
-
-          {/* Going / Pass inline buttons */}
-          <div className="flex gap-2 mt-3">
-            <button
-              onClick={e => { e.preventDefault(); handleRespond('in') }}
-              disabled={pending}
-              className="flex-1 py-2 rounded-lg text-xs font-semibold transition-all"
-              style={{
-                background: myResponse === 'in' ? '#22c55e18' : 'rgba(255,255,255,0.04)',
-                border: `1px solid ${myResponse === 'in' ? '#22c55e66' : 'rgba(255,255,255,0.06)'}`,
-                color: myResponse === 'in' ? '#22c55e' : '#555',
-                cursor: pending ? 'default' : 'pointer',
-                fontFamily: 'inherit',
-              }}
-            >
-              {myResponse === 'in' ? '✓ Going' : "I'm in"}
-            </button>
-            <button
-              onClick={e => { e.preventDefault(); handleRespond('cant') }}
-              disabled={pending}
-              className="flex-1 py-2 rounded-lg text-xs font-semibold transition-all"
-              style={{
-                background: myResponse === 'cant' ? '#ef444418' : 'rgba(255,255,255,0.04)',
-                border: `1px solid ${myResponse === 'cant' ? '#ef444466' : 'rgba(255,255,255,0.06)'}`,
-                color: myResponse === 'cant' ? '#ef4444' : '#555',
-                cursor: pending ? 'default' : 'pointer',
-                fontFamily: 'inherit',
-              }}
-            >
-              {myResponse === 'cant' ? '✗ Pass' : "Can't"}
-            </button>
-          </div>
     </Link>
   )
 }

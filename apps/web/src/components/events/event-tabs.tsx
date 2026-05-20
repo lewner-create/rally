@@ -27,7 +27,7 @@ type Props = {
 const TABS = [
   { id: 'about',   label: 'About'          },
   { id: 'details', label: 'Costs & details' },
-  { id: 'moments',  label: ' Moments'   },
+  { id: 'moments',  label: 'Moments'    },
   { id: 'expenses', label: 'Expenses'      },
   { id: 'guests',   label: 'Guests'        },
 ] as const
@@ -76,9 +76,6 @@ export default function EventTabs({
 
       {active === 'guests' && isCreator && (
           <GuestMessagesTab eventId={eventId} />
-        )}
-        {active === 'expenses' && (
-          <ExpensesTab eventId={eventId} members={members} currentUserId={currentUserId} />
         )}
         {active === 'expenses' && (
           <ExpensesTab eventId={eventId} members={members} currentUserId={currentUserId} />

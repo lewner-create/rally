@@ -1,7 +1,7 @@
 'use client'
 import { useState, useTransition } from 'react'
 import { rsvpAsGuest, sendGuestMessage } from '@/lib/actions/guest-invites'
-import { APP_URL } from '@/lib/resend'
+import { APP_URL } from '@/lib/guest-invite-config'
 
 const RSVP_OPTIONS = [
   { value: 'yes',   label: 'Going',         color: '#22c55e' },

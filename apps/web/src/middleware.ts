@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-const PUBLIC_PATHS = ['/', '/login', '/signup', '/auth/callback', '/join', '/invite', '/request-access', '/features', '/pricing', '/changelog', '/about', '/privacy', '/terms', '/cookies']
+const PUBLIC_PATHS = ['/', '/login', '/signup', '/auth/callback', '/join', '/invite', '/request-access', '/welcome', '/features', '/pricing', '/changelog', '/about', '/privacy', '/terms', '/cookies']
 const ONBOARDING_PATH = '/onboarding'
 
 export async function middleware(request: NextRequest) {
@@ -29,9 +29,10 @@ export async function middleware(request: NextRequest) {
   const isPublicPath = PUBLIC_PATHS.some(p =>
     p === '/' ? request.nextUrl.pathname === '/' : request.nextUrl.pathname.startsWith(p)
   )
-  const isOnboarding = request.nextUrl.pathname.startsWith(ONBOARDING_PATH)
+  const isOnboarding  = request.nextUrl.pathname.startsWith(ONBOARDING_PATH)
+  const isGuestJoin   = /^\/events\/[^/]+\/join\/[^/]+/.test(request.nextUrl.pathname)
 
-  if (!user && !isPublicPath && !isOnboarding) {
+  if (!user && !isPublicPath && !isOnboarding && !isGuestJoin) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
